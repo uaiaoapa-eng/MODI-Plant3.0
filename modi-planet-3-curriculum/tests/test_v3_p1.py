@@ -268,6 +268,14 @@ def test_mobile_ux_contract_keeps_lms_and_ai_lab_touch_ready(client):
     assert "studioBackdrop.disabled = !open" in lms_script
     assert 'learningStudio.addEventListener("keydown"' in lms_script
     assert "event.isComposing" in lms_script
+    assert 'class="ai-lab-link" href="/#create" aria-label="AI LAB"' in lms_html
+    assert lms_html.count('class="rail-nav-label"') == 3
+    assert 'class="player-ai-lab" href="/#create"' in lms_html
+    assert 'class="player-ai-lab-mark"' in lms_html
+    assert ".player-ai-lab" in lms_css
+    assert "min-height: 44px" in lms_css
+    assert ".rail-nav-label" in lms_css
+    assert ".rail-nav span,\n  .rail-history" not in lms_css
 
     assert "mobile-workspace-switch" in app_script
     assert "mobile-panel-hidden" in app_script
@@ -276,6 +284,9 @@ def test_mobile_ux_contract_keeps_lms_and_ai_lab_touch_ready(client):
     assert ".mobile-workspace-switch" in app_css
     assert ".back-button," in app_css
     assert "min-height: 44px" in app_css
+    assert app_html.count('class="rail-nav-label"') == 3
+    assert ".rail-nav-label" in app_css
+    assert ".rail-nav span,\n  .rail-history" not in app_css
 
 
 def test_lms_preview_seeds_polished_results_before_generation(client):
@@ -404,7 +415,7 @@ def test_lesson_decks_render_unique_layouts_scenes_and_modi_assets(client):
     assert "@container (max-width: 620px)" in styles
     for layout in layouts.values():
         assert f".visual-{layout}" in styles
-    assert "20260823-unique-scenes" in html
+    assert "20260824-ai-lab-nav" in html
 
     expected_assets = {
         "modi-kit-flatlay.jpg": "image/jpeg",

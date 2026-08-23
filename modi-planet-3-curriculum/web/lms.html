@@ -7,7 +7,7 @@
     <meta name="description" content="2022 개정 교육과정과 연계한 MODI Planet Web·하드웨어 프로젝트 수업 27차시">
     <title>교육과정 · MODI Planet</title>
     <link rel="icon" href="/static/assets/brand/favicon.ico">
-    <link rel="stylesheet" href="/static/lms.css?v=20260823-unique-scenes">
+    <link rel="stylesheet" href="/static/lms.css?v=20260824-ai-lab-nav">
   </head>
   <body>
     <a class="skip-link" href="#lmsMain">본문으로 바로가기</a>
@@ -30,7 +30,7 @@
                 <path d="M3.5 10.5 12 3l8.5 7.5v9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z"/>
                 <path d="M9 21v-7h6v7"/>
               </svg>
-              <span>홈</span>
+              <span class="rail-nav-label">홈</span>
             </a>
             <a class="active" href="/lms" aria-label="교육과정" aria-current="page">
               <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -38,13 +38,13 @@
                 <path d="M6 9v5.5c0 1.7 2.7 3 6 3s6-1.3 6-3V9"/>
                 <path d="M21 7v7"/>
               </svg>
-              <span>교육과정</span>
+              <span class="rail-nav-label">교육과정</span>
             </a>
-            <a href="/#create" aria-label="AI LAB">
+            <a class="ai-lab-link" href="/#create" aria-label="AI LAB">
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M12 3v18M3 12h18"/>
               </svg>
-              <span>AI LAB</span>
+              <span class="rail-nav-label">AI LAB</span>
             </a>
           </nav>
         </div>
@@ -113,6 +113,10 @@
         <div class="player-tools">
           <div class="phase-track" id="phaseTrack" aria-label="수업 단계"></div>
           <span class="class-timer" id="classTimer">00:00</span>
+          <a class="player-ai-lab" href="/#create" aria-label="AI LAB에서 새 프로젝트 시작">
+            <span class="player-ai-lab-mark" aria-hidden="true">AI</span>
+            <span class="player-ai-lab-label">AI LAB</span>
+          </a>
           <button class="teacher-toggle" id="teacherToggle" type="button" aria-pressed="false">교사 노트</button>
         </div>
       </header>
@@ -168,6 +172,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="/static/lms.js?v=20260823-unique-scenes" defer></script>
+    <script src="/static/lms.js?v=20260824-ai-lab-nav" defer></script>
   </body>
 </html>

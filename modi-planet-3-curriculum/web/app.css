@@ -2327,7 +2327,6 @@ svg {
 
   .brand-copy,
   .new-start-button span:last-child,
-  .rail-nav span,
   .rail-history,
   .rail-footer {
     display: none;
@@ -2340,11 +2339,27 @@ svg {
     padding: 0;
   }
 
+  .rail-nav {
+    gap: 7px;
+  }
+
   .rail-nav button {
     justify-content: center;
-    width: 44px;
+    width: 56px;
+    min-height: 56px;
     margin: 0 auto;
-    padding: 9px;
+    padding: 7px 3px;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .rail-nav-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    white-space: nowrap;
   }
 
   .rail-nav button.active {
@@ -2773,14 +2788,18 @@ svg {
   }
 
   .rail-nav button {
-    width: 44px;
-    min-height: 44px;
-    padding: 11px;
+    width: 52px;
+    min-height: 52px;
+    padding: 5px 2px;
   }
 
   .rail-nav svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .rail-nav-label {
+    font-size: 9px;
   }
 
   .main-content {
