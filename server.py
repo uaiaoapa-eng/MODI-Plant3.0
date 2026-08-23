@@ -366,6 +366,47 @@ def simulate_page():
     return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts", "simulate.html"))
 
 
+# ── MODI Plant 3.0 프론트 — 첫 화면은 대화가 아니라 "교육과정 / 만들기" 선택 ──
+# static/ 아래 정적 페이지 3장 + 교육과정(27차시) JSON 을 그대로 서빙한다.
+#   /            → 랜딩(두 모드 선택)
+#   /lms         → 교육과정(LMS): 초·중·고 9차시 수업 진행 화면
+#   /builder     → 만들기: 대화형 '같이 만들기'(design 모드 전용)
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+
+def _static_page(name: str):
+    p = os.path.join(_STATIC_DIR, name)
+    if not os.path.isfile(p):
+        return HTMLResponse("<h1>페이지를 찾을 수 없습니다</h1>", status_code=404)
+    return FileResponse(p)
+
+
+@app.get("/")
+def landing_page():
+    return _static_page("index.html")
+
+
+@app.get("/lms")
+def lms_page():
+    return _static_page("lms.html")
+
+
+@app.get("/builder")
+def builder_page():
+    return _static_page("builder.html")
+
+
+@app.get("/curriculum/{level}")
+def curriculum_json(level: str):
+    """교육과정 데이터 — level ∈ elementary|middle|high (경로 조작 방지: 화이트리스트)."""
+    if level not in ("elementary", "middle", "high"):
+        return JSONResponse({"error": "unknown level"}, status_code=404)
+    p = os.path.join(_STATIC_DIR, "curriculum", f"{level}.json")
+    if not os.path.isfile(p):
+        return JSONResponse({"error": "curriculum not found"}, status_code=404)
+    return FileResponse(p, media_type="application/json")
+
+
 @app.post("/chat")
 async def chat(req: ChatRequest, request: Request, user_id: str = Depends(get_user_id)):
     # 부하 관측 기준점 — **엔드포인트 진입 시각**으로 잡는다(스트림 시작이 아니라).

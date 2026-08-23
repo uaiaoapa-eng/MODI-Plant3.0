@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MODI Plant 3.0</title>
+<style>
+  :root{
+    --bg:#f6f8f7; --card:#ffffff; --line:#e3e8e5; --txt:#182420; --dim:#5f6f68;
+    --green:#16a06a; --green-d:#0d7a4f; --blue:#2f6fed; --blue-d:#1f54c4;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);
+    display:flex;flex-direction:column;min-height:100vh}
+  header{padding:26px 32px;display:flex;align-items:center;gap:12px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.01em}
+  .logo .dot{width:14px;height:14px;border-radius:4px;background:var(--green);box-shadow:3px 3px 0 #ffb43a, -3px -3px 0 #2f6fed22}
+  .logo small{font-weight:600;color:var(--dim);font-size:12px;margin-left:2px}
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 20px 60px}
+  h1{font-size:clamp(26px,4vw,40px);margin:0 0 10px;text-align:center;letter-spacing:-.02em}
+  h1 b{color:var(--green)}
+  .sub{color:var(--dim);text-align:center;font-size:clamp(14px,1.8vw,17px);margin:0 0 44px;line-height:1.6}
+  .choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,380px));gap:24px;width:100%;max-width:820px;justify-content:center}
+  a.card{display:block;background:var(--card);border:1.5px solid var(--line);border-radius:20px;
+    padding:30px 28px 26px;text-decoration:none;color:inherit;position:relative;overflow:hidden;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease}
+  a.card:hover{transform:translateY(-4px);box-shadow:0 14px 34px rgba(20,50,40,.10)}
+  a.card.lms:hover{border-color:var(--green)}
+  a.card.maker:hover{border-color:var(--blue)}
+  .icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:28px;margin-bottom:18px}
+  .lms .icon{background:#e5f6ee}
+  .maker .icon{background:#e9f0ff}
+  .card h2{margin:0 0 4px;font-size:22px;letter-spacing:-.01em}
+  .tag{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:12px}
+  .lms .tag{background:#e5f6ee;color:var(--green-d)}
+  .maker .tag{background:#e9f0ff;color:var(--blue-d)}
+  .card p{margin:0 0 18px;color:var(--dim);font-size:14.5px;line-height:1.65}
+  .card ul{margin:0 0 22px;padding:0;list-style:none;font-size:13.5px;color:var(--txt)}
+  .card li{padding:5px 0 5px 24px;position:relative}
+  .card li::before{content:"✓";position:absolute;left:2px;font-weight:800}
+  .lms li::before{color:var(--green)}
+  .maker li::before{color:var(--blue)}
+  .go{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:15px}
+  .lms .go{color:var(--green-d)} .maker .go{color:var(--blue-d)}
+  .go::after{content:"→";transition:transform .16s ease}
+  a.card:hover .go::after{transform:translateX(4px)}
+  footer{padding:18px;text-align:center;color:var(--dim);font-size:12.5px}
+  @media (max-width:700px){ .choices{grid-template-columns:1fr} main{justify-content:flex-start;padding-top:24px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="dot"></span>MODI Plant <small>3.0 프로토타입</small></div>
+</header>
+
+<main>
+  <h1>오늘은 <b>무엇을</b> 해볼까요?</h1>
+  <p class="sub">AI와 대화하며 웹과 MODI 하드웨어를 만드는 교육 플랫폼입니다.<br>
+    학교 수업이라면 <b>교육과정</b>, 자유로운 창작이라면 <b>만들기</b>를 선택하세요.</p>
+
+  <div class="choices">
+    <a class="card lms" href="/lms">
+      <div class="icon">🏫</div>
+      <span class="tag">선생님 · 학교 수업</span>
+      <h2>교육과정 (LMS)</h2>
+      <p>우리나라 교과 과정에 맞춘 초·중·고 각 9차시 교안.
+         PPT 없이 이 화면 그대로 띄워 수업을 진행합니다.</p>
+      <ul>
+        <li>초등 40분 · 중등 45분 · 고등 50분 수업 설계</li>
+        <li>도입 – 전개 – 정리 흐름과 수업 타이머</li>
+        <li>Web · H/W · Web+H/W 프로젝트 수업</li>
+        <li>최종 목표: MODI와 연동된 나만의 웹 만들기</li>
+      </ul>
+      <span class="go">수업 시작하기</span>
+    </a>
+
+    <a class="card maker" href="/builder">
+      <div class="icon">🛠️</div>
+      <span class="tag">학생 · 자유 창작</span>
+      <h2>만들기</h2>
+      <p>만들고 싶은 것을 한국어로 말하면 AI가 함께 설계하고
+         코드와 MODI 블록까지 만들어 줍니다.</p>
+      <ul>
+        <li>AI와 대화하며 같이 만들기</li>
+        <li>Web(웹·앱 화면) 또는 MODI 하드웨어 블록</li>
+        <li>설계 → 구현 → 검증 3단계 진행</li>
+        <li>학습 노트와 코드 설명 자동 제공</li>
+      </ul>
+      <span class="go">만들기 시작하기</span>
+    </a>
+  </div>
+</main>
+
+<footer>MODI Plant 3.0 — LLM 기반 교육용 바이브코딩 플랫폼 (LUXROBO MODI)</footer>
+</body>
+</html>

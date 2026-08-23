@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>만들기 — MODI Plant 3.0</title>
+<style>
+  :root{
+    --bg:#f6f8f7; --panel:#ffffff; --line:#e3e8e5; --txt:#182420; --dim:#5f6f68;
+    --green:#16a06a; --green-d:#0d7a4f; --blue:#2f6fed; --amber:#c47f0e; --bad:#d64545;
+    --chatme:#e5f6ee; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:14px;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+  header a.home{text-decoration:none;color:var(--txt);font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+  header a.home .dot{width:11px;height:11px;border-radius:3px;background:var(--green)}
+  .crumb{color:var(--dim);font-size:13px}
+  .seg{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{border:0;background:transparent;padding:7px 16px;font-size:13.5px;font-weight:700;color:var(--dim);cursor:pointer;font-family:var(--sans)}
+  .seg button.on{background:var(--green);color:#fff}
+  .newbtn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:700;color:var(--dim);cursor:pointer}
+  main{flex:1;display:flex;min-height:0}
+  /* 채팅 */
+  .chatcol{flex:1.05;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+  .msgs{flex:1;overflow-y:auto;padding:22px 22px 8px;display:flex;flex-direction:column;gap:14px}
+  .msg{max-width:86%;padding:12px 16px;border-radius:14px;font-size:14.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+  .msg.me{align-self:flex-end;background:var(--chatme);border:1px solid #cdeadc;border-bottom-right-radius:4px}
+  .msg.ai{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg.sys{align-self:center;background:transparent;color:var(--dim);font-size:12.5px;padding:2px}
+  .status{align-self:flex-start;color:var(--green-d);font-size:13px;display:flex;gap:8px;align-items:center;padding-left:6px}
+  .status .sp{width:12px;height:12px;border:2px solid var(--green);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .welcome{align-self:center;text-align:center;color:var(--dim);margin-top:8vh;font-size:15px;line-height:1.8}
+  .welcome h2{color:var(--txt);font-size:22px;margin:0 0 6px}
+  .exrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+  .exrow button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:7px 14px;font-size:13px;color:var(--txt);cursor:pointer;font-family:var(--sans)}
+  .exrow button:hover{border-color:var(--green)}
+  .inputbar{display:flex;gap:10px;padding:14px 18px;background:var(--panel);border-top:1px solid var(--line)}
+  .inputbar textarea{flex:1;resize:none;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;
+    font-size:14.5px;font-family:var(--sans);min-height:46px;max-height:130px;outline:none;line-height:1.5}
+  .inputbar textarea:focus{border-color:var(--green)}
+  .inputbar button{border:0;border-radius:12px;padding:0 22px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:var(--sans)}
+  #send{background:var(--green);color:#fff}
+  #send:disabled{opacity:.45;cursor:default}
+  #stop{background:#fdeaea;color:var(--bad);display:none}
+  /* 결과 패널 */
+  .outcol{flex:1;display:flex;flex-direction:column;min-width:0;background:#fbfcfb}
+  .tabs{display:flex;gap:2px;padding:10px 14px 0;border-bottom:1px solid var(--line);background:var(--panel)}
+  .tabs button{border:1px solid transparent;border-bottom:0;background:transparent;padding:8px 16px;font-size:13.5px;
+    font-weight:700;color:var(--dim);cursor:pointer;border-radius:9px 9px 0 0;font-family:var(--sans)}
+  .tabs button.on{background:#fbfcfb;border-color:var(--line);color:var(--txt)}
+  .outbody{flex:1;overflow:auto;padding:16px}
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;margin-top:10vh;line-height:1.8}
+  .filetab{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .filetab button{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 12px;font-size:12.5px;font-family:var(--mono);cursor:pointer;color:var(--dim)}
+  .filetab button.on{border-color:var(--green);color:var(--green-d);font-weight:700}
+  pre{background:#101714;color:#d7e4dc;border-radius:10px;padding:14px;font-family:var(--mono);
+    font-size:12.5px;line-height:1.55;overflow:auto;white-space:pre-wrap;word-break:break-word;margin:0}
+  .copy{float:right;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:4px 12px;font-size:12px;cursor:pointer;margin-bottom:8px}
+  .steps{display:flex;flex-direction:column;gap:8px}
+  .step{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13.5px}
+  .step .ic{font-size:15px}
+  .step.error{border-color:#f3c8c8}
+  .modichips span{display:inline-block;background:#f0ebff;color:#5a3fd6;border:1px solid #ddd2ff;
+    border-radius:7px;padding:3px 10px;margin:0 6px 8px 0;font-size:12.5px;font-weight:700}
+  @media (max-width:900px){ main{flex-direction:column} .chatcol{border-right:0;border-bottom:1px solid var(--line)} }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="/"><span class="dot"></span>MODI Plant</a>
+  <span class="crumb">› 만들기 <b style="color:var(--txt)">· AI와 같이 만들기</b></span>
+  <div class="seg" id="typeSeg">
+    <button data-t="react" class="on">🌐 Web 만들기</button>
+    <button data-t="blockly">🤖 MODI 하드웨어</button>
+  </div>
+  <button class="newbtn" id="newSession">＋ 새로 시작</button>
+</header>
+
+<main>
+  <div class="chatcol">
+    <div class="msgs" id="msgs">
+      <div class="welcome" id="welcome">
+        <h2>무엇을 만들고 싶나요?</h2>
+        만들고 싶은 것을 한국어로 편하게 말해 주세요.<br>
+        AI가 되묻고 정리하며 <b>설계 → 구현 → 검증</b> 순서로 같이 만들어 갑니다.
+        <div class="exrow">
+          <button>우리 반 알림판 웹 만들고 싶어</button>
+          <button>클릭하면 점수 올라가는 게임</button>
+          <button>버튼 누르면 LED 켜지게 하고 싶어</button>
+          <button>식물 온도에 따라 팬이 돌게 해줘</button>
+        </div>
+      </div>
+    </div>
+    <div class="inputbar">
+      <textarea id="input" placeholder="예: 배달 앱 만들고 싶어 / 버튼으로 모터 돌리고 싶어" rows="1"></textarea>
+      <button id="stop">■ 중지</button>
+      <button id="send">보내기</button>
+    </div>
+  </div>
+
+  <div class="outcol">
+    <div class="tabs">
+      <button data-tab="code" class="on">📄 결과물</button>
+      <button data-tab="steps">⚙️ 진행 과정</button>
+    </div>
+    <div class="outbody" id="outbody">
+      <div class="empty">아직 만들어진 결과물이 없어요.<br>대화가 무르익으면 AI가 코드(또는 MODI 블록)를 만들어 여기에 보여줍니다.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const msgs = $('#msgs'), input = $('#input'), sendBtn = $('#send'), stopBtn = $('#stop');
+let codingType = 'react';
+let sessionId = 'maker-' + Math.random().toString(36).slice(2, 10);
+let userId = localStorage.getItem('mp_uid') || ('u-' + Math.random().toString(36).slice(2, 12));
+localStorage.setItem('mp_uid', userId);
+let files = {}, blocklyXml = '', modiModules = null, steps = [], curTab = 'code', curFile = '';
+let streaming = false;
+
+// ── 상단 컨트롤 ──
+$('#typeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || streaming) return;
+  codingType = b.dataset.t;
+  document.querySelectorAll('#typeSeg button').forEach(x => x.classList.toggle('on', x === b));
+  addSys(codingType === 'react' ? '🌐 Web 만들기 모드로 전환했어요.' : '🤖 MODI 하드웨어 모드로 전환했어요.');
+});
+$('#newSession').onclick = () => location.reload();
+
+document.querySelector('.tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  curTab = b.dataset.tab;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  renderOut();
+});
+document.querySelector('.exrow').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  input.value = b.textContent; send();
+});
+
+// ── 채팅 렌더 ──
+function el(cls, text){ const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; msgs.appendChild(d); scroll_(); return d; }
+function addSys(t){ el('sys', t); }
+function scroll_(){ msgs.scrollTop = msgs.scrollHeight; }
+let statusEl = null;
+function setStatus(t){
+  if (!t){ if (statusEl){ statusEl.remove(); statusEl = null; } return; }
+  if (!statusEl){ statusEl = document.createElement('div'); statusEl.className = 'status';
+    statusEl.innerHTML = '<span class="sp"></span><span class="tx"></span>'; msgs.appendChild(statusEl); }
+  statusEl.querySelector('.tx').textContent = t; msgs.appendChild(statusEl); scroll_();
+}
+
+// ── 결과 패널 렌더 ──
+function renderOut(){
+  const out = $('#outbody');
+  if (curTab === 'steps'){
+    out.innerHTML = steps.length ? '<div class="steps">' + steps.map(s =>
+      `<div class="step ${s.status==='error'?'error':''}"><span class="ic">${s.status==='error'?'⚠️':'✅'}</span><span>${esc(s.description||'')}</span></div>`).join('') + '</div>'
+      : '<div class="empty">진행 과정이 여기에 기록됩니다.</div>';
+    return;
+  }
+  const names = Object.keys(files);
+  if (!names.length && !blocklyXml){
+    out.innerHTML = '<div class="empty">아직 만들어진 결과물이 없어요.<br>대화가 무르익으면 AI가 코드(또는 MODI 블록)를 만들어 여기에 보여줍니다.</div>';
+    return;
+  }
+  let html = '';
+  if (names.length){
+    if (!names.includes(curFile)) curFile = names[0];
+    html += '<div class="filetab">' + names.map(n =>
+      `<button class="${n===curFile?'on':''}" data-f="${esc(n)}">${esc(n)}</button>`).join('') + '</div>';
+    html += `<button class="copy" data-copy="file">복사</button><pre>${esc(files[curFile])}</pre>`;
+  }
+  if (blocklyXml){
+    html += '<h3 style="font-size:14px;margin:18px 0 8px">🤖 MODI 블록 (Blockly XML)</h3>';
+    if (modiModules && modiModules.length)
+      html += '<div class="modichips">' + modiModules.map(m => `<span>${esc(typeof m==='string'?m:(m.type||JSON.stringify(m)))}</span>`).join('') + '</div>';
+    html += `<button class="copy" data-copy="xml">복사</button><pre>${esc(blocklyXml)}</pre>`;
+  }
+  out.innerHTML = html;
+}
+$('#outbody').addEventListener('click', e => {
+  const f = e.target.closest('[data-f]'); if (f){ curFile = f.dataset.f; renderOut(); return; }
+  const c = e.target.closest('[data-copy]');
+  if (c){ navigator.clipboard.writeText(c.dataset.copy==='xml' ? blocklyXml : (files[curFile]||'')); c.textContent = '복사됨!'; setTimeout(()=>c.textContent='복사',1200); }
+});
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ── /chat SSE ──
+async function send(){
+  const text = input.value.trim();
+  if (!text || streaming) return;
+  const w = $('#welcome'); if (w) w.remove();
+  input.value = ''; el('me', text);
+  streaming = true; sendBtn.disabled = true; stopBtn.style.display = 'block';
+  let aiEl = null;
+  try {
+    const res = await fetch('/chat?user_id=' + encodeURIComponent(userId), {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, message: text, mode: 'design', coding_type: codingType})
+    });
+    if (!res.ok || !res.body) throw new Error('서버 응답 오류 (' + res.status + ')');
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    while (true){
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let idx;
+      while ((idx = buf.indexOf('\n')) >= 0){
+        const line = buf.slice(0, idx).trim(); buf = buf.slice(idx + 1);
+        if (!line.startsWith('data:')) continue;
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+        handleEvent(ev, t => {
+          if (!aiEl) aiEl = el('ai', '');
+          aiEl.textContent += t; scroll_();
+        });
+        if (ev.type === 'done' || ev.type === 'cancelled') setStatus(null);
+      }
+    }
+  } catch (err){
+    setStatus(null);
+    addSys('⚠️ 연결에 실패했어요: ' + err.message + ' — 서버(uvicorn)가 켜져 있는지 확인해 주세요.');
+  } finally {
+    streaming = false; sendBtn.disabled = false; stopBtn.style.display = 'none'; setStatus(null);
+  }
+}
+function handleEvent(ev, appendText){
+  switch (ev.type){
+    case 'token': setStatus(null); appendText(ev.text || ''); break;
+    case 'status': setStatus(ev.message || ''); break;
+    case 'agent_step': case 'agent_step_update':
+      if (ev.description){ steps.push(ev); if (curTab === 'steps') renderOut(); }
+      break;
+    case 'code_validated':
+      if (ev.generated_code){ files = ev.generated_code; renderOut(); }
+      break;
+    case 'blockly_ready':
+      blocklyXml = ev.blockly_xml || ''; modiModules = ev.modi_modules; renderOut(); break;
+    case 'error':
+      setStatus(null); addSys('⚠️ ' + (ev.user_message || ev.message || '오류가 발생했어요.')); break;
+  }
+}
+stopBtn.onclick = async () => {
+  try { await fetch('/chat/stop', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id: sessionId})}); } catch {}
+};
+sendBtn.onclick = send;
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 130) + 'px'; });
+</script>
+</body>
+</html>
