@@ -262,6 +262,9 @@ def test_mobile_ux_contract_keeps_lms_and_ai_lab_touch_ready(client):
     assert ".learning-studio.mobile-open" in lms_css
     assert ".mobile-player-actions" in lms_css
     assert "state.quizAnswers" in lms_script
+    assert 'document.querySelectorAll(".player-header, .slide-rail, .slide-stage")' in lms_script
+    assert "studioBackdrop.disabled = !open" in lms_script
+    assert 'learningStudio.addEventListener("keydown"' in lms_script
     assert "event.isComposing" in lms_script
 
     assert "mobile-workspace-switch" in app_script
@@ -269,6 +272,7 @@ def test_mobile_ux_contract_keeps_lms_and_ai_lab_touch_ready(client):
     assert "event.isComposing" in app_script
     assert "100dvh" in app_css
     assert ".mobile-workspace-switch" in app_css
+    assert ".back-button," in app_css
     assert "min-height: 44px" in app_css
 
 

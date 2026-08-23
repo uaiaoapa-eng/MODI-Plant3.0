@@ -429,8 +429,11 @@
   function syncStudioAccessibility() {
     const mobile = usesMobileStudio();
     const open = mobile && state.studioOpen;
+    const backgroundSections = document.querySelectorAll(".player-header, .slide-rail, .slide-stage");
     learningStudio.classList.toggle("mobile-open", open);
     studioBackdrop.classList.toggle("open", open);
+    studioBackdrop.disabled = !open;
+    studioBackdrop.setAttribute("aria-hidden", open ? "false" : "true");
     studioToggle.setAttribute("aria-expanded", open ? "true" : "false");
     studioToggle.textContent = open ? "활동실 닫기" : "활동실 열기";
     learningStudio.setAttribute("aria-hidden", mobile && !open ? "true" : "false");
@@ -439,6 +442,13 @@
     } else {
       learningStudio.removeAttribute("inert");
     }
+    backgroundSections.forEach((section) => {
+      if (open) {
+        section.setAttribute("inert", "");
+      } else {
+        section.removeAttribute("inert");
+      }
+    });
   }
 
   function openStudio() {
@@ -1165,6 +1175,27 @@
         : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
     setStudioTab(tabs[next].dataset.studioTab);
     tabs[next].focus();
+  });
+
+  learningStudio.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab" || !state.studioOpen || !usesMobileStudio()) {
+      return;
+    }
+    const focusable = Array.from(learningStudio.querySelectorAll("button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])"))
+      .filter((element) => element.getClientRects().length > 0 && element.getAttribute("aria-hidden") !== "true");
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   });
 
   document.addEventListener("keydown", (event) => {
