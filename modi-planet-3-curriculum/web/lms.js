@@ -153,8 +153,21 @@
       state.levelId = null;
       renderLevelIndex();
     }
+    updateProductRail();
     window.scrollTo({ top: 0, behavior: "auto" });
     main.focus({ preventScroll: true });
+  }
+
+  function updateProductRail() {
+    document.querySelectorAll("[data-rail-level]").forEach((link) => {
+      const active = link.dataset.railLevel === state.levelId;
+      link.classList.toggle("active", active);
+      if (active) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
   }
 
   function renderLevelIndex() {
@@ -228,8 +241,8 @@
 
     main.innerHTML = [
       '<div class="catalog-layout">',
-      renderCourseAside(catalog),
       '<section class="course-main">',
+      renderCompactLevelNav(catalog.level),
       '<nav class="breadcrumb" aria-label="현재 위치"><button type="button" data-action="all-levels">교육과정</button><span>›</span><span>',
       escapeHtml(levelMeta.difficulty), " · ", escapeHtml(catalog.label), "</span></nav>",
       '<header class="course-header"><div><p class="course-kicker">', escapeHtml(levelMeta.difficulty), " Curriculum</p>",
@@ -248,23 +261,18 @@
     document.title = catalog.label + " 교육과정 · MODI Planet";
   }
 
-  function renderCourseAside(activeCatalog) {
+  function renderCompactLevelNav(activeLevelId) {
     return [
-      '<aside class="course-aside" id="courseAside"><p class="aside-label">난이도 · 학교급</p><div class="level-switcher">',
+      '<nav class="compact-level-nav" aria-label="난이도 선택">',
       LEVELS.map((meta) => {
         const catalog = getCatalog(meta.id);
-        const active = meta.id === activeCatalog.level;
+        const active = meta.id === activeLevelId;
         return [
-          '<button type="button" class="', active ? "active" : "", '" data-level="', escapeHtml(meta.id), '">',
-          '<i class="level-dot" aria-hidden="true"></i><span><strong>', escapeHtml(meta.difficulty), " · ", escapeHtml(catalog.label),
-          "</strong><span>", escapeHtml(catalog.grade), " · ", escapeHtml(catalog.subject), "</span></span></button>"
+          '<a class="', active ? "active" : "", '" href="/lms#', escapeHtml(meta.id), '"',
+          active ? ' aria-current="page"' : "", ">", escapeHtml(meta.difficulty), " · ", escapeHtml(catalog.label), "</a>"
         ].join("");
       }).join(""),
-      '</div><div class="aside-summary"><p class="aside-label">현재 과정</p><dl>',
-      "<div><dt>차시</dt><dd>9차시</dd></div>",
-      "<div><dt>수업 시간</dt><dd>", String(activeCatalog.classMinutes), "분 × 9</dd></div>",
-      "<div><dt>최종 목표</dt><dd>융합 프로젝트</dd></div>",
-      "</dl></div></aside>"
+      "</nav>"
     ].join("");
   }
 
@@ -781,15 +789,6 @@
     const promptButton = event.target.closest("[data-prompt]");
     if (promptButton) {
       usePrompt(promptButton.dataset.prompt);
-    }
-  });
-
-  document.getElementById("mobileCourseButton").addEventListener("click", () => {
-    const aside = document.getElementById("courseAside");
-    if (aside) {
-      aside.classList.toggle("mobile-open");
-    } else {
-      window.location.hash = "#levels";
     }
   });
 

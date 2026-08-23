@@ -178,6 +178,10 @@ def test_lms_route_serves_the_curriculum_player(client):
     assert response.headers["content-type"].startswith("text/html")
     assert "MODI Planet" in response.text
     assert "교육과정" in response.text
+    assert 'class="history-rail"' in response.text
+    assert response.text.count("data-rail-level=") == 3
+    assert 'href="/#create"' in response.text
+    assert 'class="site-header"' not in response.text
 
     logo = client.get("/static/assets/brand/logo.svg")
     player_script = client.get("/static/lms.js")
@@ -186,6 +190,19 @@ def test_lms_route_serves_the_curriculum_player(client):
     assert player_script.status_code == 200
     assert "data-plan-lesson" in player_script.text
     assert "data-start-lesson" in player_script.text
+
+
+def test_create_page_bundles_the_official_example_catalog(client):
+    script = client.get("/static/app.js")
+
+    assert script.status_code == 200
+    assert script.text.count('{ ref: "') == 19
+    assert '["전체", "학습", "게임", "인터랙티브", "예술", "서비스", "로봇"]' in script.text
+    assert "MODI 수학 대시보드" in script.text
+    assert "장애물 회피 조이스틱 자동차" in script.text
+    assert "당근마켓 스타일 동네거래 앱" in script.text
+    assert "data-example-category" in script.text
+    assert "data-example-ref" in script.text
 
 
 @pytest.mark.parametrize("coding_type", sorted(SUPPORTED_CODING_TYPES))

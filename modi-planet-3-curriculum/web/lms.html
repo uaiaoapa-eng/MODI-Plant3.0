@@ -12,26 +12,77 @@
   <body>
     <a class="skip-link" href="#lmsMain">본문으로 바로가기</a>
 
-    <header class="site-header">
-      <div class="header-inner">
-        <a class="official-logo" href="/" aria-label="MODI Planet 홈">
-          <img src="/static/assets/brand/logo.svg" alt="MODI Planet">
-        </a>
-        <nav class="site-nav" aria-label="주요 메뉴">
-          <a href="/">홈</a>
-          <a class="active" href="/lms" aria-current="page">교육과정</a>
-          <a href="/#create">AI LAB</a>
-        </nav>
-        <button class="mobile-course-button" id="mobileCourseButton" type="button">과정 선택</button>
-      </div>
-    </header>
+    <div class="app-shell">
+      <aside class="history-rail" aria-label="MODI Planet 메뉴">
+        <div class="rail-top">
+          <a class="brand" href="/" aria-label="MODI Planet 홈">
+            <img class="brand-logo" src="/static/assets/brand/logo.svg" alt="MODI Planet">
+          </a>
 
-    <main id="lmsMain" tabindex="-1">
-      <div id="appLoading" class="app-loading" role="status">
-        <span class="loader" aria-hidden="true"></span>
-        <strong>교육과정을 불러오고 있어요</strong>
-      </div>
-    </main>
+          <a class="new-start-button" href="/#create" aria-label="새 AI LAB 프로젝트 시작">
+            <span aria-hidden="true">＋</span>
+            <span>새 프로젝트</span>
+          </a>
+
+          <nav class="rail-nav" aria-label="주요 메뉴">
+            <a href="/#home" aria-label="홈">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3.5 10.5 12 3l8.5 7.5v9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z"/>
+                <path d="M9 21v-7h6v7"/>
+              </svg>
+              <span>홈</span>
+            </a>
+            <a class="active" href="/lms" aria-label="교육과정" aria-current="page">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m3 6.5 9-4 9 4-9 4z"/>
+                <path d="M6 9v5.5c0 1.7 2.7 3 6 3s6-1.3 6-3V9"/>
+                <path d="M21 7v7"/>
+              </svg>
+              <span>교육과정</span>
+            </a>
+            <a href="/#create" aria-label="AI LAB">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 3v18M3 12h18"/>
+              </svg>
+              <span>AI LAB</span>
+            </a>
+          </nav>
+        </div>
+
+        <section class="rail-history" aria-labelledby="courseRailTitle">
+          <div class="rail-section-title">
+            <h2 id="courseRailTitle">난이도 바로가기</h2>
+            <span aria-label="과정 3개">3</span>
+          </div>
+          <nav class="rail-history-list" aria-label="교육과정 탐색">
+            <a class="rail-course-button" href="/lms#elementary" data-rail-level="elementary">
+              <span class="rail-project-icon" aria-hidden="true">초</span>
+              <span class="rail-project-copy"><strong>초급 · 초등</strong><span>5~6학년 · 실과</span></span>
+            </a>
+            <a class="rail-course-button" href="/lms#middle" data-rail-level="middle">
+              <span class="rail-project-icon middle" aria-hidden="true">중</span>
+              <span class="rail-project-copy"><strong>중급 · 중등</strong><span>1~3학년 · 정보</span></span>
+            </a>
+            <a class="rail-course-button" href="/lms#high" data-rail-level="high">
+              <span class="rail-project-icon high" aria-hidden="true">고</span>
+              <span class="rail-project-copy"><strong>고급 · 고등</strong><span>1~2학년 · 정보</span></span>
+            </a>
+          </nav>
+        </section>
+
+        <div class="rail-footer">
+          <span class="version-dot" aria-hidden="true"></span>
+          <span>MODI Planet 3.0</span>
+        </div>
+      </aside>
+
+      <main id="lmsMain" class="main-content" tabindex="-1">
+        <div id="appLoading" class="app-loading" role="status">
+          <span class="loader" aria-hidden="true"></span>
+          <strong>교육과정을 불러오고 있어요</strong>
+        </div>
+      </main>
+    </div>
 
     <dialog class="plan-dialog" id="planDialog" aria-labelledby="planTitle">
       <div class="dialog-shell">

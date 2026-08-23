@@ -49,6 +49,31 @@
     }
   ];
 
+  const EXAMPLE_CATEGORIES = ["전체", "학습", "게임", "인터랙티브", "예술", "서비스", "로봇"];
+
+  // Official AI MODI Planet showcase catalog, verified from ai.modiplanet.com.
+  const EXAMPLE_PROJECTS = [
+    { ref: "rhythm-game", title: "리듬 게임", description: "버튼·조이스틱·다이얼로 노트를 맞추는 DDR 스타일 MODI 리듬 액션 게임", category: "게임", type: "hybrid" },
+    { ref: "modi-math-dashboard", title: "MODI 수학 대시보드", description: "MODI 센서(조이스틱·거리·IMU)로 삼각함수·미분·기울기를 배우는 수학 대시보드", category: "학습", type: "hybrid" },
+    { ref: "cell-biology", title: "세포생물학 탐험", description: "체세포분열·감수분열, DNA 이중나선과 복제, 염기쌍을 직접 조작하며 배우는 생명과학", category: "학습", type: "react" },
+    { ref: "earth-science", title: "지구과학 교실", description: "지구본, 대기권, 자기장·태양풍을 움직이며 배우는 지구과학 시뮬레이터", category: "학습", type: "react" },
+    { ref: "color-school", title: "Color School", description: "색의 3요소·색상환·배색·빛과 물감의 혼합·코드 변환을 배우는 색채 학습 사이트", category: "학습", type: "react" },
+    { ref: "constellation", title: "별자리 만들기", description: "마우스로 밤하늘의 별을 연결하며 나만의 별자리를 만드는 인터랙티브 파티클 애니메이션", category: "인터랙티브", type: "react" },
+    { ref: "webcam-magic-filter", title: "웹캠 매직 필터", description: "웹캠 영상에 실시간 필터를 입히고 사진·영상으로 저장하는 웹앱", category: "인터랙티브", type: "react" },
+    { ref: "2048", title: "2048", description: "같은 숫자 타일을 합쳐 2048을 만드는 퍼즐 게임 (방향키·스와이프)", category: "게임", type: "react" },
+    { ref: "minesweeper", title: "지뢰찾기", description: "숫자 힌트로 지뢰를 피해 모든 칸을 여는 클래식 퍼즐 게임 (난이도 3종)", category: "게임", type: "react" },
+    { ref: "obstacle-avoiding-joystick-car", title: "장애물 회피 조이스틱 자동차", description: "조이스틱으로 조종하고 장애물을 만나면 자동으로 피하는 MODI 자동차", category: "로봇", type: "blockly" },
+    { ref: "bubble-bobble", title: "보글보글", description: "MODI 조이스틱·버튼으로 조작하는 보글보글 스타일 플랫폼 슈팅 게임", category: "게임", type: "hybrid" },
+    { ref: "space-shooter", title: "우주 슈팅게임", description: "MODI IMU를 기울여 우주선을 사방으로 조종하고 버튼으로 운석을 쏘는 슈팅 게임", category: "게임", type: "hybrid" },
+    { ref: "modi-science-lab", title: "모디 과학 탐구 실험실", description: "MODI 센서로 빛·소리·온도·거리·기울기를 배우는 과학 탐구 실험실", category: "학습", type: "hybrid" },
+    { ref: "smart-dice", title: "스마트 주사위", description: "모듈을 흔들었다 멈추면 1~6 숫자가 디스플레이에 표시되는 MODI 주사위", category: "로봇", type: "blockly" },
+    { ref: "instagram-clone", title: "Instagram 클론", description: "스토리·피드·릴스·프로필 탭으로 사진을 공유하는 인스타그램 스타일 소셜 앱", category: "서비스", type: "react" },
+    { ref: "daangn-market", title: "당근마켓 스타일 동네거래 앱", description: "동네 기반 중고거래 피드·상품 상세·채팅·동네생활·프로필을 갖춘 모바일 마켓 앱", category: "서비스", type: "react" },
+    { ref: "modi-synth", title: "MODI 신디사이저", description: "MODI 스피커·거리센서·다이얼로 건반을 연주하는 웹 신디사이저", category: "예술", type: "hybrid" },
+    { ref: "modi-paint", title: "모디 그림판", description: "MODI 조이스틱·다이얼·버튼으로 캔버스에 그림을 그리는 인터랙티브 드로잉 앱", category: "예술", type: "hybrid" },
+    { ref: "beat-maker", title: "비트 메이커", description: "드럼을 찍어 나만의 비트를 만드는 리듬 메이커", category: "예술", type: "react" }
+  ];
+
   const GRADE_BANDS = [
     {
       id: "elementary",
@@ -75,6 +100,8 @@
     learnGrade: null,
     createType: null,
     idea: "",
+    exampleCategory: "전체",
+    exampleQuery: "",
     createError: "",
     creating: false,
     session: null,
@@ -237,12 +264,16 @@
       state.learnGrade = null;
       state.createType = null;
       state.idea = "";
+      state.exampleCategory = "전체";
+      state.exampleQuery = "";
       state.createError = "";
     } else if (view === "learn" && !settings.preserve) {
       state.learnGrade = null;
     } else if (view === "create" && !settings.preserve) {
       state.createType = null;
       state.idea = "";
+      state.exampleCategory = "전체";
+      state.exampleQuery = "";
       state.createError = "";
       state.session = null;
       state.messages = [];
@@ -455,9 +486,74 @@
       "</button></div></div>",
       state.createError ? '<div class="error-banner" role="alert">' + escapeHtml(state.createError) + "</div>" : "",
       "</form>",
+      renderExampleExplorer(),
       "</div>",
       "</section>"
     ].join("");
+  }
+
+  function getVisibleExamples() {
+    const query = state.exampleQuery.trim().toLocaleLowerCase("ko-KR");
+    return EXAMPLE_PROJECTS.filter((example) => {
+      const categoryMatch = state.exampleCategory === "전체" || example.category === state.exampleCategory;
+      const queryMatch = !query || (example.title + " " + example.description).toLocaleLowerCase("ko-KR").includes(query);
+      return categoryMatch && queryMatch;
+    });
+  }
+
+  function renderExampleExplorer() {
+    return [
+      '<section class="example-explorer" aria-labelledby="exampleExplorerTitle">',
+      '<header class="example-heading"><div><p class="step-kicker">Official showcase</p>',
+      '<h2 id="exampleExplorerTitle">이런 건 어때요?</h2>',
+      '<p>공식 AI MODI Planet의 예시 19개를 골라 바로 시작할 수 있어요.</p></div>',
+      '<label class="example-search"><span class="sr-only">예시 검색</span>',
+      '<input id="exampleSearch" type="search" value="', escapeHtml(state.exampleQuery), '" placeholder="제목·설명 검색" autocomplete="off"></label></header>',
+      '<div class="example-categories" role="group" aria-label="예시 카테고리">',
+      EXAMPLE_CATEGORIES.map((category) => [
+        '<button type="button" data-example-category="', escapeHtml(category), '" class="',
+        state.exampleCategory === category ? "active" : "", '" aria-pressed="',
+        state.exampleCategory === category ? "true" : "false", '">', escapeHtml(category), "</button>"
+      ].join("")).join(""),
+      "</div>",
+      '<p class="example-result-count" id="exampleResultCount" aria-live="polite">', String(getVisibleExamples().length), "개의 예시</p>",
+      '<div class="example-grid" id="exampleGrid">', renderExampleCards(), "</div>",
+      "</section>"
+    ].join("");
+  }
+
+  function renderExampleCards() {
+    const examples = getVisibleExamples();
+    if (!examples.length) {
+      return '<div class="example-empty"><strong>검색 결과가 없어요</strong><span>다른 제목이나 카테고리를 선택해보세요.</span></div>';
+    }
+    return examples.map((example) => {
+      const type = getProjectType(example.type);
+      return [
+        '<button class="example-card type-', escapeHtml(example.type), '" type="button" data-example-ref="', escapeHtml(example.ref), '">',
+        '<span class="example-card-meta"><span>', escapeHtml(example.category), '</span><span>', escapeHtml(type.label), "</span></span>",
+        '<strong>', escapeHtml(example.title), "</strong>",
+        '<span class="example-description">', escapeHtml(example.description), "</span>",
+        '<span class="example-start"><span>이 예시로 시작</span>', ICONS.arrow, "</span>",
+        "</button>"
+      ].join("");
+    }).join("");
+  }
+
+  function updateExampleResults() {
+    const grid = document.getElementById("exampleGrid");
+    const count = document.getElementById("exampleResultCount");
+    if (!grid || !count) {
+      return;
+    }
+    const visible = getVisibleExamples();
+    grid.innerHTML = renderExampleCards();
+    count.textContent = visible.length + "개의 예시";
+    document.querySelectorAll("[data-example-category]").forEach((button) => {
+      const active = button.dataset.exampleCategory === state.exampleCategory;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
   }
 
   function renderWorkspace() {
@@ -1409,6 +1505,35 @@
   }
 
   document.addEventListener("click", (event) => {
+    const exampleCategoryButton = event.target.closest("[data-example-category]");
+    if (exampleCategoryButton) {
+      state.exampleCategory = exampleCategoryButton.dataset.exampleCategory;
+      updateExampleResults();
+      return;
+    }
+
+    const exampleButton = event.target.closest("[data-example-ref]");
+    if (exampleButton) {
+      const example = EXAMPLE_PROJECTS.find((item) => item.ref === exampleButton.dataset.exampleRef);
+      if (!example) {
+        return;
+      }
+      state.createType = example.type;
+      state.idea = example.title + " 프로젝트를 만들어줘. " + example.description + ".";
+      state.createError = "";
+      render();
+      window.requestAnimationFrame(() => {
+        const input = document.getElementById("ideaInput");
+        if (input) {
+          input.scrollIntoView({ behavior: "smooth", block: "center" });
+          input.focus({ preventScroll: true });
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+      });
+      announce(example.title + " 예시를 선택했습니다.");
+      return;
+    }
+
     const routeButton = event.target.closest("[data-route]");
     if (routeButton) {
       navigate(routeButton.getAttribute("data-route"));
@@ -1475,6 +1600,11 @@
   });
 
   document.addEventListener("input", (event) => {
+    if (event.target.id === "exampleSearch") {
+      state.exampleQuery = event.target.value;
+      updateExampleResults();
+      return;
+    }
     if (event.target.id === "ideaInput") {
       state.idea = event.target.value;
       const button = document.querySelector("#ideaForm .primary-button");
