@@ -276,6 +276,32 @@ def test_mobile_ux_contract_keeps_lms_and_ai_lab_touch_ready(client):
     assert "min-height: 44px" in app_css
 
 
+def test_lms_preview_seeds_polished_results_before_generation(client):
+    script = client.get("/static/lms.js").text
+    styles = client.get("/static/lms.css").text
+
+    for level in ("elementary", "middle", "high"):
+        for lesson_no in range(1, 10):
+            assert script.count(f'"{level}-{lesson_no:02d}"') == 1
+
+    assert "function renderPresetPreview" in script
+    assert "function renderWebPreset" in script
+    assert "function renderHardwarePreset" in script
+    assert "function renderConnectedPreset" in script
+    assert "아직 만든 작품이 없어요" not in script
+    assert 'state.previewSource = "mine"' in script
+    assert 'state.files = event.generated_code' in script
+    assert 'data-preview-source="preset"' in script
+    assert 'data-preview-action="demo"' in script
+    assert "샘플 시뮬레이션" in script
+
+    assert ".preview-showcase" in styles
+    assert ".preview-demo-badge" in styles
+    assert ".preview-window-generated iframe" in styles
+    assert "container-type: inline-size" in styles
+    assert "min-height: 44px" in styles
+
+
 def test_create_page_bundles_the_official_example_catalog(client):
     script = client.get("/static/app.js")
 
