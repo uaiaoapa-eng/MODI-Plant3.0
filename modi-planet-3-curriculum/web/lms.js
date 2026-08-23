@@ -52,6 +52,10 @@
     progress: loadProgress(),
     userId: loadUserId()
   };
+  const DEPTH_POINTER_QUERY = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const REDUCED_MOTION_QUERY = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let previewDepthFrame = 0;
+  let pendingDepthUpdate = null;
 
   const PREVIEW_PRESETS = {
     "elementary-01": { product: "햇살의 작은 우주", eyebrow: "나의 소개 카드", primaryLabel: "반가워! 내 별명은", primaryValue: "햇살", status: "개인정보 0개", message: "그림 그리기 · 우주 관찰 · 고양이 돌보기", metrics: [["취미", "3가지"], ["안전 점검", "완료"], ["수정", "1회"]], meter: 100, action: "카드 인사 보기", activeStatus: "친구 공개 준비 완료", activePrimary: "안녕!" },
@@ -857,6 +861,7 @@
       button.setAttribute("tabindex", active ? "0" : "-1");
     });
     const studio = document.getElementById("studioBody");
+    studio.setAttribute("aria-live", state.studioTab === "activity" ? "polite" : "off");
     const activeTabButton = document.querySelector('[data-studio-tab="' + state.studioTab + '"]');
     if (activeTabButton) {
       studio.setAttribute("aria-labelledby", activeTabButton.id);
@@ -956,13 +961,14 @@
     return [
       '<div class="seed-web-app', active ? " is-running" : "", '">',
       '<div class="seed-web-spark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>',
-      '<div class="seed-app-nav"><span class="seed-app-logo" aria-hidden="true">M</span><b>', escapeHtml(preset.product), '</b><span class="seed-status" role="status" aria-live="polite">', escapeHtml(status), "</span></div>",
+      '<div class="seed-scene-camera seed-scene-camera-web">',
+      '<div class="seed-app-nav"><span class="seed-app-logo" aria-hidden="true">M</span><b>', escapeHtml(preset.product), '</b><span class="seed-status">', escapeHtml(status), "</span></div>",
       '<div class="seed-app-hero"><div class="seed-hero-labels"><span class="seed-eyebrow">', escapeHtml(preset.eyebrow), '</span><b>AI READY</b></div><p>', escapeHtml(preset.primaryLabel), '</p><strong class="seed-primary-value" role="status" aria-live="polite">', escapeHtml(primary), "</strong><small>", escapeHtml(preset.message), "</small>",
       '<div class="seed-visualizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>',
       '<div class="seed-progress" aria-label="완성도 ', String(preset.meter), '%"><i style="width:', String(preset.meter), '%"></i></div></div>',
       renderPreviewMetrics(preset),
       '<button class="seed-run-button" type="button" data-preview-action="demo"><span aria-hidden="true">', active ? "↻" : "▶", "</span>", escapeHtml(active ? "처음 상태로 되돌리기" : preset.action), "</button>",
-      "</div>"
+      "</div></div>"
     ].join("");
   }
 
@@ -972,6 +978,7 @@
     return [
       '<div class="seed-hardware', active ? " is-running" : "", '">',
       '<div class="seed-hw-banner"><span><i></i> DIGITAL TWIN</span><b>MODI LAB</b><div aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>',
+      '<div class="seed-scene-camera seed-scene-camera-hardware">',
       '<div class="seed-device-flow" aria-label="입력 처리 출력 흐름">',
       '<div><span>INPUT</span><strong>', escapeHtml(preset.input || "센서 입력"), '</strong></div><i aria-hidden="true">→</i>',
       '<div><span>LOGIC</span><strong>', escapeHtml(preset.logic || "조건 처리"), '</strong></div><i aria-hidden="true">→</i>',
@@ -981,7 +988,7 @@
       renderPreviewMetrics(preset),
       '<div class="seed-signal-track" aria-label="샘플 신호 흐름"><span>00:01</span><div aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><b>SYNC</b></div>',
       '<button class="seed-run-button" type="button" data-preview-action="demo"><span aria-hidden="true">', active ? "↻" : "▶", "</span>", escapeHtml(active ? "시뮬레이션 초기화" : preset.action), "</button>",
-      "</div>"
+      "</div></div>"
     ].join("");
   }
 
@@ -991,12 +998,13 @@
     return [
       '<div class="seed-ops', active ? " is-running" : "", '">',
       '<div class="seed-ops-glow" aria-hidden="true"><i></i><i></i><i></i></div>',
+      '<div class="seed-scene-camera seed-scene-camera-ops">',
       '<div class="seed-ops-head"><div><span class="seed-live-dot" aria-hidden="true"></span><b>MODI CONTROL</b><small>SIMULATION</small></div><button type="button" data-preview-action="demo">', escapeHtml(active ? "RESET" : preset.action), "</button></div>",
       '<div class="seed-ops-grid"><div class="seed-rover-panel"><div class="seed-rover-scene" aria-hidden="true"><span class="seed-road-line"></span><div class="seed-rover"><i></i><b>M</b><i></i></div><span class="seed-obstacle"></span></div>',
       '<div class="seed-flow-caption"><span>', escapeHtml(preset.input || "차량 데이터"), '</span><i aria-hidden="true">↔</i><span>', escapeHtml(preset.output || "관제 명령"), "</span></div></div>",
       '<div class="seed-telemetry"><span class="seed-eyebrow">', escapeHtml(preset.eyebrow), '</span><p>', escapeHtml(preset.primaryLabel), '</p><strong class="seed-primary-value" role="status" aria-live="polite">', escapeHtml(primary), '</strong><span class="seed-status">', escapeHtml(status), "</span>", renderPreviewMetrics(preset), "</div></div>",
       '<div class="seed-event-log"><span><i></i> TELEMETRY</span><b>', escapeHtml(preset.logic || "양방향 데이터 흐름"), "</b><small>", escapeHtml(preset.message), '</small><div class="seed-console-chart" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>',
-      "</div>"
+      "</div></div>"
     ].join("");
   }
 
@@ -1017,7 +1025,7 @@
     const artifacts = asList(lesson.studentArtifacts).slice(-2);
     const modeLabel = lesson.projectType === "hw" ? "H/W 디지털 트윈" : lesson.projectType === "webhw" ? "Web + H/W 관제" : "Web 앱";
     return [
-      '<section class="preview-showcase" data-preview-key="', escapeHtml(lessonKey(catalog.level, lesson.no)), '">',
+      '<section class="preview-showcase" data-preview-key="', escapeHtml(lessonKey(catalog.level, lesson.no)), '" data-preview-mode="', escapeHtml(lesson.projectType), '">',
       renderPreviewSourceSwitch("preset", hasGenerated),
       '<div class="preview-heading"><div class="preview-badge-row"><span class="preview-demo-badge">완성 예시</span><span class="preview-mode-badge ', escapeHtml(lesson.projectType), '">', escapeHtml(modeLabel), '</span><span class="preview-preloaded-label">수업 시작 전</span></div><h3 id="presetPreviewTitle">', escapeHtml(preset.product), "</h3><p>", escapeHtml(example.scenario || lesson.summary), "</p></div>",
       '<div class="preview-window preview-window-preset"><div class="preview-bar"><span class="preview-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="preview-address">preview.modiplanet.com · ', String(lesson.no).padStart(2, "0"), '</span><span class="preview-sample-label">샘플 데이터</span></div>',
@@ -1373,6 +1381,48 @@
         : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
     setStudioTab(tabs[next].dataset.studioTab);
     tabs[next].focus();
+  });
+
+  learningStudio.addEventListener("pointermove", (event) => {
+    const stage = event.target.closest(".preview-result-stage");
+    if (!stage
+      || !DEPTH_POINTER_QUERY.matches
+      || REDUCED_MOTION_QUERY.matches) {
+      return;
+    }
+    pendingDepthUpdate = { stage, clientX: event.clientX, clientY: event.clientY };
+    if (previewDepthFrame) {
+      return;
+    }
+    previewDepthFrame = window.requestAnimationFrame(() => {
+      const update = pendingDepthUpdate;
+      pendingDepthUpdate = null;
+      previewDepthFrame = 0;
+      if (!update || !update.stage.isConnected) {
+        return;
+      }
+      const rect = update.stage.getBoundingClientRect();
+      if (!rect.width || !rect.height) {
+        return;
+      }
+      const x = Math.max(0, Math.min(1, (update.clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (update.clientY - rect.top) / rect.height));
+      update.stage.style.setProperty("--depth-rotate-x", ((0.5 - y) * 7).toFixed(2) + "deg");
+      update.stage.style.setProperty("--depth-rotate-y", ((x - 0.5) * 9).toFixed(2) + "deg");
+      update.stage.style.setProperty("--depth-shine-x", (x * 100).toFixed(1) + "%");
+      update.stage.style.setProperty("--depth-shine-y", (y * 100).toFixed(1) + "%");
+    });
+  });
+
+  learningStudio.addEventListener("pointerout", (event) => {
+    const stage = event.target.closest(".preview-result-stage");
+    if (!stage || stage.contains(event.relatedTarget)) {
+      return;
+    }
+    if (pendingDepthUpdate && pendingDepthUpdate.stage === stage) {
+      pendingDepthUpdate = null;
+    }
+    ["--depth-rotate-x", "--depth-rotate-y", "--depth-shine-x", "--depth-shine-y"].forEach((property) => stage.style.removeProperty(property));
   });
 
   learningStudio.addEventListener("keydown", (event) => {

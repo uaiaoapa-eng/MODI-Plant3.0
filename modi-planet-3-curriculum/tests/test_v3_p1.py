@@ -293,13 +293,22 @@ def test_lms_preview_seeds_polished_results_before_generation(client):
     assert 'state.files = event.generated_code' in script
     assert 'data-preview-source="preset"' in script
     assert 'data-preview-action="demo"' in script
+    assert 'data-preview-mode="' in script
+    assert "seed-scene-camera" in script
     assert "샘플 시뮬레이션" in script
+    assert 'learningStudio.addEventListener("pointermove"' in script
+    assert '"--depth-rotate-x"' in script
 
     assert ".preview-showcase" in styles
     assert ".preview-demo-badge" in styles
     assert ".preview-window-generated iframe" in styles
     assert "container-type: inline-size" in styles
     assert "min-height: 44px" in styles
+    assert "perspective: 1050px" in styles
+    assert "transform-style: preserve-3d" in styles
+    assert ".seed-modi-core::before" in styles
+    assert ".seed-rover::before" in styles
+    assert "prefers-reduced-motion: reduce" in styles
 
 
 def test_create_page_bundles_the_official_example_catalog(client):
