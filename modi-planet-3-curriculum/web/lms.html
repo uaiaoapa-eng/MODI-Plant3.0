@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ff4547">
+    <meta name="description" content="2022 개정 교육과정과 연계한 MODI Planet Web·하드웨어 프로젝트 수업 27차시">
+    <title>교육과정 · MODI Planet</title>
+    <link rel="icon" href="/static/assets/brand/favicon.ico">
+    <link rel="stylesheet" href="/static/lms.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#lmsMain">본문으로 바로가기</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="official-logo" href="/" aria-label="MODI Planet 홈">
+          <img src="/static/assets/brand/logo.svg" alt="MODI Planet">
+        </a>
+        <nav class="site-nav" aria-label="주요 메뉴">
+          <a href="/">홈</a>
+          <a class="active" href="/lms" aria-current="page">교육과정</a>
+          <a href="/#create">AI LAB</a>
+        </nav>
+        <button class="mobile-course-button" id="mobileCourseButton" type="button">과정 선택</button>
+      </div>
+    </header>
+
+    <main id="lmsMain" tabindex="-1">
+      <div id="appLoading" class="app-loading" role="status">
+        <span class="loader" aria-hidden="true"></span>
+        <strong>교육과정을 불러오고 있어요</strong>
+      </div>
+    </main>
+
+    <dialog class="plan-dialog" id="planDialog" aria-labelledby="planTitle">
+      <div class="dialog-shell">
+        <header class="dialog-header">
+          <div>
+            <p class="dialog-kicker" id="planKicker"></p>
+            <h2 id="planTitle"></h2>
+          </div>
+          <button class="icon-button" id="closePlanButton" type="button" aria-label="교안 닫기">×</button>
+        </header>
+        <div class="dialog-body" id="planBody"></div>
+        <footer class="dialog-footer">
+          <button class="secondary-button" id="closePlanFooterButton" type="button">닫기</button>
+          <button class="primary-button" id="startFromPlanButton" type="button">이 차시 수업 시작</button>
+        </footer>
+      </div>
+    </dialog>
+
+    <section class="lesson-player" id="lessonPlayer" aria-hidden="true">
+      <header class="player-header">
+        <button class="player-exit" id="exitLessonButton" type="button" aria-label="수업 나가기">
+          <span aria-hidden="true">←</span><span>과정으로</span>
+        </button>
+        <div class="player-title-wrap">
+          <p id="playerMeta"></p>
+          <h1 id="playerTitle"></h1>
+        </div>
+        <div class="player-tools">
+          <div class="phase-track" id="phaseTrack" aria-label="수업 단계"></div>
+          <span class="class-timer" id="classTimer">00:00</span>
+          <button class="teacher-toggle" id="teacherToggle" type="button" aria-pressed="false">교사 노트</button>
+        </div>
+      </header>
+
+      <div class="player-layout">
+        <aside class="slide-rail" id="slideRail" aria-label="차시 진행 순서"></aside>
+
+        <section class="slide-stage" aria-label="수업 슬라이드">
+          <div class="slide-card" id="slideCard"></div>
+          <aside class="teacher-note" id="teacherNote" aria-live="polite"></aside>
+          <nav class="slide-controls" aria-label="슬라이드 이동">
+            <button class="secondary-button" id="previousSlideButton" type="button">이전</button>
+            <div class="slide-progress-wrap">
+              <div class="slide-progress" id="slideProgress"><span></span></div>
+              <span id="slideCounter"></span>
+            </div>
+            <button class="primary-button" id="nextSlideButton" type="button">다음</button>
+          </nav>
+        </section>
+
+        <aside class="learning-studio" aria-label="활동 작업실">
+          <div class="studio-tabs" role="tablist" aria-label="작업실 탭">
+            <button class="active" type="button" role="tab" data-studio-tab="activity" aria-selected="true">활동</button>
+            <button type="button" role="tab" data-studio-tab="preview" aria-selected="false">미리보기</button>
+            <button type="button" role="tab" data-studio-tab="modi" aria-selected="false">MODI</button>
+          </div>
+          <div class="studio-body" id="studioBody"></div>
+          <form class="tutor-composer" id="tutorForm">
+            <label class="sr-only" for="tutorInput">AI 튜터에게 입력</label>
+            <textarea id="tutorInput" rows="2" placeholder="수업 활동을 AI에게 구체적으로 말해보세요"></textarea>
+            <button type="submit" aria-label="메시지 보내기">↑</button>
+          </form>
+        </aside>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/static/lms.js" defer></script>
+  </body>
+</html>

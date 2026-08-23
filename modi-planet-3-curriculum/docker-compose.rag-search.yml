@@ -1,0 +1,33 @@
+# 하이브리드 검색(벡터+부분일치) 온프렘 배포.
+#
+#   docker compose -f docker-compose.rag-search.yml up --build -d
+#   → http://<서버IP>:8100   (검색 / 도출 / 커버리지 탭)
+#
+# 임계값은 .env(deploy/.env.example 참고) 또는 아래 environment 로 조정.
+# data/ 를 볼륨 마운트하면 이미지에 구운 임베딩 대신 호스트 캐시를 재사용한다.
+
+services:
+  rag-search:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag-search
+    image: edu-agent-rag-search:latest
+    container_name: edu-agent-rag-search
+    ports:
+      - "${PORT:-8100}:8100"
+    environment:
+      TAU_REUSE: "${TAU_REUSE:-0.62}"   # ≥ → 재사용(가져오기)
+      TAU_NEAR: "${TAU_NEAR:-0.48}"     # ≥ → 근접(검수), 미만 → 등록 후보
+      W_VEC: "${W_VEC:-0.4}"            # 하이브리드 가중치(청크 벡터)
+      W_LEX: "${W_LEX:-0.15}"           # 하이브리드 가중치(어휘)
+      W_CONCEPT: "${W_CONCEPT:-0.45}"   # 하이브리드 가중치(개념 centroid)
+    volumes:
+      - ./data:/app/data                # 임베딩/DB 캐시(호스트 재사용·영속)
+      - ./projects:/app/projects:ro     # 세션 데이터(읽기전용)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8100/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped

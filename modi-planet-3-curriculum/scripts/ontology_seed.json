@@ -1,0 +1,1032 @@
+{
+  "_comment": "교육팀 검수 대상 개념 어휘(온톨로지 시드). aliases=학습노트 제목/질문을 개념에 매칭하는 한국어 키워드(부분일치). prerequisite=선수학습 개념 key. axes=적용 coding_type.",
+  "concepts": [
+    {
+      "key": "variable",
+      "label": "변수 (값 기억)",
+      "axes": [
+        "blockly",
+        "hybrid",
+        "react"
+      ],
+      "prerequisite": [],
+      "aliases": [
+        "메모지",
+        "마법 상자",
+        "비밀 상자",
+        "담아두는",
+        "적어두는",
+        "메모장",
+        "변수",
+        "값을 잠깐",
+        "숫자를 담",
+        "선택지 저장"
+      ]
+    },
+    {
+      "key": "loop",
+      "label": "반복 (계속 실행)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "쉬지 않고",
+        "계속 살펴보",
+        "계속 지켜보",
+        "무한 반복",
+        "무한반복",
+        "쳇바퀴",
+        "계속 도는",
+        "반복문",
+        "반복의 힘",
+        "계속 확인",
+        "계속 살피",
+        "끊임없이",
+        "매 순간",
+        "잠들지 않",
+        "쉬지 않는"
+      ]
+    },
+    {
+      "key": "conditional",
+      "label": "조건 (만약에)",
+      "axes": [
+        "blockly",
+        "hybrid",
+        "react"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "만약에",
+        "갈림길",
+        "조건에 따라",
+        "라면 이렇게",
+        "상황에 따라 다르게",
+        "둘 중 하나",
+        "선택하기",
+        "판단",
+        "이럴 땐 이렇게"
+      ]
+    },
+    {
+      "key": "while_until",
+      "label": "조건까지 반복 (UNTIL)",
+      "axes": [
+        "blockly"
+      ],
+      "prerequisite": [
+        "loop",
+        "conditional"
+      ],
+      "aliases": [
+        "until",
+        "때까지",
+        "기준을 넘는 동안",
+        "만족될 때까지",
+        "멈추지 않는 끈기",
+        "동안 계속"
+      ]
+    },
+    {
+      "key": "sequence",
+      "label": "순차 실행 (순서대로)",
+      "axes": [
+        "blockly"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "순서대로",
+        "여러 일을 순서",
+        "척척"
+      ]
+    },
+    {
+      "key": "priority",
+      "label": "우선순위 (급한 일 먼저)",
+      "axes": [
+        "blockly"
+      ],
+      "prerequisite": [
+        "conditional",
+        "sequence"
+      ],
+      "aliases": [
+        "우선순위",
+        "급한 일부터",
+        "1순위",
+        "안전이 1",
+        "순서대로 따지",
+        "판단의 사다리",
+        "겹겹이 쌓인"
+      ]
+    },
+    {
+      "key": "threshold",
+      "label": "기준선 (임계값)",
+      "axes": [
+        "blockly"
+      ],
+      "prerequisite": [
+        "conditional"
+      ],
+      "aliases": [
+        "기준선",
+        "기준을 정",
+        "넘었는지",
+        "눈금자",
+        "기준을 넘"
+      ]
+    },
+    {
+      "key": "timing",
+      "label": "타이밍/딜레이",
+      "axes": [
+        "blockly"
+      ],
+      "prerequisite": [
+        "sequence"
+      ],
+      "aliases": [
+        "잠깐 멈추",
+        "시간을 정해두고",
+        "0.5초",
+        "0.05초",
+        "타이밍",
+        "음미하는"
+      ]
+    },
+    {
+      "key": "cleanup",
+      "label": "마무리 (끄기/정리)",
+      "axes": [
+        "blockly"
+      ],
+      "prerequisite": [
+        "sequence"
+      ],
+      "aliases": [
+        "켰으면",
+        "꺼주는",
+        "끄는 것도",
+        "깔끔하게 원래",
+        "마무리",
+        "반드시 끄",
+        "끄는 한 줄"
+      ]
+    },
+    {
+      "key": "randomness",
+      "label": "무작위 (랜덤)",
+      "axes": [
+        "blockly",
+        "hybrid",
+        "react"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "랜덤",
+        "주사위",
+        "매번 다른 숫자",
+        "매번 다른 색",
+        "매번 다른 곳",
+        "예측할 수 없",
+        "무지개 테두리"
+      ]
+    },
+    {
+      "key": "button_input",
+      "label": "버튼 입력",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "conditional"
+      ],
+      "aliases": [
+        "버튼 누르",
+        "버튼을 누르",
+        "버튼 눌림",
+        "눌렀을 때",
+        "뗐을 때",
+        "한 번 누르면",
+        "누르고 있는 동안"
+      ]
+    },
+    {
+      "key": "dial_input",
+      "label": "다이얼 (연속값 입력)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "다이얼",
+        "손가락 돌리기",
+        "값을 직접 조절",
+        "손잡이 하나로 속도",
+        "연속 값",
+        "돌리는",
+        "돌려서",
+        "손잡이로",
+        "돌려 숫자",
+        "빙글빙글 돌"
+      ]
+    },
+    {
+      "key": "joystick_input",
+      "label": "조이스틱 입력",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "conditional"
+      ],
+      "aliases": [
+        "조이스틱",
+        "사방으로 밀",
+        "손짓을 숫자로",
+        "까딱이"
+      ]
+    },
+    {
+      "key": "imu_shake",
+      "label": "기울기/흔들림 (IMU)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "threshold"
+      ],
+      "aliases": [
+        "흔들면",
+        "흔들림",
+        "기울기",
+        "기울인 만큼",
+        "세게 흔들",
+        "균형 감각",
+        "빙글빙글"
+      ]
+    },
+    {
+      "key": "distance_sensing",
+      "label": "거리 감지 (ToF)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "loop",
+        "threshold"
+      ],
+      "aliases": [
+        "초음파",
+        "거리 재",
+        "거리를 재",
+        "더듬이",
+        "앞을 보고",
+        "벽을 보고",
+        "거리를 읽",
+        "손의 거리",
+        "가까우면",
+        "보이지 않는 자",
+        "자동차의 눈",
+        "로봇 눈",
+        "센서로 앞",
+        "장애물",
+        "멈추게",
+        "스스로 멈",
+        "부딪히",
+        "정지",
+        "알아서 서"
+      ]
+    },
+    {
+      "key": "env_sensor",
+      "label": "환경 감지 (밝기/온도/습도)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "loop",
+        "threshold"
+      ],
+      "aliases": [
+        "온도가",
+        "더우면",
+        "밝기를 느끼",
+        "어두우면",
+        "온도와 빛",
+        "흙의 목마름",
+        "흙을 지켜보",
+        "촉촉한지",
+        "메마른지",
+        "밝으면",
+        "화분을 지켜",
+        "깜깜",
+        "캄캄",
+        "어두워지",
+        "빛이 없으면",
+        "밝아지면"
+      ]
+    },
+    {
+      "key": "motor_drive",
+      "label": "차동 구동 (두 바퀴 조향)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "두 바퀴",
+        "바퀴 두 개",
+        "방향을 바꾸",
+        "방향을 트",
+        "제자리에서 방향",
+        "빙글 도는",
+        "쌍둥이 바퀴",
+        "운전 기술",
+        "차를 빙글"
+      ]
+    },
+    {
+      "key": "motor_speed",
+      "label": "모터 속도 제어",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "dial_input",
+        "motor_drive"
+      ],
+      "aliases": [
+        "서보",
+        "서보모터",
+        "얼마나 빨리",
+        "속도를 정",
+        "빠르게 도는",
+        "속도 조절",
+        "마이너스 비밀",
+        "거꾸로"
+      ]
+    },
+    {
+      "key": "led_output",
+      "label": "LED 출력 (빛/색)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "conditional"
+      ],
+      "aliases": [
+        "led",
+        "엘이디",
+        "깜빡이",
+        "빨간불",
+        "초록 불",
+        "깜빡임",
+        "rgb led",
+        "빛으로 색",
+        "삼원색",
+        "켰다 껐다",
+        "불 켜"
+      ]
+    },
+    {
+      "key": "speaker_output",
+      "label": "스피커 출력 (소리)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "conditional"
+      ],
+      "aliases": [
+        "부저",
+        "알람",
+        "소리로 알리",
+        "노래가 나오",
+        "음악 신호",
+        "소리를 켜",
+        "짧은 소리",
+        "한 음과 여러 음",
+        "소리로 알"
+      ]
+    },
+    {
+      "key": "display_output",
+      "label": "디스플레이 출력 (글자/숫자)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "글자로",
+        "화면에 보여주",
+        "숫자도 보여주",
+        "작은 창",
+        "지금 상태를 글자",
+        "또렷하게 말"
+      ]
+    },
+    {
+      "key": "multi_actuator",
+      "label": "다중 부품 동시 제어",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "led_output",
+        "speaker_output"
+      ],
+      "aliases": [
+        "여러 부품이 함께",
+        "한 팀으로",
+        "하나의 신호로 여러",
+        "한꺼번에 반응",
+        "한꺼번에 움직",
+        "한 팀",
+        "여러 부품",
+        "다재다능",
+        "여러 개의 반응"
+      ]
+    },
+    {
+      "key": "sensor_fusion",
+      "label": "다중 센서 융합",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "distance_sensing",
+        "env_sensor"
+      ],
+      "aliases": [
+        "여러 눈과 귀",
+        "여러 개의 감각",
+        "여러 감각",
+        "감각기관",
+        "세상을 보고 듣"
+      ]
+    },
+    {
+      "key": "state",
+      "label": "상태 (state)",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "기억하는 비밀",
+        "행동을 기억",
+        "기억력을",
+        "state",
+        "상태(state)",
+        "점수를 기억",
+        "지금 값을 계속 기억",
+        "기억하는 법",
+        "기록이 남"
+      ]
+    },
+    {
+      "key": "component_reuse",
+      "label": "컴포넌트 재사용",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "카드를 100개",
+        "카드 100개",
+        "100개",
+        "수십 개",
+        "똑같이 만",
+        "똑같은 카드",
+        "여러 곳에 재사용",
+        "레고 블록",
+        "조각으로 나눠",
+        "조립하는",
+        "일일이 안 만",
+        "만능 카드",
+        "찍어내는 틀",
+        "블록처럼 쪼개",
+        "여러 개 만"
+      ]
+    },
+    {
+      "key": "props",
+      "label": "props (부품 간 값 전달)",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "component_reuse"
+      ],
+      "aliases": [
+        "정보를 건네",
+        "택배",
+        "도장에 내용물",
+        "내용만 바꿔",
+        "내용물을 끼워",
+        "같은 틀에"
+      ]
+    },
+    {
+      "key": "child_parent_event",
+      "label": "자식→부모 이벤트",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "props"
+      ],
+      "aliases": [
+        "자식이 부모",
+        "나 눌렸어요",
+        "부모에게"
+      ]
+    },
+    {
+      "key": "list_render",
+      "label": "리스트 렌더링",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "component_reuse"
+      ],
+      "aliases": [
+        "목록을 자동",
+        "줄줄이",
+        "칸을 자동으로",
+        "똑같이 생긴 칸"
+      ]
+    },
+    {
+      "key": "conditional_render",
+      "label": "조건부 렌더링",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "state",
+        "conditional"
+      ],
+      "aliases": [
+        "조건에 따라 다른 모습",
+        "다른 모습 보여",
+        "무지개 테두리가 생기는 조건",
+        "새 소식이 있는",
+        "상태에 따라 색",
+        "오르면 초록"
+      ]
+    },
+    {
+      "key": "event_handling",
+      "label": "이벤트 처리 (입력)",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "키보드와 손가락",
+        "마우스를 올리",
+        "손가락으로 쓸어",
+        "쓸어서 움직",
+        "둘 다 통하",
+        "알아듣는 귀"
+      ]
+    },
+    {
+      "key": "hover_effect",
+      "label": "호버 효과",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "event_handling"
+      ],
+      "aliases": [
+        "마우스를 올리면 살짝",
+        "살짝 반응"
+      ]
+    },
+    {
+      "key": "screen_transition",
+      "label": "화면 전환",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "state",
+        "conditional"
+      ],
+      "aliases": [
+        "화면 전체가 갈아",
+        "화면이 싹 바뀌",
+        "화면 전체가 갈아끼",
+        "시작 전",
+        "여행 중",
+        "변신하는 비밀",
+        "화면이 갈아"
+      ]
+    },
+    {
+      "key": "number_format",
+      "label": "숫자 포맷팅",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "1,284",
+        "1284",
+        "옷 입히기",
+        "보기 좋게"
+      ]
+    },
+    {
+      "key": "data_aggregation",
+      "label": "데이터 집계 (합계)",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "합계",
+        "자동으로 모아",
+        "알아서 더",
+        "계산기"
+      ]
+    },
+    {
+      "key": "bar_chart",
+      "label": "막대 그래프",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "data_aggregation",
+        "list_render"
+      ],
+      "aliases": [
+        "막대 높이",
+        "막대 그래프",
+        "한눈에 비교",
+        "그래프 길이"
+      ]
+    },
+    {
+      "key": "sticky_header",
+      "label": "고정 헤더 (sticky)",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "component_reuse"
+      ],
+      "aliases": [
+        "따라다니는 마법",
+        "메뉴가 따라",
+        "상단바가 안",
+        "안 사라지는",
+        "메뉴와 상단바"
+      ]
+    },
+    {
+      "key": "separation_concerns",
+      "label": "관심사 분리",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "component_reuse"
+      ],
+      "aliases": [
+        "내용물과 디자인을 따로",
+        "따로 보관",
+        "정리 정돈"
+      ]
+    },
+    {
+      "key": "persistence",
+      "label": "영속 저장 (기록 보존)",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "껐다 켜도",
+        "최고 기록이 남",
+        "명예의 전당",
+        "최고 기록을 기억"
+      ]
+    },
+    {
+      "key": "timer",
+      "label": "타이머 (시간 감소)",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "시간이 알아서 줄",
+        "줄어드는 비밀"
+      ]
+    },
+    {
+      "key": "spawner",
+      "label": "생성기 (계속 생성)",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "randomness",
+        "timer"
+      ],
+      "aliases": [
+        "튀어나오는",
+        "계속 떨어지는",
+        "계속 만들어내",
+        "노트를 계속",
+        "운석이",
+        "두더지가",
+        "새 타일"
+      ]
+    },
+    {
+      "key": "collision",
+      "label": "충돌 감지",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "부딪혔는지",
+        "가장 가까운 노트를 콕",
+        "충돌"
+      ]
+    },
+    {
+      "key": "game_over",
+      "label": "게임 종료 판정",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "conditional",
+        "state"
+      ],
+      "aliases": [
+        "게임이 끝났는지",
+        "끝났는지 매번",
+        "끝났는지 미리"
+      ]
+    },
+    {
+      "key": "merge_rule",
+      "label": "합치기 규칙 (2048)",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "같은 숫자를 합",
+        "줄이 정리되는",
+        "방향키 한 번에"
+      ]
+    },
+    {
+      "key": "game_clock",
+      "label": "게임 루프/박자",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "timer"
+      ],
+      "aliases": [
+        "일정한 박자",
+        "1초에 수십 번",
+        "박자로 노트"
+      ]
+    },
+    {
+      "key": "render_optimization",
+      "label": "렌더 최적화",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "conditional_render",
+        "game_clock"
+      ],
+      "aliases": [
+        "꼭 필요할 때만",
+        "새로 그리는 절약",
+        "자주 안 바꿔도",
+        "다시 그려지는 비밀",
+        "너무 자주 안"
+      ]
+    },
+    {
+      "key": "frame_independence",
+      "label": "프레임 독립 (속도 일정)",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "game_clock"
+      ],
+      "aliases": [
+        "느린 폰에서도",
+        "느린 컴퓨터에서도",
+        "똑같은 속도로",
+        "똑같은 속도"
+      ]
+    },
+    {
+      "key": "debounce",
+      "label": "디바운스 (떨림 무시)",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "threshold"
+      ],
+      "aliases": [
+        "살짝 떨림은 무시",
+        "손가락 살짝 떨림",
+        "똑똑한 조종기"
+      ]
+    },
+    {
+      "key": "color_encoding",
+      "label": "색 인코딩 (RGB/HSL)",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "색깔도 사실",
+        "색을 숫자",
+        "hsl",
+        "hex",
+        "rgb",
+        "명도와 채도",
+        "보색",
+        "배색",
+        "빛은 더하면",
+        "삼원색 섞"
+      ]
+    },
+    {
+      "key": "camera_permission",
+      "label": "카메라 권한",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "state"
+      ],
+      "aliases": [
+        "카메라를 켜려면",
+        "먼저 허락"
+      ]
+    },
+    {
+      "key": "video_frames",
+      "label": "영상=프레임 원리",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "timer"
+      ],
+      "aliases": [
+        "영상은 사실",
+        "빠르게 넘기는 그림책"
+      ]
+    },
+    {
+      "key": "image_processing",
+      "label": "이미지 처리",
+      "axes": [
+        "react"
+      ],
+      "prerequisite": [
+        "color_encoding"
+      ],
+      "aliases": [
+        "모자이크",
+        "흑백 사진",
+        "평균이 아닐까",
+        "사진으로 저장",
+        "순간을 사진"
+      ]
+    },
+    {
+      "key": "sound_input",
+      "label": "소리 감지 (마이크)",
+      "axes": [
+        "blockly",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "loop",
+        "threshold"
+      ],
+      "aliases": [
+        "소리 크기",
+        "소리에 반응",
+        "마이크",
+        "박수",
+        "시끄러우면",
+        "소리를 들",
+        "소리 감지",
+        "큰 소리"
+      ]
+    },
+    {
+      "key": "score_display",
+      "label": "점수/화면 표시 (UI)",
+      "axes": [
+        "react",
+        "hybrid"
+      ],
+      "prerequisite": [
+        "variable"
+      ],
+      "aliases": [
+        "점수를 표시",
+        "점수판",
+        "화면에 점수",
+        "스코어",
+        "화면에 글자",
+        "화면에 보여",
+        "점수 화면"
+      ]
+    }
+  ]
+}

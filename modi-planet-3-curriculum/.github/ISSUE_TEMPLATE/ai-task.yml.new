@@ -1,0 +1,91 @@
+name: "AI 구현 작업 (AI Implementation Task)"
+description: "AI 에이전트에게 위임할 구현 단위 작업. 세션 1개에서 끝나는 크기로 쪼갤 것."
+title: "[Task] "
+labels: ["ai-task"]
+# 이슈 타입은 organization 리포 전용 — 개인 리포에서는 무시됨.
+# 담당자는 폼에서 동적 지정이 불가하므로(고정 로그인만 가능) 등록 후 직접 할당하거나 /spec 경로를 사용.
+# 이 폼의 섹션 구조는 /spec이 생성하는 이슈 본문(.claude/commands/spec.md 4-2)과 짝이다.
+# 한쪽 구조를 바꾸면 반드시 다른 쪽도 함께 수정할 것.
+# 제목 규칙: /spec 경로는 "[Task][<슬러그> <순번>/<전체>] <제목>"로 기능 내 순번을 박는다.
+#   수동 등록 시에도 같은 기능의 형제 이슈가 있으면 이 형식을 따라 제목을 직접 채운다
+#   (폼은 총 개수를 알 수 없어 자동 계산 불가 — 아래 title 기본값은 힌트일 뿐).
+type: "Task"
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: "목표 (Goal)"
+      description: "왜 하는지 한 문단. 구현 중 판단이 갈릴 때 이 문단이 기준이 된다."
+      placeholder: "예: 토큰 만료 시 사용자가 재로그인 없이 세션을 이어가도록 refresh 토큰 갱신 로직을 추가한다."
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: "하지 말 것 (Non-goals)"
+      description: "이번 작업 범위가 아닌 것, 건드리면 안 되는 파일/모듈. scope creep 방지의 핵심."
+      placeholder: |
+        - 기존 로그인 플로우 리팩토링 금지
+        - src/legacy/ 이하 수정 금지
+        - 에러 페이지 UI 변경은 이번 범위 아님
+    validations:
+      required: true
+
+  - type: textarea
+    id: anchors
+    attributes:
+      label: "코드 앵커 (Code Anchors)"
+      description: "수정/참조할 정확한 위치. 파일 경로 + 함수명 + 가능하면 라인. '~근처에' 같은 표현 금지."
+      placeholder: |
+        - 수정: src/api/auth.py:42 `refresh_token()`
+        - 참조: src/models/session.py `Session` 모델
+        - 테스트 추가: tests/test_auth.py
+    validations:
+      required: true
+
+  - type: textarea
+    id: interface
+    attributes:
+      label: "인터페이스 계약 (Interface Contract)"
+      description: "API 시그니처, 타입, 요청/응답 스키마를 산문이 아니라 코드/JSON으로 명시."
+      placeholder: |
+        def refresh_token(refresh: str) -> TokenPair:
+            """만료 5분 전부터 갱신 허용. 유효하지 않으면 AuthError(401)."""
+
+        POST /api/auth/refresh
+        -> 200 {"access": "...", "refresh": "...", "expires_in": 3600}
+        -> 401 {"error": "invalid_refresh_token"}
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "완료 기준 + 검증 명령어 (Acceptance Criteria)"
+      description: "AI가 스스로 실행해서 통과를 확인할 수 있는 구체적 명령어. '잘 동작해야 함' 금지. 명령어로 검증 불가능한 항목(UI 확인 등)은 `- [ ] (수동) ...`로 표기 — 리뷰 때 사람 확인 항목으로 넘어간다."
+      placeholder: |
+        - [ ] `pytest tests/test_auth.py -k refresh` 전부 통과
+        - [ ] 만료된 refresh 토큰으로 요청 시 401 반환
+        - [ ] 기존 테스트 전체 통과: `pytest`
+        - [ ] (수동) 로그인 화면에서 토큰 만료 후에도 세션 유지 확인
+    validations:
+      required: true
+
+  - type: textarea
+    id: edge-cases
+    attributes:
+      label: "엣지 케이스 (Edge Cases)"
+      description: "설계 단계에서 이미 결정한 예외 상황 처리. 안 쓰면 AI가 임의로 정한다. 되돌리기 비싼 변경(마이그레이션 등)이면 롤백 방법도 여기에."
+      placeholder: |
+        - refresh 토큰이 이미 사용된 경우 -> 재사용 감지, 세션 전체 무효화
+        - 동시에 두 요청이 갱신 시도 -> 먼저 온 것만 성공, 나머지는 새 토큰 반환
+        - 롤백: 마이그레이션 실패 시 `alembic downgrade -1` 후 이전 버전 재배포
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "의존성 (Dependencies)"
+      description: "선행 이슈, 관련 설계문서 링크. UI full 티어 이슈면 승인 시안 링크도 여기에 — 코드 앵커에 넣지 말 것 (시안은 참조 전용, 수정 대상 아님)."
+      placeholder: |
+        - 선행: #12 (머지 후 시작)
+        - 설계문서: docs/design/auth-refresh.md
+        - 승인 시안: .design/auth-refresh/v3.html (참조 전용 — 수정 금지. UI full 티어 이슈만)

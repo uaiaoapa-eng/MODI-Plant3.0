@@ -1,0 +1,44 @@
+{
+  "slug": "cost-rag-ontology-report-2026-07",
+  "title": "edu-agent 비용절감·RAG·온톨로지 구축 검증 보고서",
+  "kind": "report",
+  "status": "review",
+  "created": "2026-07-08",
+  "direction": "restraint guardrail — 문서형 편집 레이아웃, 단일 액센트(#1d4ed8), 이모지·장식 배제, 인라인 SVG 다이어그램 2점",
+  "source_verification": {
+    "mode": "sufficient-source (full fidelity)",
+    "verified_facts": [
+      "모델 단일 Haiku 4.5 — agent/llm_config.py:6",
+      "출력 비용 지배 5.6x — agent/orchestrator_stream.py:65-66",
+      "TAU_REUSE 0.62 / TAU_NEAR 0.48, W_VEC .40/W_LEX .15/W_CONCEPT .45 — scripts/search_lib.py:30-39,249-254",
+      "DIRECT_SERVE 기본 ON, MIN_SCORE 90, 검증입력 상한 — agent/direct_serve.py:33-45,112",
+      "REUSE_SEED_EDIT 기본 OFF — agent/prime_service.py:33",
+      "D3 실측 COLD 1199 / REUSE_OFF 973 / forced-edit 2408 tok — 이슈 #84",
+      "직접서브 만족도: 델타없음 95-100, 델타 15-20, 무관 0 — 이슈 #84",
+      "write-back 폐루프 — server.py:520-559, 백필 165건",
+      "테스트 427 passed / 3 skipped (2026-07-08 직접 실행), flaky 1건 test_code_retry",
+      "열린 이슈 #73 #80 #81 — gh issue list로 확인"
+    ]
+  },
+  "versions": [
+    {
+      "file": "v1.html",
+      "date": "2026-07-08",
+      "note": "초판 — 6개 섹션: ①비용절감 근거·시점 ②AS-IS/TO-BE ③아키텍처 변경이력 ④RAG·온톨로지 상세 ⑤안정성·테스트 ⑥로드맵"
+    },
+    {
+      "file": "v2.html",
+      "date": "2026-07-08",
+      "note": "사용자 피드백 반영 — 목차·용어집(델타 등 20개 용어), 왜 RAG/왜 온톨로지(관계 5종 실데이터), 3중 유사도 수식+계산 시연, 데이터 축적 전략(150~200 목표·하이브리드 공급·카테고리), Summary 전체 관계도. 추가 검증: search_lib.py 수식 원문, ontology_seed.json 51개념·alias, build_ontology.py 관계 5종"
+    },
+    {
+      "file": "v3.html",
+      "date": "2026-07-08",
+      "note": "§13 실전 미발동 진단(배포 서버 라이브 실측: simulate top1 0.623/none, top5 code 0건, 코퍼스 2,727건, coverage 착시) + W9 조치안 · §14 온톨로지 심화(노드 70/엣지 1,958 실측, 행동 노드 부재와 확장 5안) · §15 비용 예상(검증된 계산기 모델 기반 시나리오 라인차트, 팔레트 validator PASS) · 차트 4점 추가"
+    }
+  ],
+  "related_docs": [
+    "docs/design/progress-report-cost-rag-2026-07.md",
+    "docs/design/sonnet-work-orders-2026-07.md"
+  ]
+}

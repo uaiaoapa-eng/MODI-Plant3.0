@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이슈 #1 시안 — README.md 렌더링 미리보기</title>
+<style>
+  :root{
+    --primary:#2563eb;          /* 액션/링크 강조 (파랑은 액션에만) */
+    --ink:#1f2328; --muted:#656d76; --line:#d0d7de; --bg:#ffffff;
+    --soft:#f6f8fa; --soft2:#eef1f4;
+    --green:#1a7f37; --green-bd:#86efac; --yellow-bd:#fcd34d;
+    --code:#0a3069; --node-line:#a8b3c0;
+    --core:#eef5ff; --core-bd:#bcd4ff; --ext:#f3f0ff; --ext-bd:#d8cdf5;
+    --srv:#fff7ed; --srv-bd:#f6c993;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--soft);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",
+    "Malgun Gothic",Helvetica,Arial,sans-serif;line-height:1.6;font-size:16px;}
+  .page{max-width:1000px;margin:24px auto;background:var(--bg);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .ghbar{display:flex;align-items:center;gap:8px;padding:10px 18px;border-bottom:1px solid var(--line);
+    background:var(--soft);font-size:13px;color:var(--muted);}
+  .ghbar .dot{width:11px;height:11px;border-radius:50%;background:#e5e7eb;}
+  .ghbar .file{margin-left:8px;font-weight:600;color:var(--ink);}
+  .ghbar .tag{margin-left:auto;font-size:11px;border:1px solid var(--line);border-radius:999px;
+    padding:2px 10px;background:#fff;}
+  .md{padding:28px 40px 48px;}
+  .md h1{font-size:30px;border-bottom:1px solid var(--line);padding-bottom:.3em;margin:.2em 0 .6em;}
+  .md h2{font-size:22px;border-bottom:1px solid var(--line);padding-bottom:.3em;margin:1.8em 0 .8em;}
+  .md h3{font-size:17px;margin:1.4em 0 .5em;}
+  .lead{color:var(--muted);font-size:16px;}
+  .md a{color:var(--primary);text-decoration:none;}
+  .md code{background:var(--soft2);padding:.15em .4em;border-radius:6px;font-size:85%;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--code);}
+  .md pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    overflow:auto;font-size:13px;line-height:1.5;}
+  .md pre code{background:none;padding:0;color:#0d1117;}
+  table{border-collapse:collapse;width:100%;margin:.4em 0 1em;font-size:14px;}
+  th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top;}
+  th{background:var(--soft);}
+  td code,th code{font-size:90%;}
+  ul{padding-left:1.3em;}
+  .pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;
+    border:1px solid var(--line);background:#fff;color:var(--muted);}
+  .diagram{border:1px solid var(--line);border-radius:8px;background:#fff;padding:8px;margin:.6em 0 1.2em;}
+  .diagram .cap{font-size:11.5px;color:var(--muted);padding:4px 8px;border-bottom:1px dashed var(--line);
+    margin-bottom:6px;display:flex;gap:8px;align-items:center;}
+  .diagram .cap .mm{font-family:ui-monospace,monospace;background:var(--soft2);border-radius:5px;padding:1px 7px;color:#6e40c9;}
+  svg{display:block;width:100%;height:auto;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:.2em 0 0;padding:6px 8px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .sw{width:22px;height:13px;border-radius:3px;display:inline-block;}
+  .note{background:#fff8e6;border:1px solid var(--yellow-bd);border-radius:8px;padding:10px 14px;font-size:13.5px;color:#7a5b00;}
+  .openq{background:#f6f8fa;border-left:4px solid var(--primary);border-radius:6px;padding:10px 16px;font-size:14px;}
+  text{font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="ghbar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="file">README.md</span>
+    <span style="color:var(--muted)">— 렌더링 미리보기 시안 (이슈 #1)</span>
+    <span class="tag">자체완결 · 외부 의존 0</span>
+  </div>
+
+  <div class="md">
+    <h1>교육용 바이브코딩 에이전트 <span style="font-size:18px;color:var(--muted)">(edu-agent)</span></h1>
+    <p class="lead">만들고 싶은 것을 <b>한국어로 말하면</b>, AI 에이전트가 함께 <b>설계</b>하고
+      <b>코드(웹·앱)</b> 또는 <b>MODI 하드웨어 블록</b>까지 만들어 주는 교육용 도구입니다.
+      코드를 몰라도 자기 아이디어를 실제로 굴려볼 수 있게 돕습니다.</p>
+
+    <h2>이게 뭔가요?</h2>
+    <ul>
+      <li>학습자가 "배달 앱 만들고 싶어" 처럼 말하면, 에이전트가 되묻고 정리하며 <b>설계도</b>를 같이 그립니다.</li>
+      <li>이야기가 충분히 되면 <b>코드를 생성</b>하고 결과를 미리보기로 보여줍니다.</li>
+      <li>생성된 코드는 esbuild로 <b>빌드되는지 자동 점검</b>하고, <b>학습 노트·코드 설명</b>도 붙여 줍니다.</li>
+      <li>결과물 타입 2종: <span class="pill">react</span> 웹/앱 화면(JSX) · <span class="pill">blockly</span> MODI 하드웨어 블록(모터·LED·센서)</li>
+    </ul>
+
+    <h2>핵심 개념</h2>
+    <table>
+      <tr><th>모드 <code>mode</code></th><td><code>design</code> 설계부터 차근차근 / <code>quick</code> 설계 건너뛰고 바로 만들기</td></tr>
+      <tr><th>타입 <code>coding_type</code></th><td><code>react</code> 웹·앱 / <code>blockly</code> MODI 하드웨어</td></tr>
+      <tr><th>3단계 Phase</th><td>설계(DESIGN) → 구현(IMPLEMENT) → 검증(VERIFY)</td></tr>
+      <tr><th>세션 <code>session_id</code></th><td>대화 단위. 메모리에 두고 <code>projects/&lt;id&gt;.json</code>으로 저장·복원</td></tr>
+    </table>
+
+    <h2>전체 아키텍처 구성도</h2>
+    <div class="diagram">
+      <div class="cap"><span class="mm">```mermaid```</span> GitHub에서는 아래 코드블록이 다이어그램으로 렌더됩니다. (미리보기는 SVG로 그림)</div>
+      <svg viewBox="0 0 920 540" role="img" aria-label="전체 아키텍처 구성도">
+        <defs>
+          <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#7d8896"/>
+          </marker>
+        </defs>
+        <rect x="20" y="20" width="200" height="150" rx="10" fill="#f7f9fb" stroke="var(--line)"/>
+        <text x="34" y="42" font-size="12" font-weight="700" fill="#57606a">사용자 진입점</text>
+        <rect x="260" y="20" width="240" height="150" rx="10" fill="var(--srv)" stroke="var(--srv-bd)"/>
+        <text x="274" y="42" font-size="12" font-weight="700" fill="#9a6a1f">진입 계층</text>
+        <rect x="20" y="200" width="600" height="320" rx="10" fill="var(--core)" stroke="var(--core-bd)"/>
+        <text x="34" y="222" font-size="12" font-weight="700" fill="#3b6fd4">에이전트 코어 (agent/)</text>
+        <rect x="660" y="60" width="240" height="450" rx="10" fill="var(--ext)" stroke="var(--ext-bd)"/>
+        <text x="674" y="82" font-size="12" font-weight="700" fill="#7048c0">외부</text>
+
+        <g font-size="12.5" text-anchor="middle">
+          <rect x="40" y="58" width="160" height="40" rx="8" fill="#fff" stroke="var(--node-line)"/>
+          <text x="120" y="83">웹 / API 클라이언트</text>
+          <rect x="40" y="112" width="160" height="40" rx="8" fill="#fff" stroke="var(--node-line)"/>
+          <text x="120" y="137">터미널 CLI</text>
+
+          <rect x="280" y="56" width="200" height="44" rx="8" fill="#fff" stroke="var(--srv-bd)"/>
+          <text x="380" y="74" font-weight="600">server.py (FastAPI)</text>
+          <text x="380" y="90" font-size="11" fill="#9a6a1f">/chat · SSE 스트리밍</text>
+          <rect x="280" y="116" width="200" height="38" rx="8" fill="#fff" stroke="var(--srv-bd)"/>
+          <text x="380" y="139">main.py (콘솔)</text>
+
+          <rect x="40" y="244" width="200" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="140" y="263" font-weight="600">orchestrator_stream.py</text>
+          <text x="140" y="279" font-size="11" fill="#3b6fd4">StreamOrchestrator</text>
+
+          <rect x="260" y="244" width="160" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="340" y="263">orchestrator.py</text>
+          <text x="340" y="279" font-size="11" fill="#3b6fd4">Orchestrator</text>
+
+          <rect x="440" y="244" width="160" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="520" y="263">router.py</text>
+          <text x="520" y="279" font-size="11" fill="#3b6fd4">키워드 의도분류</text>
+
+          <rect x="40" y="312" width="135" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="107" y="331">tools.py</text>
+          <text x="107" y="347" font-size="11" fill="#3b6fd4">도구·검증</text>
+
+          <rect x="190" y="312" width="135" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="257" y="331">context.py</text>
+          <text x="257" y="347" font-size="11" fill="#3b6fd4">SessionState</text>
+
+          <rect x="340" y="312" width="125" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="402" y="331">diagram.py</text>
+          <text x="402" y="347" font-size="11" fill="#3b6fd4">mermaid</text>
+
+          <rect x="480" y="312" width="120" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="540" y="331">models.py</text>
+          <text x="540" y="347" font-size="11" fill="#3b6fd4">도메인 모델</text>
+
+          <rect x="40" y="380" width="135" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="107" y="399">builder.py</text>
+          <text x="107" y="415" font-size="11" fill="#3b6fd4">esbuild 체크</text>
+
+          <rect x="190" y="380" width="135" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="257" y="399">modi_modules.py</text>
+          <text x="257" y="415" font-size="11" fill="#3b6fd4">MODI 조립</text>
+
+          <rect x="340" y="380" width="135" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="407" y="399">claude_client.py</text>
+          <text x="407" y="415" font-size="11" fill="#3b6fd4">CLI/API 분기</text>
+
+          <rect x="40" y="448" width="135" height="46" rx="8" fill="#fff" stroke="var(--core-bd)"/>
+          <text x="107" y="467">prompts.py</text>
+          <text x="107" y="483" font-size="11" fill="#3b6fd4">시스템 프롬프트</text>
+
+          <rect x="678" y="100" width="204" height="42" rx="8" fill="#fff" stroke="var(--ext-bd)"/>
+          <text x="780" y="125">Claude — 로컬 CLI / API</text>
+          <rect x="678" y="170" width="204" height="42" rx="8" fill="#fff" stroke="var(--ext-bd)"/>
+          <text x="780" y="195">build_template (React)</text>
+          <rect x="678" y="240" width="204" height="42" rx="8" fill="#fff" stroke="var(--ext-bd)"/>
+          <text x="780" y="265">Langfuse (선택)</text>
+          <rect x="678" y="310" width="204" height="48" rx="8" fill="#fff" stroke="var(--ext-bd)"/>
+          <text x="780" y="330">projects/*.json</text>
+          <text x="780" y="347" font-size="11" fill="#7048c0">세션 저장소</text>
+        </g>
+
+        <g stroke="#7d8896" stroke-width="1.4" fill="none" marker-end="url(#arr)">
+          <path d="M200,78 H278"/>
+          <path d="M200,132 H278"/>
+          <path d="M340,100 V244"/>
+          <path d="M380,154 V200 H340 V244"/>
+          <path d="M260,267 H243"/>
+          <path d="M240,267 H440"/>
+          <path d="M120,290 V312"/>
+          <path d="M150,290 V302 H257 V312"/>
+          <path d="M200,290 V302 H402 V312"/>
+          <path d="M257,358 V370 H540 V358"/>
+          <path d="M107,358 V380"/>
+          <path d="M160,358 V370 H257 V380"/>
+          <path d="M120,290 V300 H407 V380"/>
+          <path d="M540,403 H636 V125 H678"/>
+          <path d="M175,403 H650 V191 H678"/>
+          <path d="M210,267 H656 V265 H678" stroke-dasharray="5 4"/>
+          <path d="M480,78 H644 V334 H678"/>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i class="sw" style="background:#fff;border:1px solid var(--srv-bd)"></i>진입 계층</span>
+        <span><i class="sw" style="background:#fff;border:1px solid var(--core-bd)"></i>에이전트 코어</span>
+        <span><i class="sw" style="background:#fff;border:1px solid var(--ext-bd)"></i>외부</span>
+        <span><i class="sw" style="background:#fff;border:1px dashed #7d8896"></i>선택(관측)</span>
+      </div>
+    </div>
+
+    <h2>에이전트 처리 프로세스 흐름도</h2>
+    <p class="lead"><code>/chat</code> 요청이 들어온 뒤 <code>StreamOrchestrator</code>가 한 턴을 처리하는 흐름입니다.</p>
+    <div class="diagram">
+      <div class="cap"><span class="mm">```mermaid```</span> 요청 → 분류 → Phase 분기 → 에이전트 루프 → 검증 → 스트리밍 응답</div>
+      <svg viewBox="0 0 920 580" role="img" aria-label="에이전트 처리 프로세스 흐름도">
+        <defs>
+          <marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#7d8896"/>
+          </marker>
+        </defs>
+        <g font-size="12.5" text-anchor="middle">
+          <rect x="330" y="20" width="260" height="44" rx="8" fill="#fff" stroke="var(--node-line)"/>
+          <text x="460" y="38" font-weight="600">POST /chat</text>
+          <text x="460" y="55" font-size="11" fill="var(--muted)">message · mode · coding_type</text>
+
+          <rect x="350" y="92" width="220" height="40" rx="8" fill="#fff" stroke="var(--node-line)"/>
+          <text x="460" y="117">router.classify — 의도 분류</text>
+
+          <polygon points="460,160 560,200 460,240 360,200" fill="#fff7ed" stroke="var(--srv-bd)"/>
+          <text x="460" y="204" font-weight="600">현재 Phase?</text>
+
+          <rect x="40" y="270" width="240" height="56" rx="8" fill="var(--core)" stroke="var(--core-bd)"/>
+          <text x="160" y="292" font-weight="600">설계 루프 (DESIGN)</text>
+          <text x="160" y="309" font-size="10.5" fill="#3b6fd4">update_design_doc · update_diagram · web_search</text>
+          <polygon points="160,356 250,386 160,416 70,386" fill="#fff7ed" stroke="var(--srv-bd)"/>
+          <text x="160" y="382" font-size="11.5">이제 만들자?</text>
+          <text x="160" y="398" font-size="10" fill="var(--muted)">transition_phase</text>
+
+          <rect x="340" y="270" width="240" height="56" rx="8" fill="var(--core)" stroke="var(--core-bd)"/>
+          <text x="460" y="292" font-weight="600">구현 루프 (IMPLEMENT)</text>
+          <text x="460" y="309" font-size="10" fill="#3b6fd4">generate_code · edit_code / generate_blockly_xml</text>
+
+          <rect x="640" y="270" width="240" height="56" rx="8" fill="var(--core)" stroke="var(--core-bd)"/>
+          <text x="760" y="292" font-weight="600">검증 루프 (VERIFY)</text>
+          <text x="760" y="309" font-size="10.5" fill="#3b6fd4">update_diagram</text>
+
+          <polygon points="460,356 560,396 460,436 360,396" fill="#fff7ed" stroke="var(--srv-bd)"/>
+          <text x="460" y="400" font-weight="600">결과물 타입?</text>
+
+          <rect x="296" y="456" width="158" height="50" rx="8" fill="#fff" stroke="var(--node-line)"/>
+          <text x="375" y="476" font-size="11.5" font-weight="600">react: 빌드 체크</text>
+          <text x="375" y="492" font-size="10.5" fill="var(--muted)">esbuild + 노트·주석</text>
+
+          <rect x="470" y="456" width="160" height="50" rx="8" fill="#fff" stroke="var(--node-line)"/>
+          <text x="550" y="476" font-size="11.5" font-weight="600">blockly: XML 검증</text>
+          <text x="550" y="492" font-size="10.5" fill="var(--muted)">docs/modi 레퍼런스</text>
+
+          <rect x="650" y="456" width="240" height="50" rx="8" fill="#eef9f0" stroke="var(--green-bd)"/>
+          <text x="770" y="476" font-weight="600" fill="#15692e">SSE 이벤트 스트리밍</text>
+          <text x="770" y="492" font-size="10.5" fill="#2c7a43">token · status · agent_step · done</text>
+
+          <rect x="650" y="528" width="240" height="32" rx="8" fill="#fff" stroke="var(--node-line)"/>
+          <text x="770" y="548" font-size="11.5">projects/&lt;id&gt;.json 자동 저장</text>
+        </g>
+
+        <g stroke="#7d8896" stroke-width="1.4" fill="none" marker-end="url(#arr2)">
+          <path d="M460,64 V92"/>
+          <path d="M460,132 V160"/>
+          <path d="M360,200 H160 V270"/>
+          <path d="M460,240 V270"/>
+          <path d="M560,200 H760 V270"/>
+          <path d="M160,326 V356"/>
+          <path d="M250,386 H310 V330 H340"/>
+          <path d="M460,326 V356"/>
+          <path d="M420,396 H375 V456"/>
+          <path d="M500,396 H550 V456"/>
+          <path d="M454,481 H470"/>
+          <path d="M630,481 H650"/>
+          <path d="M760,326 V340 H895 V481 H890"/>
+          <path d="M770,506 V528"/>
+        </g>
+        <g font-size="11" fill="var(--muted)">
+          <text x="250" y="258">설계</text>
+          <text x="470" y="258">구현</text>
+          <text x="690" y="258">검증</text>
+          <text x="275" y="372">예</text>
+          <text x="398" y="430">react</text>
+          <text x="562" y="430">blockly</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i class="sw" style="background:#fff7ed;border:1px solid var(--srv-bd)"></i>분기 판단</span>
+        <span><i class="sw" style="background:var(--core);border:1px solid var(--core-bd)"></i>에이전트 루프</span>
+        <span><i class="sw" style="background:#eef9f0;border:1px solid var(--green-bd)"></i>응답/출력</span>
+      </div>
+    </div>
+
+    <h2>디렉터리 / 모듈 설명</h2>
+    <table>
+      <tr><th>경로</th><th>역할</th></tr>
+      <tr><td><code>server.py</code></td><td><b>웹/API 진입점.</b> FastAPI 앱. <code>/chat</code>(SSE), 세션 저장·복원·삭제, 프로젝트 목록.</td></tr>
+      <tr><td><code>main.py</code></td><td><b>터미널 CLI 진입점.</b> <code>/diagram /phase /files /reset /quit</code>.</td></tr>
+      <tr><td><code>agent/orchestrator_stream.py</code></td><td><b>스트리밍 오케스트레이터.</b> 한 턴 전체 흐름(라우팅→루프→검증·후처리).</td></tr>
+      <tr><td><code>agent/orchestrator.py</code></td><td>CLI용 얇은 래퍼. 내부적으로 StreamOrchestrator 사용.</td></tr>
+      <tr><td><code>agent/router.py</code></td><td>API 호출 없는 <b>키워드 의도 분류기.</b> 설계 단계엔 항상 설계 대화로.</td></tr>
+      <tr><td><code>agent/tools.py</code></td><td>도구 <b>11종 정의·실행</b> + MODI 코어 로딩 + Blockly XML 검증/자동수정. Phase별 허용 도구 상이.</td></tr>
+      <tr><td><code>agent/models.py</code></td><td><b>도메인 모델</b> (pydantic): Phase, DesignDoc, TaskPlan, ProjectState 등.</td></tr>
+      <tr><td><code>agent/context.py</code></td><td><b>세션 상태(SessionState).</b> 대화·생성코드·학습노트·다이어그램 보관·요약.</td></tr>
+      <tr><td><code>agent/diagram.py</code></td><td>mermaid 관리 + LLM 문법 자동 보정(<code>_sanitize_mermaid</code>).</td></tr>
+      <tr><td><code>agent/builder.py</code></td><td>생성 React 코드를 <b>esbuild로 번들 빌드 체크.</b></td></tr>
+      <tr><td><code>agent/modi_modules.py</code></td><td>MODI 하드웨어 <b>모듈 배치·조립 가이드</b> 생성(blockly).</td></tr>
+      <tr><td><code>agent/claude_client.py</code></td><td><b>LLM 호출 분기.</b> 기본 로컬 Claude CLI, <code>USE_LOCAL_CLAUDE=false</code>면 API.</td></tr>
+      <tr><td><code>build_template/</code></td><td>빌드 체크용 React 템플릿(React 18, react-router, lucide-react, esbuild).</td></tr>
+      <tr><td><code>docs/modi/</code></td><td>MODI 코어(<code>modi_core.md</code>)·모듈 레퍼런스(<code>ref/*.md</code>). Blockly 검증 근거.</td></tr>
+    </table>
+
+    <h2>설치 / 실행</h2>
+    <p>요구: Python <b>3.11+</b> · 의존성 <code>anthropic · pydantic · fastapi · uvicorn · langfuse · python-dotenv</code></p>
+<pre><code># 1) 설치
+python -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -e .
+
+# 2) .env (USE_LOCAL_CLAUDE=true 면 API 키 불필요)
+#   ANTHROPIC_API_KEY=...   USE_LOCAL_CLAUDE=true
+
+# 3a) 웹/API 서버
+make run        # uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+
+# 3b) 터미널 CLI
+python main.py</code></pre>
+
+    <h2>API 엔드포인트 요약</h2>
+    <table>
+      <tr><th>메서드</th><th>경로</th><th>설명</th></tr>
+      <tr><td>POST</td><td><code>/chat</code></td><td>메시지 → <b>SSE 스트리밍</b> 응답 (session_id, message, mode, coding_type)</td></tr>
+      <tr><td>POST</td><td><code>/chat/stop</code></td><td>진행 중 응답 중단</td></tr>
+      <tr><td>GET</td><td><code>/session/{id}</code></td><td>현재 phase·다이어그램 조회</td></tr>
+      <tr><td>POST</td><td><code>/session/{id}/reset</code></td><td>세션 초기화</td></tr>
+      <tr><td>POST</td><td><code>/session/{id}/save · /restore</code></td><td>세션 저장 / 복원</td></tr>
+      <tr><td>GET / DELETE</td><td><code>/projects · /projects/{file}</code></td><td>프로젝트 목록 / 불러오기 / 삭제</td></tr>
+    </table>
+
+    <h2>참고 / 주의</h2>
+    <ul>
+      <li>기본은 <b>로컬 Claude CLI</b>(구독 인증). API 키로 바꾸려면 <code>USE_LOCAL_CLAUDE=false</code> + <code>ANTHROPIC_API_KEY</code>.</li>
+      <li><b>Langfuse</b>는 선택 — 키 없으면 자동 비활성화.</li>
+    </ul>
+    <p class="note">⚠ 라이선스 · 테스트 · CI · Docker 설정은 현재 저장소에서 확인되지 않았습니다.
+      README에 임의로 적지 않았고, 아래 열린 질문으로 남겼습니다(근거 없는 단정 금지).</p>
+
+    <h2>열린 질문 (사람 결정 필요)</h2>
+    <div class="openq">
+      ① 라이선스(LICENSE 파일 없음) — 공개/사내 여부와 표기 ·
+      ② 테스트/CI 섹션을 "없음"으로 명시할지 ·
+      ③ <code>.env.example</code> 제공 여부(보안 권장) ·
+      ④ README 공개 범위(외부/사내)에 따른 톤·배지.
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ff4547">
+    <meta
+      name="description"
+      content="2022 개정 교육과정으로 배우고, AI와 함께 Web·MODI 작품을 만드는 MODI Planet"
+    >
+    <title>MODI Planet 3.0</title>
+    <link rel="icon" href="static/assets/brand/favicon.ico">
+    <link rel="stylesheet" href="static/app.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#app">본문으로 바로가기</a>
+
+    <div class="app-shell">
+      <aside class="history-rail" id="historyRail" aria-label="MODI Planet 메뉴">
+        <div class="rail-top">
+          <button class="brand" type="button" data-route="home" aria-label="MODI Planet 홈">
+            <img class="brand-logo" src="static/assets/brand/logo.svg" alt="MODI Planet">
+          </button>
+
+          <button class="new-start-button" type="button" data-route="home">
+            <span aria-hidden="true">＋</span>
+            <span>새로 시작하기</span>
+          </button>
+
+          <nav class="rail-nav" aria-label="주요 화면">
+            <button type="button" data-route="home" data-nav-item="home">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3.5 10.5 12 3l8.5 7.5v9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z"/>
+                <path d="M9 21v-7h6v7"/>
+              </svg>
+              <span>홈</span>
+            </button>
+            <button type="button" data-route="learn" data-nav-item="learn">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m3 6.5 9-4 9 4-9 4z"/>
+                <path d="M6 9v5.5c0 1.7 2.7 3 6 3s6-1.3 6-3V9"/>
+                <path d="M21 7v7"/>
+              </svg>
+              <span>교육과정</span>
+            </button>
+            <button type="button" data-route="create" data-nav-item="create">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 3v18M3 12h18"/>
+              </svg>
+              <span>만들기</span>
+            </button>
+          </nav>
+        </div>
+
+        <section class="rail-history" aria-labelledby="recentRailTitle">
+          <div class="rail-section-title">
+            <h2 id="recentRailTitle">최근 프로젝트</h2>
+            <span id="historyCount" aria-label="프로젝트 수">0</span>
+          </div>
+          <div id="railHistory" class="rail-history-list"></div>
+        </section>
+
+        <div class="rail-footer">
+          <span class="version-dot" aria-hidden="true"></span>
+          <span>MODI Planet · AI LAB</span>
+        </div>
+      </aside>
+
+      <main id="app" class="main-content" tabindex="-1"></main>
+    </div>
+
+    <div id="globalLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <noscript>
+      <div class="noscript-message">MODI Planet을 사용하려면 JavaScript를 켜주세요.</div>
+    </noscript>
+    <script src="static/app.js" defer></script>
+  </body>
+</html>

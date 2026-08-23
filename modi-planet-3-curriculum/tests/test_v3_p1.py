@@ -1,0 +1,260 @@
+"""Focused v3 product, published curriculum, and Create adapter tests."""
+from pathlib import Path
+
+import pytest
+
+try:
+    from fastapi.responses import JSONResponse
+    from fastapi.testclient import TestClient
+    import server
+except Exception as exc:  # pragma: no cover - dependency-less test environments
+    pytest.skip(f"server import 불가(의존성 미설치): {exc}", allow_module_level=True)
+
+from agent.create import CreateOrchestratorAdapter, SUPPORTED_CODING_TYPES
+from agent.session_store import InMemorySessionStore
+from curriculum import get_lesson, list_grade_bands, validate_catalog
+
+
+@pytest.fixture
+def client(monkeypatch):
+    monkeypatch.setattr(server, "create_sessions", InMemorySessionStore())
+    return TestClient(server.app)
+
+
+@pytest.mark.parametrize("coding_type", ["react", "blockly", "hybrid"])
+def test_create_adapter_forces_design_and_keeps_existing_coding_types(coding_type):
+    adapter = CreateOrchestratorAdapter.start(coding_type)
+    payload = adapter.legacy_chat_payload("만들자", runtime_error="preview failed")
+
+    assert payload == {
+        "session_id": adapter.session_id,
+        "message": "만들자",
+        "mode": "design",
+        "coding_type": coding_type,
+        "runtime_error": "preview failed",
+    }
+
+
+@pytest.mark.parametrize("coding_type", ["quick", "web", "hardware", "REACT", ""])
+def test_create_adapter_rejects_new_or_legacy_aliases(coding_type):
+    with pytest.raises(ValueError, match="coding_type"):
+        CreateOrchestratorAdapter.start(coding_type)
+
+
+def test_runtime_neutral_catalog_contains_27_published_lessons():
+    expected_minutes = {"elementary": 40, "middle": 45, "high": 50}
+    required_lesson_fields = {
+        "id",
+        "lesson_no",
+        "status",
+        "title",
+        "summary",
+        "projectType",
+        "project_type",
+        "projectLabel",
+        "duration_min",
+        "objectives",
+        "standards",
+        "materials",
+        "slides",
+    }
+
+    validate_catalog()
+    bands = list_grade_bands()
+
+    assert [band["id"] for band in bands] == ["elementary", "middle", "high"]
+    assert sum(len(band["lessons"]) for band in bands) == 27
+    for band in bands:
+        assert band["lesson_count"] == 9
+        assert band["classMinutes"] == expected_minutes[band["id"]]
+        assert band["class_minutes"] == expected_minutes[band["id"]]
+        assert len(band["lessons"]) == 9
+        assert [lesson["lesson_no"] for lesson in band["lessons"]] == list(range(1, 10))
+        for lesson in band["lessons"]:
+            assert required_lesson_fields <= set(lesson)
+            assert lesson["id"] == f"{band['id']}-{lesson['lesson_no']:02d}"
+            assert lesson["status"] == "published"
+            assert lesson["title"].strip()
+            assert lesson["summary"].strip()
+            assert lesson["objectives"]
+            assert lesson["standards"]
+            assert lesson["materials"]
+            assert lesson["slides"]
+            assert sum(slide["minutes"] for slide in lesson["slides"]) == band["classMinutes"]
+
+
+def test_all_lesson_standards_match_the_reviewed_2022_notice_mapping():
+    bands = list_grade_bands()
+    codes = {
+        standard["code"]
+        for band in bands
+        for lesson in band["lessons"]
+        for standard in lesson["standards"]
+    }
+
+    assert len(codes) == 28
+    assert all(
+        band["standardsSource"]["title"].startswith("교육부 고시 제2022-33호")
+        for band in bands
+    )
+    assert all(
+        band["standardsSource"]["verifiedOn"] == "2026-08-23"
+        for band in bands
+    )
+    assert bands[0]["lessons"][0]["standards"] == [
+        {
+            "code": "[6실05-02]",
+            "text": "컴퓨터에게 명령하는 방법을 체험하고, 주어진 문제를 해결하는 프로그램을 작성한다.",
+        },
+        {
+            "code": "[6실04-03]",
+            "text": "제작한 발표 자료를 사이버 공간에 공유하고, 건전한 정보기기의 활용을 실천한다.",
+        },
+    ]
+    assert bands[1]["lessons"][2]["standards"] == [
+        {
+            "code": "[9정03-07]",
+            "text": "프로그램 작성에서 함수를 활용하고, 프로그램 수행 결과를 디버거로 분석하여 오류를 수정한다.",
+        }
+    ]
+    assert bands[2]["lessons"][7]["standards"][0] == {
+        "code": "[12정01-01]",
+        "text": "유무선 네트워크의 특성을 이해하고, 컴퓨팅 시스템 간 공유, 협력, 소통을 위한 네트워크 환경을 구성한다.",
+    }
+
+
+def test_catalog_lesson_lookup_returns_detached_detail_with_course_context():
+    lesson = get_lesson("elementary", 1)
+
+    assert lesson is not None
+    assert lesson["id"] == "elementary-01"
+    assert lesson["grade_band"] == "elementary"
+    assert lesson["grade_label"] == "초등"
+    assert lesson["subject"] == "실과"
+    assert lesson["class_minutes"] == 40
+    assert get_lesson("elementary", 0) is None
+    assert get_lesson("elementary", 10) is None
+    assert get_lesson("college", 1) is None
+
+    lesson["title"] = "mutated by caller"
+    assert get_lesson("elementary", 1)["title"] != "mutated by caller"
+
+
+def test_home_exposes_only_learn_and_create(client):
+    response = client.get("/api/v3/home")
+
+    assert response.status_code == 200
+    assert response.json()["product"] == {"name": "MODI Planet", "version": "3.0"}
+    assert [mode["id"] for mode in response.json()["modes"]] == ["learn", "create"]
+    assert "quick" not in response.text.lower()
+
+
+def test_curriculum_routes_return_published_courses_and_lesson_detail(client):
+    all_bands = client.get("/api/v3/curriculum")
+    elementary = client.get("/api/v3/curriculum/elementary")
+    lesson = client.get("/api/v3/curriculum/elementary/1")
+
+    assert all_bands.status_code == 200
+    assert len(all_bands.json()["grade_bands"]) == 3
+    assert "placeholder" not in all_bands.text
+    assert elementary.status_code == 200
+    assert elementary.json()["label"] == "초등"
+    assert elementary.json()["classMinutes"] == 40
+    assert len(elementary.json()["lessons"]) == 9
+    assert lesson.status_code == 200
+    assert lesson.json()["id"] == "elementary-01"
+    assert lesson.json()["status"] == "published"
+    assert lesson.json()["grade_band"] == "elementary"
+    assert sum(slide["minutes"] for slide in lesson.json()["slides"]) == 40
+    assert client.get("/api/v3/curriculum/college").status_code == 404
+    assert client.get("/api/v3/curriculum/elementary/10").status_code == 404
+    assert client.get("/api/v3/curriculum/college/1").status_code == 404
+
+
+def test_lms_route_serves_the_curriculum_player(client):
+    response = client.get("/lms")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "MODI Planet" in response.text
+    assert "교육과정" in response.text
+
+    logo = client.get("/static/assets/brand/logo.svg")
+    player_script = client.get("/static/lms.js")
+    assert logo.status_code == 200
+    assert "#ff4438" in logo.text.lower()
+    assert player_script.status_code == 200
+    assert "data-plan-lesson" in player_script.text
+    assert "data-start-lesson" in player_script.text
+
+
+@pytest.mark.parametrize("coding_type", sorted(SUPPORTED_CODING_TYPES))
+def test_create_session_accepts_only_existing_coding_types(client, coding_type):
+    response = client.post("/api/v3/create/sessions", json={"coding_type": coding_type})
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["session_id"]
+    assert body["mode"] == "design"
+    assert body["coding_type"] == coding_type
+    assert server.create_sessions.get(body["session_id"]).coding_type == coding_type
+
+
+def test_create_session_rejects_unknown_coding_type(client):
+    response = client.post("/api/v3/create/sessions", json={"coding_type": "web"})
+
+    assert response.status_code == 422
+    assert "react" in response.json()["detail"]
+
+
+def test_create_chat_delegates_to_legacy_chat_with_forced_mode(client, monkeypatch):
+    created = client.post(
+        "/api/v3/create/sessions", json={"coding_type": "hybrid"}
+    ).json()
+    captured = {}
+
+    async def fake_legacy_chat(*, req, request, user_id):
+        captured.update({"request": req, "user_id": user_id, "path": request.url.path})
+        return JSONResponse({"delegated": True})
+
+    monkeypatch.setattr(server, "chat", fake_legacy_chat)
+    response = client.post(
+        created["chat_endpoint"],
+        params={"user_id": "student-1"},
+        json={
+            "message": "센서와 웹을 연결하고 싶어",
+            "runtime_error": "boom",
+            "mode": "quick",
+            "coding_type": "react",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"delegated": True}
+    assert captured["request"].session_id == created["session_id"]
+    assert captured["request"].mode == "design"
+    assert captured["request"].coding_type == "hybrid"
+    assert captured["request"].runtime_error == "boom"
+    assert captured["user_id"] == "student-1"
+
+
+def test_create_chat_rejects_unknown_session_without_calling_chat(client, monkeypatch):
+    async def should_not_run(**kwargs):
+        raise AssertionError("legacy chat must not run")
+
+    monkeypatch.setattr(server, "chat", should_not_run)
+    response = client.post(
+        "/api/v3/create/sessions/missing/chat", json={"message": "hello"}
+    )
+
+    assert response.status_code == 404
+
+
+def test_product_index_and_static_mount_are_wired(client):
+    response = client.get("/")
+    static_mount = next(route for route in server.app.routes if route.path == "/static")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "MODI Planet" in response.text
+    assert Path(static_mount.app.directory).resolve() == Path(server._WEB_DIR).resolve()

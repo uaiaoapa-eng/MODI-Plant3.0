@@ -1,0 +1,192 @@
+{
+  "session_id": "reference_beat-maker",
+  "title": "비트메이커",
+  "description": "16스텝 격자에 드럼 비트를 찍어 만드는 스텝 시퀀서. 외부 음원 없이 Web Audio API로 소리를 합성하고, 정확한 타이밍을 위해 lookahead 스케줄러로 재생한다.",
+  "phase": "implement",
+  "coding_type": "react",
+  "app_type": "desktop",
+  "diagram": "graph TD\n  A[재생 클릭] --> B[AudioContext 시작/resume]\n  B --> C[lookahead 스케줄러]\n  C --> D{각 스텝: 켜진 트랙?}\n  D -->|예| E[Web Audio로 드럼 합성]\n  C --> F[재생 헤드 표시]\n  G[칸 클릭] --> H[pattern 2D 배열 토글]",
+  "generated_code": {
+    "App.tsx": "import { useState, useRef, useEffect, useCallback } from 'react';\nimport { Play, Square, Shuffle, Trash2, Volume2, VolumeX } from 'lucide-react';\nimport { TRIGGERS, type DrumName } from './drums';\n\nconst STEPS = 16;\n\nconst TRACKS: { name: string; key: DrumName; color: string }[] = [\n  { name: 'Kick', key: 'kick', color: '#fb7185' },\n  { name: 'Snare', key: 'snare', color: '#fbbf24' },\n  { name: 'Hi-Hat', key: 'hihat', color: '#34d399' },\n  { name: 'Clap', key: 'clap', color: '#818cf8' },\n  { name: 'Tom', key: 'tom', color: '#c084fc' },\n];\n\ntype Pattern = boolean[][]; // [track][step]\n\nconst emptyPattern = (): Pattern => TRACKS.map(() => Array(STEPS).fill(false));\n\n// (트랙별 켜진 스텝 인덱스)로 프리셋 패턴을 만든다.\nconst make = (\n  kick: number[],\n  snare: number[],\n  hihat: number[],\n  clap: number[],\n  tom: number[],\n): Pattern => {\n  const p = emptyPattern();\n  [kick, snare, hihat, clap, tom].forEach((arr, t) =>\n    arr.forEach((s) => {\n      p[t][s] = true;\n    }),\n  );\n  return p;\n};\n\nconst PRESETS: { name: string; pattern: Pattern }[] = [\n  { name: '기본', pattern: make([0, 4, 8, 12], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14], [], []) },\n  { name: '하우스', pattern: make([0, 4, 8, 12], [4, 12], [2, 6, 10, 14], [4, 12], []) },\n  { name: '힙합', pattern: make([0, 6, 10], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14], [], [7, 15]) },\n];\n\nexport default function App() {\n  const [pattern, setPattern] = useState<Pattern>(PRESETS[0].pattern.map((r) => [...r]));\n  const [bpm, setBpm] = useState(110);\n  const [playing, setPlaying] = useState(false);\n  const [step, setStep] = useState(-1);\n  const [mutes, setMutes] = useState<boolean[]>(TRACKS.map(() => false));\n  const [volumes, setVolumes] = useState<number[]>(TRACKS.map(() => 0.9));\n\n  // 스케줄러가 항상 '최신' 상태를 읽도록 ref로 미러링(클로저 stale 방지).\n  const ctxRef = useRef<AudioContext | null>(null);\n  const patternRef = useRef(pattern);\n  const mutesRef = useRef(mutes);\n  const volumesRef = useRef(volumes);\n  const bpmRef = useRef(bpm);\n  patternRef.current = pattern;\n  mutesRef.current = mutes;\n  volumesRef.current = volumes;\n  bpmRef.current = bpm;\n\n  const nextStepRef = useRef(0);\n  const nextTimeRef = useRef(0);\n  const timerRef = useRef<number | null>(null);\n  const rafRef = useRef<number | null>(null);\n  const queueRef = useRef<{ step: number; time: number }[]>([]);\n\n  // 미리보기(lookahead) 스케줄러: 0.1초 앞의 박자까지 오디오 엔진에 예약해 둔다.\n  const schedule = useCallback(() => {\n    const ctx = ctxRef.current;\n    if (!ctx) return;\n    while (nextTimeRef.current < ctx.currentTime + 0.1) {\n      const s = nextStepRef.current;\n      const t = nextTimeRef.current;\n      TRACKS.forEach((tr, ti) => {\n        if (patternRef.current[ti][s] && !mutesRef.current[ti]) {\n          TRIGGERS[tr.key](ctx, t, volumesRef.current[ti]);\n        }\n      });\n      queueRef.current.push({ step: s, time: t });\n      nextTimeRef.current += 60 / bpmRef.current / 4; // 16분음표 = 1박의 1/4\n      nextStepRef.current = (s + 1) % STEPS;\n    }\n    timerRef.current = window.setTimeout(schedule, 25);\n  }, []);\n\n  // 재생 헤드(현재 칸) 표시는 오디오 시계 기준으로 그려 흔들림 없이 정확하게.\n  const draw = useCallback(() => {\n    const ctx = ctxRef.current;\n    if (ctx) {\n      while (queueRef.current.length && queueRef.current[0].time < ctx.currentTime) {\n        setStep(queueRef.current.shift()!.step);\n      }\n    }\n    rafRef.current = requestAnimationFrame(draw);\n  }, []);\n\n  const stop = useCallback(() => {\n    if (timerRef.current) window.clearTimeout(timerRef.current);\n    if (rafRef.current) cancelAnimationFrame(rafRef.current);\n    timerRef.current = null;\n    rafRef.current = null;\n    queueRef.current = [];\n    setPlaying(false);\n    setStep(-1);\n  }, []);\n\n  const play = useCallback(() => {\n    let ctx = ctxRef.current;\n    if (!ctx) {\n      ctx = new (window.AudioContext || (window as any).webkitAudioContext)();\n      ctxRef.current = ctx;\n    }\n    ctx.resume(); // 브라우저 자동재생 정책: 사용자 클릭 시점에 켜야 소리가 난다.\n    nextStepRef.current = 0;\n    nextTimeRef.current = ctx.currentTime + 0.06;\n    queueRef.current = [];\n    setPlaying(true);\n    schedule();\n    rafRef.current = requestAnimationFrame(draw);\n  }, [schedule, draw]);\n\n  useEffect(() => () => stop(), [stop]); // 언마운트 시 정리\n\n  const toggleCell = (t: number, s: number) =>\n    setPattern((prev) => {\n      const next = prev.map((row) => [...row]);\n      next[t][s] = !next[t][s];\n      return next;\n    });\n\n  const toggleMute = (t: number) =>\n    setMutes((prev) => prev.map((m, i) => (i === t ? !m : m)));\n\n  const setVolume = (t: number, v: number) =>\n    setVolumes((prev) => prev.map((x, i) => (i === t ? v : x)));\n\n  return (\n    <div className=\"min-h-screen w-full flex items-center justify-center bg-gradient-to-b from-[#12141d] via-[#0c0e15] to-[#07080d] text-slate-100 p-4 sm:p-6 overflow-x-hidden\">\n      <div className=\"w-full max-w-[1080px]\">\n        <div className=\"rounded-[28px] border border-white/10 bg-[#151925]/90 shadow-2xl shadow-black/50 backdrop-blur px-5 py-6 sm:px-9 sm:py-8\">\n          {/* 헤더 + 트랜스포트 */}\n          <header className=\"flex flex-wrap items-center gap-4 mb-7 sm:mb-9\">\n            <div className=\"flex items-center gap-3.5 mr-auto\">\n              <div className=\"w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0\">\n                <span className=\"text-2xl leading-none\">🥁</span>\n              </div>\n              <div>\n                <h1 className=\"text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-none\">\n                  Beat Maker\n                </h1>\n                <p className=\"text-sm text-slate-400 mt-2\">드럼을 찍어 만드는 나만의 비트</p>\n              </div>\n            </div>\n\n            {/* BPM */}\n            <div className=\"flex items-center gap-3 h-12 px-4 rounded-2xl bg-white/5 border border-white/10\">\n              <span className=\"text-xs font-bold tracking-widest text-slate-400\">BPM</span>\n              <input\n                type=\"range\"\n                min={60}\n                max={180}\n                value={bpm}\n                onChange={(e) => setBpm(Number(e.target.value))}\n                className=\"w-28 sm:w-40 accent-indigo-400 cursor-pointer\"\n              />\n              <span className=\"text-lg font-bold font-mono text-white w-9 text-right tabular-nums\">\n                {bpm}\n              </span>\n            </div>\n\n            {/* 재생 / 정지 */}\n            <button\n              onClick={playing ? stop : play}\n              className={`flex items-center gap-2.5 h-12 px-7 rounded-2xl font-bold text-base transition-all active:scale-95 ${\n                playing\n                  ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/30'\n                  : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'\n              }`}\n            >\n              {playing ? <Square size={18} fill=\"currentColor\" /> : <Play size={18} fill=\"currentColor\" />}\n              {playing ? '정지' : '재생'}\n            </button>\n          </header>\n\n          {/* 시퀀서 — 좁은 화면에선 이 영역만 가로 스크롤(페이지는 안 깨짐) */}\n          <div className=\"overflow-x-auto -mx-1 px-1\">\n            <div className=\"min-w-[540px]\">\n              {/* 박자 눈금 (1·2·3·4) */}\n              <div className=\"flex items-center mb-3 pl-[136px] sm:pl-[172px]\">\n                <div className=\"flex-1 grid grid-cols-4 gap-2.5 sm:gap-3\">\n                  {[1, 2, 3, 4].map((beat) => (\n                    <div key={beat} className=\"text-xs font-bold tracking-widest text-slate-500\">\n                      {beat}\n                    </div>\n                  ))}\n                </div>\n              </div>\n\n              {/* 트랙들 */}\n              <div className=\"flex flex-col gap-2.5\">\n                {TRACKS.map((track, t) => (\n                  <div key={track.key} className=\"flex items-center gap-3 sm:gap-4\">\n                    {/* 트랙 라벨 + 음소거 + 볼륨 */}\n                    <div className=\"w-[124px] sm:w-[160px] shrink-0 flex items-center gap-2.5\">\n                      <span\n                        className=\"w-3 h-3 rounded-full shrink-0\"\n                        style={{ backgroundColor: mutes[t] ? '#475569' : track.color }}\n                      />\n                      <div className=\"min-w-0 flex-1\">\n                        <div className=\"flex items-center gap-1.5\">\n                          <span\n                            className={`text-[15px] font-bold truncate leading-tight ${\n                              mutes[t] ? 'text-slate-600 line-through' : 'text-white'\n                            }`}\n                          >\n                            {track.name}\n                          </span>\n                          <button\n                            onClick={() => toggleMute(t)}\n                            className=\"text-slate-500 hover:text-slate-200 transition-colors shrink-0\"\n                            title=\"음소거\"\n                          >\n                            {mutes[t] ? <VolumeX size={16} /> : <Volume2 size={16} />}\n                          </button>\n                        </div>\n                        <input\n                          type=\"range\"\n                          min={0}\n                          max={1}\n                          step={0.01}\n                          value={volumes[t]}\n                          onChange={(e) => setVolume(t, Number(e.target.value))}\n                          className=\"w-full h-1.5 mt-1.5 hidden sm:block cursor-pointer\"\n                          style={{ accentColor: track.color }}\n                        />\n                      </div>\n                    </div>\n\n                    {/* 16스텝 — 4칸씩 4그룹, aspect-square로 항상 정사각 패드 */}\n                    <div className=\"flex-1 grid grid-cols-4 gap-2.5 sm:gap-3 min-w-0\">\n                      {[0, 1, 2, 3].map((group) => (\n                        <div key={group} className=\"grid grid-cols-4 gap-1.5 min-w-0\">\n                          {[0, 1, 2, 3].map((i) => {\n                            const s = group * 4 + i;\n                            const on = pattern[t][s];\n                            const isHead = s === step && playing;\n                            return (\n                              <button\n                                key={s}\n                                onClick={() => toggleCell(t, s)}\n                                className={`aspect-square rounded-lg transition-all duration-100 ${\n                                  isHead ? 'ring-2 ring-white scale-105' : 'hover:brightness-125'\n                                }`}\n                                style={{\n                                  backgroundColor: on ? track.color : 'rgba(255,255,255,0.06)',\n                                  boxShadow: on\n                                    ? `0 0 16px ${track.color}80, inset 0 1px 0 rgba(255,255,255,0.25)`\n                                    : 'inset 0 1px 0 rgba(255,255,255,0.04)',\n                                }}\n                                aria-label={`${track.name} step ${s + 1}`}\n                              />\n                            );\n                          })}\n                        </div>\n                      ))}\n                    </div>\n                  </div>\n                ))}\n              </div>\n            </div>\n          </div>\n\n          {/* 하단: 프리셋 / 랜덤 / 비우기 */}\n          <div className=\"flex flex-wrap items-center gap-2.5 mt-7 sm:mt-9 pt-6 border-t border-white/10\">\n            <span className=\"text-xs font-bold tracking-widest text-slate-500 mr-1\">프리셋</span>\n            {PRESETS.map((p) => (\n              <button\n                key={p.name}\n                onClick={() => setPattern(p.pattern.map((r) => [...r]))}\n                className=\"h-10 px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-colors\"\n              >\n                {p.name}\n              </button>\n            ))}\n            <div className=\"flex-1\" />\n            <button\n              onClick={() =>\n                setPattern(TRACKS.map(() => Array.from({ length: STEPS }, () => Math.random() < 0.28)))\n              }\n              className=\"h-10 px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-2\"\n            >\n              <Shuffle size={16} /> 랜덤\n            </button>\n            <button\n              onClick={() => setPattern(emptyPattern())}\n              className=\"h-10 px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-slate-400 hover:text-rose-300 hover:border-rose-400/30 transition-colors flex items-center gap-2\"\n            >\n              <Trash2 size={16} /> 비우기\n            </button>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n}\n",
+    "drums.ts": "// Web Audio API로 드럼 소리를 '합성'한다 — 외부 음원 파일 없이 오실레이터/노이즈로.\n// 각 트리거는 (ctx, time, gain)을 받아 정확히 그 시각(time)에 한 번 소리를 낸다.\n// time 을 받는 이유: 재생 스케줄러가 박자를 '미리' 예약해 타이밍이 흔들리지 않게 하기 위함.\n\nexport type DrumName = 'kick' | 'snare' | 'hihat' | 'clap' | 'tom';\n\n// 짧게 솟았다가 사그라드는 음량 엔벌로프(공통). peak까지 튀고 decay초 동안 0으로 감쇠.\nfunction envGain(ctx: AudioContext, time: number, peak: number, decay: number): GainNode {\n  const g = ctx.createGain();\n  g.gain.setValueAtTime(0.0001, time);\n  g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), time + 0.002);\n  g.gain.exponentialRampToValueAtTime(0.0001, time + decay);\n  return g;\n}\n\n// 화이트 노이즈 버퍼(스네어/하이햇/클랩의 '치익' 성분).\nfunction makeNoise(ctx: AudioContext): AudioBufferSourceNode {\n  const len = Math.floor(ctx.sampleRate * 0.4);\n  const buf = ctx.createBuffer(1, len, ctx.sampleRate);\n  const data = buf.getChannelData(0);\n  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;\n  const src = ctx.createBufferSource();\n  src.buffer = buf;\n  return src;\n}\n\nfunction kick(ctx: AudioContext, time: number, gain: number): void {\n  const osc = ctx.createOscillator();\n  osc.frequency.setValueAtTime(150, time);\n  osc.frequency.exponentialRampToValueAtTime(45, time + 0.18); // 피치를 떨어뜨려 '둥' 소리\n  const g = envGain(ctx, time, gain, 0.4);\n  osc.connect(g).connect(ctx.destination);\n  osc.start(time);\n  osc.stop(time + 0.4);\n}\n\nfunction snare(ctx: AudioContext, time: number, gain: number): void {\n  const noise = makeNoise(ctx);\n  const hp = ctx.createBiquadFilter();\n  hp.type = 'highpass';\n  hp.frequency.value = 1500;\n  const ng = envGain(ctx, time, gain * 0.7, 0.2);\n  noise.connect(hp).connect(ng).connect(ctx.destination);\n  noise.start(time);\n  noise.stop(time + 0.2);\n  const osc = ctx.createOscillator();\n  osc.type = 'triangle';\n  osc.frequency.value = 180;\n  const og = envGain(ctx, time, gain * 0.4, 0.1);\n  osc.connect(og).connect(ctx.destination);\n  osc.start(time);\n  osc.stop(time + 0.1);\n}\n\nfunction hihat(ctx: AudioContext, time: number, gain: number): void {\n  const noise = makeNoise(ctx);\n  const hp = ctx.createBiquadFilter();\n  hp.type = 'highpass';\n  hp.frequency.value = 7000;\n  const g = envGain(ctx, time, gain * 0.4, 0.05); // 아주 짧게 — 닫힌 하이햇\n  noise.connect(hp).connect(g).connect(ctx.destination);\n  noise.start(time);\n  noise.stop(time + 0.06);\n}\n\nfunction clap(ctx: AudioContext, time: number, gain: number): void {\n  // 여러 번의 짧은 노이즈 버스트를 겹쳐 박수 같은 질감을 만든다.\n  for (const delay of [0, 0.01, 0.02]) {\n    const noise = makeNoise(ctx);\n    const bp = ctx.createBiquadFilter();\n    bp.type = 'bandpass';\n    bp.frequency.value = 1200;\n    const g = envGain(ctx, time + delay, gain * 0.5, 0.12);\n    noise.connect(bp).connect(g).connect(ctx.destination);\n    noise.start(time + delay);\n    noise.stop(time + delay + 0.12);\n  }\n}\n\nfunction tom(ctx: AudioContext, time: number, gain: number): void {\n  const osc = ctx.createOscillator();\n  osc.type = 'sine';\n  osc.frequency.setValueAtTime(220, time);\n  osc.frequency.exponentialRampToValueAtTime(90, time + 0.25);\n  const g = envGain(ctx, time, gain, 0.3);\n  osc.connect(g).connect(ctx.destination);\n  osc.start(time);\n  osc.stop(time + 0.3);\n}\n\nexport const TRIGGERS: Record<DrumName, (ctx: AudioContext, time: number, gain: number) => void> = {\n  kick,\n  snare,\n  hihat,\n  clap,\n  tom,\n};\n"
+  },
+  "files": "App.tsx\ndrums.ts",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": null,
+  "task_plan": null,
+  "conversation": "학습자: 소프트웨어로 할게요\n튜터: 좋아요, 웹·앱을 만들어볼게요! 무엇이든 편하게 설명해 주세요.\n학습자: 드럼 비트를 찍어서 만드는 비트 메이커를 만들고 싶어\n튜터: 16스텝 격자에 킥·스네어·하이햇·클랩·톰을 찍어 루프로 재생하는 비트 메이커를 만들게요. 소리는 외부 음원 없이 Web Audio로 합성하고, 정확한 박자를 위해 lookahead 스케줄러로 재생해요.\n학습자: BPM 조절이랑 프리셋도 넣어줘\n튜터: BPM 슬라이더와 트랙별 볼륨·음소거, 기본·하우스·힙합 프리셋, 랜덤·비우기 버튼까지 넣었어요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "드럼 비트를 찍어서 루프로 재생하는 비트 메이커를 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "16스텝 격자에 킥·스네어·하이햇 등 5개 드럼을 찍어 루프로 재생하는 비트 메이커를 만들게요."
+    }
+  ],
+  "design_doc": {
+    "project_name": "비트메이커",
+    "description": "5개 드럼 트랙 × 16스텝 격자에 비트를 찍어 루프 재생하는 스텝 시퀀서. 소리는 Web Audio로 합성하고, 박자 타이밍은 오디오 시계 기반 lookahead 스케줄러로 잡는다.",
+    "users": [
+      "코딩으로 음악을 만들어보고 싶은 학습자",
+      "리듬·박자·루프 개념을 직접 만지며 배우려는 사람"
+    ],
+    "features": [
+      {
+        "name": "16스텝 시퀀서 격자",
+        "description": "5개 드럼 트랙 × 16스텝. 칸을 클릭해 그 박자에 악기를 토글한다. 4칸씩 4그룹으로 묶어 박자를 읽기 쉽게.",
+        "priority": "mvp"
+      },
+      {
+        "name": "Web Audio 드럼 합성",
+        "description": "오실레이터·노이즈·필터·엔벌로프로 킥/스네어/하이햇/클랩/탐을 실시간 합성(음원 파일 없음).",
+        "priority": "mvp"
+      },
+      {
+        "name": "lookahead 재생 스케줄러",
+        "description": "오디오 시계 기준으로 0.1초 앞 박자까지 미리 예약해 타이밍 흔들림 없이 루프 재생.",
+        "priority": "mvp"
+      },
+      {
+        "name": "BPM·트랙 볼륨·음소거",
+        "description": "60~180 템포 슬라이더, 트랙별 볼륨/음소거.",
+        "priority": "should"
+      },
+      {
+        "name": "프리셋·랜덤·비우기",
+        "description": "기본/하우스/힙합 프리셋, 랜덤 패턴, 전체 지우기.",
+        "priority": "should"
+      }
+    ],
+    "pages": [
+      {
+        "name": "시퀀서",
+        "description": "16스텝 격자에 드럼 비트를 찍고 재생하는 단일 페이지",
+        "components": [
+          "16스텝 × 5트랙 시퀀서 격자",
+          "재생/정지 · 재생 헤드 표시",
+          "BPM 슬라이더(60~180)",
+          "트랙별 볼륨·음소거",
+          "프리셋·랜덤·전체 지우기"
+        ]
+      }
+    ],
+    "data_models": [],
+    "user_flows": [
+      "재생을 누르면 16칸을 왼쪽부터 순서대로 돌며 켜진 칸의 악기가 동시에 소리난다(재생 헤드가 현재 칸 표시).",
+      "칸을 클릭해 패턴을 만들거나 프리셋으로 시작점을 잡고 BPM을 조절한다."
+    ],
+    "strengths": [
+      "외부 의존(음원 파일) 없이 완결되는 자가완결 앱",
+      "오디오 시계 기반의 정확한 타이밍",
+      "반응형·전문적 DAW 톤 UI(좁은 화면은 시퀀서만 가로 스크롤)"
+    ],
+    "weaknesses": [
+      "녹음/오디오 내보내기 없음",
+      "스윙·트랙 추가·패턴 저장 미지원"
+    ]
+  },
+  "learning_notes": [
+    {
+      "title": "박자가 안 흔들리는 비밀 — lookahead 스케줄러",
+      "what": "매 박자마다 '지금 소리내!'를 호출하는 대신, 앞으로 0.1초 안에 올 박자들의 '정확한 시각'을 미리 계산해 오디오 엔진에 예약해 둬요. 화면 타이머(setTimeout)는 25ms마다 깨어나 '예약만' 하고, 실제 발음은 오디오 시계가 맡죠.",
+      "why": "setInterval로 매 박자에 바로 소리내면 브라우저 타이머가 몇 ms씩 들쭉날쭉해 비트가 흔들려요. 미리 예약하면 오디오 하드웨어 시계가 정확히 그 시각에 울려 칼박이 됩니다.",
+      "where": "메트로놈, 리듬게임, 게임 루프 등 정확한 타이밍이 필요한 모든 곳."
+    },
+    {
+      "title": "음원 파일 없이 소리를 '합성'한다",
+      "what": "mp3를 불러오는 대신 사인파(오실레이터)·화이트노이즈·필터를 조합해 드럼 소리를 코드로 직접 만들어요. 킥은 낮은 사인파, 하이햇은 고역 노이즈 식으로요.",
+      "why": "외부 파일에 의존하지 않아 가볍고 어디서든 동작하며, 음색을 숫자(주파수·길이)로 자유롭게 디자인할 수 있어요.",
+      "where": "신디사이저, 게임 효과음, 알림음."
+    },
+    {
+      "title": "엔벌로프 — 소리의 '모양'",
+      "what": "오실레이터를 그냥 켜면 '삑' 하고 끝나요. 음량을 순간 솟구쳤다가 빠르게 사그라뜨리는 곡선을 씌우면 '둥/탁' 하는 타격음이 됩니다.",
+      "why": "엔벌로프가 타악기 소리의 핵심이에요. 같은 오실레이터라도 엔벌로프 길이만 바꾸면 킥·탐·클릭이 전부 달라져요.",
+      "where": "모든 신스 사운드 디자인."
+    },
+    {
+      "title": "비트를 2D 배열로 — pattern[트랙][스텝]",
+      "what": "어떤 박자에 어떤 악기가 켜졌는지를 boolean 2차원 배열로 저장해요. 화면 격자 한 칸이 배열 한 원소와 1:1로 대응하죠.",
+      "why": "UI(격자)와 데이터(배열)가 똑같은 구조라 클릭 토글·재생 읽기가 아주 단순해져요.",
+      "where": "픽셀 아트 에디터, 지뢰찾기, 보드게임 판."
+    },
+    {
+      "title": "타이머 콜백이 '옛날 값'을 보는 함정 — ref",
+      "what": "스케줄러는 useRef에 담아둔 최신 pattern·bpm을 읽어요. state를 직접 읽지 않고요.",
+      "why": "setTimeout 콜백은 만들어진 시점의 state(낡은 값)를 붙잡는 stale closure 문제가 있어요. ref는 늘 최신 값을 가리켜 재생 중 패턴을 바꿔도 바로 반영됩니다.",
+      "where": "타이머·이벤트·구독 콜백에서 React state를 읽는 모든 상황."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 7,
+      "title": "드럼 트랙 정의",
+      "explanation": "킥·스네어·하이햇·클랩·탐 5개 트랙의 이름·합성키·색을 정의합니다. 이 배열이 격자의 각 '행'이 됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 43,
+      "title": "패턴 = 2D 격자 상태",
+      "explanation": "pattern[트랙][스텝] boolean 2차원 배열로 비트를 저장합니다. 칸 클릭 시 토글합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 56,
+      "title": "ref로 최신 상태 미러링",
+      "explanation": "스케줄러(setTimeout 콜백)가 늘 최신 pattern/bpm/볼륨을 읽도록 useRef에 복사합니다. stale closure 방지."
+    },
+    {
+      "file": "App.tsx",
+      "line": 68,
+      "title": "lookahead 스케줄러",
+      "explanation": "오디오 시계(ctx.currentTime) 기준 0.1초 앞 박자까지 미리 예약합니다. 타이밍 흔들림을 없애는 핵심."
+    },
+    {
+      "file": "App.tsx",
+      "line": 76,
+      "title": "정확한 시각에 발음",
+      "explanation": "켜져 있고 음소거가 아닌 트랙의 드럼을 계산된 시각 t에 정확히 소리내도록 예약합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 80,
+      "title": "BPM → 박자 간격",
+      "explanation": "16분음표 간격 = 60 / BPM / 4 초. BPM이 바뀌면 다음 박자 간격이 즉시 반영됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 87,
+      "title": "재생 헤드 그리기",
+      "explanation": "requestAnimationFrame으로 오디오 시계가 지나간 박자를 현재 칸으로 표시합니다. 소리와 화면을 같은 시계로 맞춰요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 107,
+      "title": "재생 + 자동재생 정책",
+      "explanation": "사용자가 재생을 누른 시점에 AudioContext를 만들고 resume합니다. 브라우저는 사용자 제스처 없이는 소리를 막기 때문입니다."
+    },
+    {
+      "file": "drums.ts",
+      "line": 8,
+      "title": "엔벌로프(음량 곡선)",
+      "explanation": "소리가 순간 솟았다가 decay초 동안 사그라드는 gain 곡선. 드럼의 '타격감'을 만듭니다."
+    },
+    {
+      "file": "drums.ts",
+      "line": 27,
+      "title": "킥 합성",
+      "explanation": "사인파 주파수를 150→45Hz로 빠르게 떨어뜨려 '둥' 하는 킥을 만듭니다."
+    },
+    {
+      "file": "drums.ts",
+      "line": 91,
+      "title": "드럼 이름 → 합성 함수 맵",
+      "explanation": "스케줄러가 트랙 키로 이 표를 찾아 해당 드럼 합성 함수를 호출합니다."
+    }
+  ]
+}

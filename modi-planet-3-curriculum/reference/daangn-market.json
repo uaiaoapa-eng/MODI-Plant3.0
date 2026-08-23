@@ -1,0 +1,269 @@
+{
+  "session_id": "reference_daangn-market",
+  "title": "당근마켓 스타일 동네거래 앱",
+  "description": "동네 기반 중고거래 피드, 상품 상세, 채팅, 동네생활, 나의 당근 프로필을 갖춘 모바일 마켓 앱",
+  "phase": "implement",
+  "diagram": "graph TD\n  App[App.tsx 모바일 앱 셸] --> Home[홈 피드/검색/필터]\n  App --> Detail[상품 상세/판매자 신뢰/거래 CTA]\n  App --> Chat[채팅 목록/거래 대화]\n  App --> Community[동네생활 피드]\n  App --> Profile[나의 당근/매너온도/거래 메뉴]\n  Home --> Product[상품 데이터/관심 토글]\n  Detail --> Chat\n  Chat --> Messages[메시지 상태]",
+  "generated_code": {
+    "data/market.ts": "export type Tab = 'home' | 'life' | 'chat' | 'me';\n\nexport interface Product {\n  id: string;\n  title: string;\n  price: number;\n  image: string;\n  location: string;\n  distance: string;\n  time: string;\n  seller: string;\n  avatar: string;\n  temperature: number;\n  category: string;\n  condition: string;\n  description: string;\n  place: string;\n  tags: string[];\n  likes: number;\n  chats: number;\n  views: number;\n  liked: boolean;\n  status?: string;\n  boosted?: boolean;\n  instantBuy?: boolean;\n}\n\nexport interface ChatRoom {\n  id: string;\n  productId: string;\n  title: string;\n  image: string;\n  price: number;\n  seller: string;\n  avatar: string;\n  location: string;\n  temperature: number;\n  last: string;\n  time: string;\n  unread: number;\n}\n\nexport interface Message {\n  id: string;\n  mine?: boolean;\n  system?: boolean;\n  text: string;\n  time: string;\n}\n\nexport interface LifePost {\n  id: string;\n  category: string;\n  title: string;\n  body: string;\n  meta: string;\n  comments: number;\n  likes: number;\n  image?: string;\n}\n\nexport const productsSeed: Product[] = [\n  {\n    id: 'p1',\n    title: '스토케 트립트랩 내추럴 + 베이비세트',\n    price: 185000,\n    image: 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=900&h=900&fit=crop',\n    location: '서초 1동',\n    distance: '360m',\n    time: '13분 전',\n    seller: '하루맘',\n    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=haru',\n    temperature: 39.8,\n    category: '유아동',\n    condition: '거의 새것',\n    description: '첫째가 짧게 사용하고 보관만 했어요. 생활 기스는 아주 조금 있고 흔들림 없습니다. 베이비세트와 안전벨트 같이 드립니다.',\n    place: '서초초 정문 앞',\n    tags: ['육아필수템', '상태좋음', '끌올'],\n    likes: 14,\n    chats: 5,\n    views: 128,\n    liked: false,\n    status: '예약중',\n    boosted: true,\n  },\n  {\n    id: 'p2',\n    title: '아이패드 프로 11 4세대 256GB 셀룰러',\n    price: 890000,\n    image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=900&h=900&fit=crop',\n    location: '삼성2동',\n    distance: '1.8km',\n    time: '42분 전',\n    seller: '디자인하는민',\n    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=min',\n    temperature: 40.6,\n    category: '디지털기기',\n    condition: '거의 새것',\n    description: '영상 편집용으로 사용했습니다. 액정 보호필름 붙어 있고 케이스 씌워 사용해서 외관 깨끗합니다. 애플펜슬은 별도 협의 가능해요.',\n    place: '코엑스 별마당도서관',\n    tags: ['셀룰러', '풀박스'],\n    likes: 47,\n    chats: 12,\n    views: 566,\n    liked: false,\n    instantBuy: true,\n  },\n  {\n    id: 'p3',\n    title: 'LG 코드제로 A9S 무선청소기 세트',\n    price: 210000,\n    image: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=900&h=900&fit=crop',\n    location: '역삼2동',\n    distance: '820m',\n    time: '25분 전',\n    seller: '테헤란로직장인',\n    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=teheran',\n    temperature: 38.4,\n    category: '생활가전',\n    condition: '사용감 있음',\n    description: '배터리 2개, 거치대, 침구 브러시 포함입니다. 사무실 이전하면서 정리합니다.',\n    place: '선릉역 4번 출구',\n    tags: ['구성품풀세트', '오늘가능'],\n    likes: 21,\n    chats: 4,\n    views: 187,\n    liked: false,\n    boosted: true,\n  },\n  {\n    id: 'p4',\n    title: '바질 화분 나눔합니다',\n    price: 0,\n    image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=900&h=900&fit=crop',\n    location: '신사동',\n    distance: '1.5km',\n    time: '3시간 전',\n    seller: '식집사수',\n    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=plant',\n    temperature: 42.1,\n    category: '식물',\n    condition: '거의 새것',\n    description: '바질이 너무 잘 자라서 작은 화분으로 나눔해요. 물받침까지 같이 드립니다.',\n    place: '신사동 주민센터 앞',\n    tags: ['나눔', '식물'],\n    likes: 26,\n    chats: 10,\n    views: 156,\n    liked: false,\n    status: '예약중',\n  },\n];\n\nexport const lifePosts: LifePost[] = [\n  {\n    id: 'l1',\n    category: '동네질문',\n    title: '서초동에서 아이랑 가기 좋은 소아과 추천해 주세요',\n    body: '야간 진료 가능한 곳이면 더 좋아요. 최근에 이사 와서 동네 정보가 아직 부족하네요.',\n    meta: '초보동네주민 · 서초 1동 · 8분 전',\n    comments: 12,\n    likes: 7,\n  },\n  {\n    id: 'l2',\n    category: '동네소식',\n    title: '이번 주 토요일 플리마켓 열려요',\n    body: '서초문화센터 앞마당에서 오전 11시부터 시작한대요. 아이 옷, 책, 반려용품 부스가 많다고 합니다.',\n    meta: '동네알림이 · 서초동 · 31분 전',\n    comments: 18,\n    likes: 46,\n    image: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=700&h=500&fit=crop',\n  },\n  {\n    id: 'l3',\n    category: '동네맛집',\n    title: '선릉역 근처 김밥집 새로 생겼는데 든든해요',\n    body: '아침에 줄이 조금 있지만 회전 빠르고 참치김밥이 괜찮았습니다.',\n    meta: '점심탐험대 · 역삼2동 · 1시간 전',\n    comments: 9,\n    likes: 28,\n    image: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=700&h=500&fit=crop',\n  },\n];\n\nexport const initialRooms: ChatRoom[] = [\n  {\n    id: 'p1',\n    productId: 'p1',\n    title: productsSeed[0].title,\n    image: productsSeed[0].image,\n    price: productsSeed[0].price,\n    seller: productsSeed[0].seller,\n    avatar: productsSeed[0].avatar,\n    location: productsSeed[0].location,\n    temperature: productsSeed[0].temperature,\n    last: '네, 오늘 7시 서초초 앞 가능해요.',\n    time: '5분 전',\n    unread: 2,\n  },\n  {\n    id: 'p2',\n    productId: 'p2',\n    title: productsSeed[1].title,\n    image: productsSeed[1].image,\n    price: productsSeed[1].price,\n    seller: productsSeed[1].seller,\n    avatar: productsSeed[1].avatar,\n    location: productsSeed[1].location,\n    temperature: productsSeed[1].temperature,\n    last: '애플펜슬 포함이면 94까지 생각하고 있어요.',\n    time: '38분 전',\n    unread: 0,\n  },\n];\n\nexport const initialMessages: Record<string, Message[]> = {\n  p1: [\n    { id: 's1', system: true, text: '거래 전 물품 상태와 거래 장소를 꼭 확인해 주세요.', time: '오늘' },\n    { id: 'm1', mine: true, text: '안녕하세요. 아직 거래 가능할까요?', time: '18:21' },\n    { id: 'm2', text: '네 가능해요. 베이비세트까지 같이 드리는 구성입니다.', time: '18:23' },\n    { id: 'm3', mine: true, text: '오늘 저녁에 직접 보고 가져갈 수 있을까요?', time: '18:25' },\n    { id: 'm4', text: '네, 오늘 7시 서초초 앞 가능해요.', time: '18:27' },\n  ],\n  p2: [\n    { id: 'm1', text: '배터리 성능이랑 외관 같이 확인시켜드릴게요.', time: '17:41' },\n    { id: 'm2', mine: true, text: '애플펜슬 포함 가격도 가능할까요?', time: '17:49' },\n    { id: 'm3', text: '애플펜슬 포함이면 94까지 생각하고 있어요.', time: '17:52' },\n  ],\n};",
+    "utils/market.ts": "import type { ChatRoom, Product } from '../data/market';\n\nexport const money = (price: number) =>\n  price === 0 ? '나눔' : price.toLocaleString() + '원';\n\nexport function roomFromProduct(\n  product: Product,\n  last: string,\n  time: string,\n  unread: number,\n): ChatRoom {\n  return {\n    id: product.id,\n    productId: product.id,\n    title: product.title,\n    image: product.image,\n    price: product.price,\n    seller: product.seller,\n    avatar: product.avatar,\n    location: product.location,\n    temperature: product.temperature,\n    last,\n    time,\n    unread,\n  };\n}",
+    "components/IconButton.tsx": "import type { LucideIcon } from 'lucide-react';\n\ninterface Props {\n  icon: LucideIcon;\n  label: string;\n  badge?: boolean;\n}\n\nexport default function IconButton({ icon: Icon, label, badge }: Props) {\n  return (\n    <button\n      aria-label={label}\n      className=\"relative flex h-10 w-10 items-center justify-center rounded-full text-gray-900 hover:bg-gray-50\"\n      type=\"button\"\n    >\n      <Icon size={22} />\n      {badge && (\n        <span className=\"absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#ff6f0f]\" />\n      )}\n    </button>\n  );\n}",
+    "components/Header.tsx": "import { Bell, ChevronDown, Search } from 'lucide-react';\nimport type { Tab } from '../data/market';\nimport IconButton from './IconButton';\n\ninterface Props {\n  tab: Tab;\n  unread: number;\n}\n\nconst titles: Record<Tab, string> = {\n  home: '서초 1동',\n  life: '동네생활',\n  chat: '채팅',\n  me: '나의 당근',\n};\n\nexport default function Header({ tab, unread }: Props) {\n  return (\n    <header className=\"sticky top-0 z-40 flex h-[58px] items-center justify-between border-b border-gray-100 bg-white/95 px-4 backdrop-blur\">\n      <button\n        className=\"flex min-w-0 items-center gap-1.5 rounded-md px-1 py-2 text-left hover:bg-gray-50\"\n        type=\"button\"\n      >\n        <span className=\"truncate text-[21px] font-extrabold text-gray-950\">\n          {titles[tab]}\n        </span>\n        {tab === 'home' && <ChevronDown size={18} />}\n      </button>\n\n      <div className=\"flex items-center gap-1\">\n        <IconButton icon={Search} label=\"검색\" />\n        <IconButton icon={Bell} label=\"알림\" badge={unread > 0} />\n      </div>\n    </header>\n  );\n}",
+    "components/BottomNav.tsx": "import { Home, MessageCircle, Newspaper, User } from 'lucide-react';\nimport type { LucideIcon } from 'lucide-react';\nimport type { Tab } from '../data/market';\n\ninterface Props {\n  tab: Tab;\n  unread: number;\n  onChange: (tab: Tab) => void;\n}\n\nconst items: Array<{ id: Tab; label: string; icon: LucideIcon }> = [\n  { id: 'home', label: '홈', icon: Home },\n  { id: 'life', label: '동네생활', icon: Newspaper },\n  { id: 'chat', label: '채팅', icon: MessageCircle },\n  { id: 'me', label: '나의 당근', icon: User },\n];\n\nexport default function BottomNav({ tab, unread, onChange }: Props) {\n  return (\n    <nav className=\"absolute bottom-0 left-0 right-0 z-30 h-16 border-t border-gray-100 bg-white\">\n      <div className=\"grid h-full grid-cols-4\">\n        {items.map(({ id, label, icon: Icon }) => {\n          const active = tab === id;\n          return (\n            <button\n              key={id}\n              onClick={() => onChange(id)}\n              className={\n                'relative flex flex-col items-center justify-center gap-1 text-[11px] font-semibold ' +\n                (active ? 'text-gray-950' : 'text-gray-500')\n              }\n              type=\"button\"\n            >\n              <Icon size={23} strokeWidth={active ? 2.7 : 2.1} />\n              <span>{label}</span>\n              {id === 'chat' && unread > 0 && (\n                <span className=\"absolute right-[25%] top-2 min-w-[18px] rounded-full bg-[#ff3b30] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white\">\n                  {unread}\n                </span>\n              )}\n            </button>\n          );\n        })}\n      </div>\n    </nav>\n  );\n}",
+    "components/Badge.tsx": "export default function Badge({ children }: { children: string }) {\n  return (\n    <span className=\"rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600\">\n      {children}\n    </span>\n  );\n}",
+    "components/ProductRow.tsx": "import { Heart, MessageCircle, MoreVertical } from 'lucide-react';\nimport type { Product } from '../data/market';\nimport { money } from '../utils/market';\n\ninterface Props {\n  product: Product;\n  onSelect: () => void;\n  onLike: () => void;\n}\n\nexport default function ProductRow({ product, onSelect, onLike }: Props) {\n  return (\n    <article className=\"bg-white px-4 py-3 hover:bg-gray-50\">\n      <div className=\"flex gap-3\">\n        <button\n          onClick={onSelect}\n          className=\"relative h-[112px] w-[112px] flex-shrink-0 overflow-hidden rounded-md bg-gray-100\"\n          type=\"button\"\n        >\n          <img src={product.image} alt={product.title} className=\"h-full w-full object-cover\" />\n          {product.status && (\n            <span className=\"absolute left-2 top-2 rounded bg-emerald-500 px-1.5 py-0.5 text-[11px] font-bold text-white\">\n              {product.status}\n            </span>\n          )}\n        </button>\n\n        <div className=\"min-w-0 flex-1\">\n          <button onClick={onSelect} className=\"w-full text-left\" type=\"button\">\n            <div className=\"flex items-start gap-2\">\n              <div className=\"min-w-0 flex-1\">\n                <h3 className=\"line-clamp-2 text-[15px] font-semibold leading-5 text-gray-950\">\n                  {product.title}\n                </h3>\n                <p className=\"mt-1 truncate text-[13px] text-gray-500\">\n                  {product.location} · {product.distance} · {product.time}\n                </p>\n              </div>\n              <MoreVertical size={18} className=\"text-gray-400\" />\n            </div>\n          </button>\n\n          <div className=\"mt-2 flex flex-wrap items-center gap-1.5\">\n            {product.boosted && (\n              <span className=\"rounded bg-orange-50 px-1.5 py-0.5 text-[11px] font-bold text-[#ff6f0f]\">\n                끌올\n              </span>\n            )}\n            {product.tags.slice(0, 2).map((tag) => (\n              <span\n                key={tag}\n                className=\"rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold text-gray-600\"\n              >\n                {tag}\n              </span>\n            ))}\n          </div>\n\n          <div className=\"mt-2 flex items-end justify-between gap-2\">\n            <p\n              className={\n                'text-[16px] font-extrabold ' +\n                (product.price === 0 ? 'text-[#ff6f0f]' : 'text-gray-950')\n              }\n            >\n              {money(product.price)}\n            </p>\n            <div className=\"flex items-center gap-2 text-xs text-gray-500\">\n              <span className=\"inline-flex items-center gap-0.5\">\n                <MessageCircle size={14} />\n                {product.chats}\n              </span>\n              <button\n                onClick={onLike}\n                className={\n                  'inline-flex items-center gap-0.5 rounded-full px-1.5 py-1 ' +\n                  (product.liked ? 'text-[#ff3b30]' : 'text-gray-500')\n                }\n                type=\"button\"\n              >\n                <Heart size={14} className={product.liked ? 'fill-[#ff3b30]' : ''} />\n                {product.likes}\n              </button>\n            </div>\n          </div>\n        </div>\n      </div>\n    </article>\n  );\n}",
+    "components/ProductDetail.tsx": "import { ArrowLeft, BadgeCheck, Heart, MapPin, MessageCircle, Zap } from 'lucide-react';\nimport type { Product } from '../data/market';\nimport { money } from '../utils/market';\nimport Badge from './Badge';\n\ninterface Props {\n  product: Product;\n  close: () => void;\n  like: () => void;\n  chat: () => void;\n}\n\nexport default function ProductDetail({ product, close, like, chat }: Props) {\n  const tempWidth = String(Math.min(100, Math.max(12, (product.temperature - 30) * 6))) + '%';\n\n  return (\n    <div className=\"absolute inset-0 z-50 flex flex-col bg-white\">\n      <div className=\"flex-1 overflow-y-auto pb-28\">\n        <div className=\"relative aspect-square bg-gray-100\">\n          <img src={product.image} alt={product.title} className=\"h-full w-full object-cover\" />\n          <button\n            onClick={close}\n            className=\"absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur\"\n            type=\"button\"\n          >\n            <ArrowLeft size={23} />\n          </button>\n        </div>\n\n        <section className=\"border-b border-gray-100 px-4 py-4\">\n          <div className=\"flex items-center gap-3\">\n            <img src={product.avatar} alt={product.seller} className=\"h-12 w-12 rounded-full bg-gray-100 object-cover\" />\n            <div className=\"min-w-0 flex-1\">\n              <div className=\"flex items-center gap-1\">\n                <p className=\"truncate text-[15px] font-extrabold text-gray-950\">\n                  {product.seller}\n                </p>\n                <BadgeCheck size={16} className=\"text-[#ff6f0f]\" />\n              </div>\n              <p className=\"truncate text-sm text-gray-500\">{product.location}</p>\n            </div>\n            <div className=\"w-[82px]\">\n              <p className=\"text-right text-sm font-extrabold text-teal-600\">\n                {product.temperature.toFixed(1)}°C\n              </p>\n              <div className=\"mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100\">\n                <div className=\"h-full rounded-full bg-teal-500\" style={{ width: tempWidth }} />\n              </div>\n            </div>\n          </div>\n        </section>\n\n        <section className=\"border-b border-gray-100 px-4 py-5\">\n          <div className=\"mb-2 flex gap-1.5\">\n            <Badge>{product.category}</Badge>\n            <Badge>{product.condition}</Badge>\n          </div>\n          <h1 className=\"text-[22px] font-extrabold leading-7 text-gray-950\">{product.title}</h1>\n          <p className=\"mt-1 text-sm text-gray-500\">\n            {product.location} · {product.distance} · {product.time}\n          </p>\n          <p\n            className={\n              'mt-4 text-[25px] font-extrabold ' +\n              (product.price === 0 ? 'text-[#ff6f0f]' : 'text-gray-950')\n            }\n          >\n            {money(product.price)}\n          </p>\n          <p className=\"mt-5 text-[15px] leading-6 text-gray-800\">{product.description}</p>\n          <div className=\"mt-5 flex items-center gap-3 text-xs text-gray-500\">\n            <span>조회 {product.views}</span>\n            <span>채팅 {product.chats}</span>\n            <span>관심 {product.likes}</span>\n          </div>\n        </section>\n\n        <section className=\"px-4 py-4\">\n          <div className=\"flex items-center gap-3\">\n            <span className=\"flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-[#ff6f0f]\">\n              <MapPin size={20} />\n            </span>\n            <div>\n              <p className=\"text-[15px] font-bold text-gray-950\">{product.place}</p>\n              <p className=\"text-xs text-gray-500\">직거래 · 계좌이체</p>\n            </div>\n          </div>\n        </section>\n      </div>\n\n      <div className=\"absolute bottom-0 left-0 right-0 border-t border-gray-100 bg-white px-4 pb-4 pt-3\">\n        <div\n          className={\n            'grid items-center gap-3 ' +\n            (product.instantBuy ? 'grid-cols-[44px_1fr_1fr]' : 'grid-cols-[44px_1fr]')\n          }\n        >\n          <button\n            onClick={like}\n            className={\n              'flex h-11 w-11 items-center justify-center rounded-md border ' +\n              (product.liked\n                ? 'border-red-100 bg-red-50 text-[#ff3b30]'\n                : 'border-gray-200 text-gray-700')\n            }\n            type=\"button\"\n          >\n            <Heart size={22} className={product.liked ? 'fill-[#ff3b30]' : ''} />\n          </button>\n          <button\n            onClick={chat}\n            className=\"flex h-12 items-center justify-center gap-2 rounded-md bg-gray-950 px-3 text-[15px] font-extrabold text-white\"\n            type=\"button\"\n          >\n            <MessageCircle size={19} />\n            채팅하기\n          </button>\n          {product.instantBuy && (\n            <button className=\"flex h-12 items-center justify-center gap-2 rounded-md bg-[#ff6f0f] px-3 text-[15px] font-extrabold text-white\" type=\"button\">\n              <Zap size={18} />\n              바로구매\n            </button>\n          )}\n        </div>\n      </div>\n    </div>\n  );\n}",
+    "components/ChatDetail.tsx": "import { useState } from 'react';\nimport { ArrowLeft, MapPin, Send } from 'lucide-react';\nimport type { ChatRoom, Message } from '../data/market';\nimport { money } from '../utils/market';\n\ninterface Props {\n  room: ChatRoom;\n  messages: Message[];\n  close: () => void;\n  send: (text: string) => void;\n}\n\nconst quickReplies = ['오늘 거래 가능해요', '조금만 네고 가능할까요?', '거래 장소 어디가 편하세요?'];\n\nexport default function ChatDetail({ room, messages, close, send }: Props) {\n  const [input, setInput] = useState('');\n\n  const submit = (text = input) => {\n    if (!text.trim()) return;\n    send(text);\n    setInput('');\n  };\n\n  return (\n    <div className=\"absolute inset-0 z-50 flex flex-col bg-[#f7f8fa]\">\n      <header className=\"flex h-[58px] items-center gap-2 border-b border-gray-100 bg-white px-3\">\n        <button onClick={close} className=\"flex h-10 w-10 items-center justify-center rounded-full\" type=\"button\">\n          <ArrowLeft size={23} />\n        </button>\n        <img src={room.avatar} alt={room.seller} className=\"h-9 w-9 rounded-full object-cover\" />\n        <div className=\"min-w-0\">\n          <p className=\"truncate text-[15px] font-extrabold text-gray-950\">{room.seller}</p>\n          <p className=\"truncate text-xs text-gray-500\">\n            {room.location} · {room.temperature.toFixed(1)}°C\n          </p>\n        </div>\n      </header>\n\n      <button className=\"flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 text-left\" type=\"button\">\n        <img src={room.image} alt={room.title} className=\"h-12 w-12 rounded-md object-cover\" />\n        <div className=\"min-w-0 flex-1\">\n          <p className=\"truncate text-sm font-bold text-gray-950\">{room.title}</p>\n          <p className=\"text-sm font-extrabold text-gray-950\">{money(room.price)}</p>\n        </div>\n        <MapPin size={17} className=\"text-[#ff6f0f]\" />\n      </button>\n\n      <div className=\"flex-1 overflow-y-auto px-4 py-5\">\n        <div className=\"space-y-3\">\n          {messages.map((msg) =>\n            msg.system ? (\n              <div key={msg.id} className=\"flex justify-center\">\n                <p className=\"max-w-[280px] rounded-md bg-white px-3 py-2 text-center text-xs text-gray-500 shadow-sm\">\n                  {msg.text}\n                </p>\n              </div>\n            ) : (\n              <div key={msg.id} className={msg.mine ? 'flex justify-end' : 'flex justify-start'}>\n                <div className={'flex max-w-[78%] items-end gap-1.5 ' + (msg.mine ? 'flex-row-reverse' : '')}>\n                  <div\n                    className={\n                      'rounded-2xl px-3.5 py-2.5 text-[15px] leading-5 shadow-sm ' +\n                      (msg.mine\n                        ? 'rounded-br-md bg-[#ff6f0f] text-white'\n                        : 'rounded-bl-md bg-white text-gray-950')\n                    }\n                  >\n                    {msg.text}\n                  </div>\n                  <span className=\"mb-1 text-[10px] text-gray-400\">{msg.time}</span>\n                </div>\n              </div>\n            ),\n          )}\n        </div>\n      </div>\n\n      <div className=\"border-t border-gray-100 bg-white px-4 pb-4 pt-3\">\n        <div className=\"mb-3 flex gap-2 overflow-x-auto\">\n          {quickReplies.map((reply) => (\n            <button\n              key={reply}\n              onClick={() => submit(reply)}\n              className=\"h-8 flex-shrink-0 rounded-full border border-gray-200 px-3 text-xs font-semibold text-gray-700\"\n              type=\"button\"\n            >\n              {reply}\n            </button>\n          ))}\n        </div>\n        <div className=\"flex items-center gap-2\">\n          <input\n            value={input}\n            onChange={(event) => setInput(event.target.value)}\n            onKeyDown={(event) => {\n              if (event.key === 'Enter') submit();\n            }}\n            placeholder=\"메시지 보내기\"\n            className=\"h-10 min-w-0 flex-1 rounded-full bg-gray-100 px-4 text-[15px] outline-none\"\n          />\n          <button\n            onClick={() => submit()}\n            disabled={!input.trim()}\n            className=\"flex h-10 w-10 items-center justify-center rounded-full bg-[#ff6f0f] text-white disabled:bg-gray-300\"\n            type=\"button\"\n          >\n            <Send size={18} />\n          </button>\n        </div>\n      </div>\n    </div>\n  );\n}",
+    "pages/HomeFeed.tsx": "import { ChevronRight, Search, ShieldCheck, SlidersHorizontal } from 'lucide-react';\nimport type { Product } from '../data/market';\nimport ProductRow from '../components/ProductRow';\n\ninterface Props {\n  products: Product[];\n  query: string;\n  filter: string;\n  setQuery: (value: string) => void;\n  setFilter: (value: string) => void;\n  onSelect: (product: Product) => void;\n  onLike: (id: string) => void;\n}\n\nconst filters = ['전체', '나눔', '디지털', '생활가전', '유아동', '식물'];\n\nexport default function HomeFeed({\n  products,\n  query,\n  filter,\n  setQuery,\n  setFilter,\n  onSelect,\n  onLike,\n}: Props) {\n  return (\n    <div className=\"pb-24\">\n      <section className=\"border-b border-gray-100 bg-white px-4 pb-3 pt-3\">\n        <div className=\"flex items-center gap-2\">\n          <label className=\"flex h-11 flex-1 items-center gap-2 rounded-md bg-gray-100 px-3\">\n            <Search size={18} className=\"text-gray-500\" />\n            <input\n              value={query}\n              onChange={(event) => setQuery(event.target.value)}\n              placeholder=\"동네 물건, 가게, 알바 검색\"\n              className=\"min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-gray-500\"\n            />\n          </label>\n          <button className=\"flex h-11 w-11 items-center justify-center rounded-md bg-gray-100 text-gray-800\" type=\"button\">\n            <SlidersHorizontal size={20} />\n          </button>\n        </div>\n        <div className=\"mt-3 flex gap-2 overflow-x-auto pb-1\">\n          {filters.map((item) => (\n            <button\n              key={item}\n              onClick={() => setFilter(item)}\n              className={\n                'h-8 flex-shrink-0 rounded-full px-3 text-sm font-semibold ' +\n                (filter === item ? 'bg-gray-950 text-white' : 'bg-gray-100 text-gray-700')\n              }\n              type=\"button\"\n            >\n              {item}\n            </button>\n          ))}\n        </div>\n      </section>\n\n      <button className=\"flex w-full items-center justify-between border-b border-gray-100 bg-[#fff7f2] px-4 py-3 text-left\" type=\"button\">\n        <div className=\"flex min-w-0 items-center gap-3\">\n          <span className=\"flex h-9 w-9 items-center justify-center rounded-full bg-[#ff6f0f] text-white\">\n            <ShieldCheck size={19} />\n          </span>\n          <div className=\"min-w-0\">\n            <p className=\"truncate text-sm font-bold text-gray-950\">동네 인증하고 더 가까운 매물을 만나보세요</p>\n            <p className=\"text-xs text-gray-600\">서초 1동 기준 3km 안 거래가 먼저 보여요</p>\n          </div>\n        </div>\n        <ChevronRight size={18} className=\"text-gray-500\" />\n      </button>\n\n      <section className=\"divide-y divide-gray-100 bg-white\">\n        {products.map((product) => (\n          <ProductRow\n            key={product.id}\n            product={product}\n            onSelect={() => onSelect(product)}\n            onLike={() => onLike(product.id)}\n          />\n        ))}\n      </section>\n    </div>\n  );\n}",
+    "pages/LifeFeed.tsx": "import { Users } from 'lucide-react';\nimport Badge from '../components/Badge';\nimport { lifePosts } from '../data/market';\n\nexport default function LifeFeed() {\n  return (\n    <div className=\"pb-24\">\n      <section className=\"border-b border-gray-100 bg-[#fff7f2] px-4 py-4\">\n        <div className=\"flex items-center gap-3\">\n          <span className=\"flex h-11 w-11 items-center justify-center rounded-full bg-[#ff6f0f] text-white\">\n            <Users size={22} />\n          </span>\n          <div>\n            <p className=\"text-[15px] font-extrabold text-gray-950\">\n              서초 1동 이웃 12,480명과 연결 중\n            </p>\n            <p className=\"text-xs text-gray-600\">생활 질문, 소식, 맛집 이야기가 매일 올라와요</p>\n          </div>\n        </div>\n      </section>\n\n      <section className=\"divide-y divide-gray-100\">\n        {lifePosts.map((post) => (\n          <article key={post.id} className=\"px-4 py-4\">\n            <div className=\"mb-2\">\n              <Badge>{post.category}</Badge>\n            </div>\n            <div className=\"flex gap-3\">\n              <div className=\"min-w-0 flex-1\">\n                <h2 className=\"line-clamp-2 text-[16px] font-extrabold leading-6 text-gray-950\">\n                  {post.title}\n                </h2>\n                <p className=\"mt-1 line-clamp-2 text-sm leading-5 text-gray-600\">{post.body}</p>\n                <p className=\"mt-2 text-xs text-gray-500\">{post.meta}</p>\n              </div>\n              {post.image && (\n                <img src={post.image} alt={post.title} className=\"h-[86px] w-[86px] flex-shrink-0 rounded-md object-cover\" />\n              )}\n            </div>\n            <div className=\"mt-3 flex gap-4 text-xs text-gray-500\">\n              <span>댓글 {post.comments}</span>\n              <span>공감 {post.likes}</span>\n            </div>\n          </article>\n        ))}\n      </section>\n    </div>\n  );\n}",
+    "pages/ChatList.tsx": "import type { ChatRoom } from '../data/market';\nimport { money } from '../utils/market';\n\ninterface Props {\n  rooms: ChatRoom[];\n  open: (id: string) => void;\n}\n\nexport default function ChatList({ rooms, open }: Props) {\n  return (\n    <div className=\"pb-24\">\n      <section className=\"border-b border-gray-100 bg-[#fff7f2] px-4 py-3\">\n        <p className=\"text-sm font-extrabold text-gray-950\">거래 약속 전에 안전수칙을 확인해 보세요</p>\n        <p className=\"text-xs text-gray-600\">선입금, 외부 링크, 택배 사칭을 조심하세요</p>\n      </section>\n\n      <section className=\"divide-y divide-gray-100\">\n        {rooms.map((room) => (\n          <button\n            key={room.id}\n            onClick={() => open(room.id)}\n            className=\"w-full px-4 py-3 text-left hover:bg-gray-50\"\n            type=\"button\"\n          >\n            <div className=\"flex gap-3\">\n              <img src={room.image} alt={room.title} className=\"h-[62px] w-[62px] rounded-md object-cover\" />\n              <div className=\"min-w-0 flex-1\">\n                <div className=\"flex items-center gap-1.5\">\n                  <p className=\"truncate text-[15px] font-extrabold text-gray-950\">{room.seller}</p>\n                  <span className=\"text-xs text-gray-400\">·</span>\n                  <p className=\"truncate text-xs text-gray-500\">{room.location}</p>\n                  <p className=\"ml-auto text-xs text-gray-400\">{room.time}</p>\n                </div>\n                <p className=\"mt-0.5 truncate text-xs font-semibold text-gray-500\">\n                  {room.title} · {money(room.price)}\n                </p>\n                <div className=\"mt-1 flex items-center gap-2\">\n                  <p className={'min-w-0 flex-1 truncate text-sm ' + (room.unread ? 'font-bold text-gray-950' : 'text-gray-600')}>\n                    {room.last}\n                  </p>\n                  {room.unread ? (\n                    <span className=\"rounded-full bg-[#ff3b30] px-1.5 text-xs font-bold text-white\">\n                      {room.unread}\n                    </span>\n                  ) : null}\n                </div>\n                <p className=\"mt-1 text-xs font-semibold text-teal-600\">\n                  매너온도 {room.temperature.toFixed(1)}°C\n                </p>\n              </div>\n            </div>\n          </button>\n        ))}\n      </section>\n    </div>\n  );\n}",
+    "pages/Profile.tsx": "import {\n  ChevronRight,\n  CreditCard,\n  Heart,\n  MapPin,\n  PackageCheck,\n  Receipt,\n  Settings,\n  ShoppingBag,\n  Star,\n  Store,\n} from 'lucide-react';\nimport type { LucideIcon } from 'lucide-react';\n\ninterface Props {\n  liked: number;\n}\n\nconst menu: Array<{ label: string; desc: string; icon: LucideIcon }> = [\n  { label: '내 동네 설정', desc: '서초 1동 외 1개', icon: MapPin },\n  { label: '당근페이', desc: '송금과 바로구매 결제 관리', icon: CreditCard },\n  { label: '거래 영수증', desc: '구매 확정 및 거래 기록', icon: Receipt },\n  { label: '앱 설정', desc: '계정, 보안, 고객센터', icon: Settings },\n];\n\nexport default function Profile({ liked }: Props) {\n  const stats = [\n    { label: '판매내역', value: '5', icon: Store },\n    { label: '구매내역', value: '12', icon: ShoppingBag },\n    { label: '관심목록', value: String(liked), icon: Heart },\n    { label: '거래후기', value: '52', icon: Star },\n  ];\n\n  return (\n    <div className=\"pb-24\">\n      <section className=\"border-b border-gray-100 px-4 py-5\">\n        <div className=\"flex items-center gap-4\">\n          <img\n            src=\"https://api.dicebear.com/9.x/lorelei/svg?seed=Modi&backgroundColor=ffd5dc&radius=50\"\n            alt=\"모디\"\n            className=\"h-[72px] w-[72px] rounded-full bg-gray-100 object-cover\"\n          />\n          <div>\n            <div className=\"flex items-center gap-2\">\n              <h2 className=\"text-xl font-extrabold text-gray-950\">모디</h2>\n              <span className=\"rounded bg-orange-50 px-2 py-1 text-xs font-bold text-[#ff6f0f]\">\n                본인인증\n              </span>\n            </div>\n            <p className=\"mt-1 text-sm text-gray-500\">서초 1동 · 동네 인증 24회</p>\n            <button className=\"mt-3 rounded-md border border-gray-200 px-3 py-2 text-sm font-bold text-gray-800\" type=\"button\">\n              프로필 보기\n            </button>\n          </div>\n        </div>\n\n        <div className=\"mt-5 rounded-md bg-gray-50 p-4\">\n          <div className=\"mb-2 flex items-center justify-between\">\n            <p className=\"text-sm font-extrabold text-gray-950\">매너온도</p>\n            <p className=\"text-base font-extrabold text-teal-600\">38.9°C</p>\n          </div>\n          <div className=\"h-2 overflow-hidden rounded-full bg-gray-200\">\n            <div className=\"h-full w-[54%] rounded-full bg-teal-500\" />\n          </div>\n        </div>\n      </section>\n\n      <section className=\"grid grid-cols-4 border-b border-gray-100\">\n        {stats.map(({ label, value, icon: Icon }) => (\n          <button key={label} className=\"flex flex-col items-center gap-1.5 px-2 py-4\" type=\"button\">\n            <span className=\"flex h-10 w-10 items-center justify-center rounded-full bg-gray-100\">\n              <Icon size={20} />\n            </span>\n            <span className=\"text-xs font-semibold text-gray-700\">{label}</span>\n            <span className=\"text-xs font-bold text-gray-950\">{value}</span>\n          </button>\n        ))}\n      </section>\n\n      <section className=\"mt-2 divide-y divide-gray-100 border-y border-gray-100\">\n        {menu.map(({ label, desc, icon: Icon }) => (\n          <button key={label} className=\"flex w-full items-center gap-3 px-4 py-4 text-left\" type=\"button\">\n            <span className=\"flex h-10 w-10 items-center justify-center rounded-full bg-gray-100\">\n              <Icon size={20} />\n            </span>\n            <div className=\"min-w-0 flex-1\">\n              <p className=\"truncate text-[15px] font-bold text-gray-950\">{label}</p>\n              <p className=\"truncate text-xs text-gray-500\">{desc}</p>\n            </div>\n            <ChevronRight size={18} className=\"text-gray-400\" />\n          </button>\n        ))}\n      </section>\n\n      <section className=\"mt-2 border-y border-gray-100 px-4 py-4\">\n        <div className=\"flex items-start gap-3\">\n          <span className=\"flex h-10 w-10 items-center justify-center rounded-full bg-[#fff7f2] text-[#ff6f0f]\">\n            <PackageCheck size={20} />\n          </span>\n          <div>\n            <p className=\"text-[15px] font-extrabold text-gray-950\">이번 달 거래 리포트</p>\n            <p className=\"mt-1 text-sm leading-5 text-gray-600\">\n              판매 3건, 구매 2건을 완료했어요. 평균 응답 시간은 8분입니다.\n            </p>\n          </div>\n        </div>\n      </section>\n    </div>\n  );\n}",
+    "App.tsx": "import { useMemo, useState } from 'react';\nimport { Plus } from 'lucide-react';\nimport Header from './components/Header';\nimport BottomNav from './components/BottomNav';\nimport ProductDetail from './components/ProductDetail';\nimport ChatDetail from './components/ChatDetail';\nimport HomeFeed from './pages/HomeFeed';\nimport LifeFeed from './pages/LifeFeed';\nimport ChatList from './pages/ChatList';\nimport Profile from './pages/Profile';\nimport {\n  initialMessages,\n  initialRooms,\n  productsSeed,\n  type ChatRoom,\n  type Message,\n  type Product,\n  type Tab,\n} from './data/market';\nimport { roomFromProduct } from './utils/market';\n\nexport default function App() {\n  const [tab, setTab] = useState<Tab>('home');\n  const [products, setProducts] = useState<Product[]>(productsSeed);\n  const [selected, setSelected] = useState<Product | null>(null);\n  const [chatId, setChatId] = useState<string | null>(null);\n  const [query, setQuery] = useState('');\n  const [filter, setFilter] = useState('전체');\n  const [rooms, setRooms] = useState<ChatRoom[]>(initialRooms);\n  const [messages, setMessages] = useState<Record<string, Message[]>>(initialMessages);\n\n  const unread = rooms.reduce((sum, room) => sum + room.unread, 0);\n  const activeRoom = rooms.find((room) => room.id === chatId) || null;\n  const visibleProducts = useMemo(() => {\n    return products.filter((product) => {\n      const q = query.trim().toLowerCase();\n      const matchesQuery =\n        !q ||\n        product.title.toLowerCase().includes(q) ||\n        product.location.toLowerCase().includes(q);\n      const matchesFilter =\n        filter === '전체' ||\n        (filter === '나눔' && product.price === 0) ||\n        product.category.includes(filter);\n      return matchesQuery && matchesFilter;\n    });\n  }, [filter, products, query]);\n\n  function toggleLike(id: string) {\n    const update = (product: Product) => {\n      if (product.id !== id) return product;\n      const liked = !product.liked;\n      return {\n        ...product,\n        liked,\n        likes: Math.max(0, product.likes + (liked ? 1 : -1)),\n      };\n    };\n\n    setProducts((current) => current.map(update));\n    setSelected((current) => (current ? update(current) : current));\n  }\n\n  function openChat(product: Product) {\n    const room = rooms.find((item) => item.productId === product.id);\n\n    if (!room) {\n      const next = roomFromProduct(product, '채팅이 시작되었습니다.', '방금', 0);\n      setRooms((current) => [next, ...current]);\n      setMessages((current) => ({\n        ...current,\n        [next.id]: [\n          {\n            id: 'start',\n            system: true,\n            text: '거래 전 물품 상태와 거래 장소를 꼭 확인해 주세요.',\n            time: '방금',\n          },\n        ],\n      }));\n      setChatId(next.id);\n    } else {\n      setChatId(room.id);\n      setRooms((current) =>\n        current.map((item) => (item.id === room.id ? { ...item, unread: 0 } : item)),\n      );\n    }\n\n    setSelected(null);\n    setTab('chat');\n  }\n\n  function sendMessage(text: string) {\n    if (!chatId || !text.trim()) return;\n    const msg: Message = {\n      id: Date.now().toString(),\n      mine: true,\n      text: text.trim(),\n      time: new Date().toLocaleTimeString('ko-KR', {\n        hour: '2-digit',\n        minute: '2-digit',\n      }),\n    };\n\n    setMessages((current) => ({ ...current, [chatId]: [...(current[chatId] || []), msg] }));\n    setRooms((current) =>\n      current.map((room) => (room.id === chatId ? { ...room, last: msg.text, time: '방금' } : room)),\n    );\n  }\n\n  return (\n    <div className=\"flex h-screen justify-center bg-neutral-100\">\n      <div className=\"relative h-screen w-full max-w-md overflow-hidden bg-white shadow-2xl\">\n        <Header tab={tab} unread={unread} />\n\n        <main className=\"h-[calc(100vh-122px)] overflow-y-auto bg-white\">\n          {tab === 'home' && (\n            <HomeFeed\n              products={visibleProducts}\n              query={query}\n              filter={filter}\n              setQuery={setQuery}\n              setFilter={setFilter}\n              onSelect={setSelected}\n              onLike={toggleLike}\n            />\n          )}\n          {tab === 'life' && <LifeFeed />}\n          {tab === 'chat' && (\n            <ChatList\n              rooms={rooms}\n              open={(id) => {\n                setChatId(id);\n                setRooms((current) =>\n                  current.map((room) => (room.id === id ? { ...room, unread: 0 } : room)),\n                );\n              }}\n            />\n          )}\n          {tab === 'me' && <Profile liked={products.filter((product) => product.liked).length} />}\n        </main>\n\n        {(tab === 'home' || tab === 'life') && (\n          <button\n            className=\"absolute bottom-[82px] right-4 z-30 flex h-12 items-center gap-1.5 rounded-full bg-[#ff6f0f] px-4 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(255,111,15,0.35)]\"\n            type=\"button\"\n          >\n            <Plus size={20} />\n            글쓰기\n          </button>\n        )}\n\n        <BottomNav tab={tab} unread={unread} onChange={setTab} />\n\n        {selected && (\n          <ProductDetail\n            product={selected}\n            close={() => setSelected(null)}\n            like={() => toggleLike(selected.id)}\n            chat={() => openChat(selected)}\n          />\n        )}\n\n        {activeRoom && (\n          <ChatDetail\n            room={activeRoom}\n            messages={messages[activeRoom.id] || []}\n            close={() => setChatId(null)}\n            send={sendMessage}\n          />\n        )}\n      </div>\n    </div>\n  );\n}"
+  },
+  "coding_type": "react",
+  "app_type": "mobile",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": null,
+  "files": "- data/market.ts (typescript): 상품, 채팅, 동네생활 데이터와 타입 정의\n- utils/market.ts (typescript): 가격 표시와 상품-채팅방 변환 유틸리티\n- components/Header.tsx (typescript): 상단 지역/탭 헤더와 검색·알림 버튼\n- components/BottomNav.tsx (typescript): 하단 탭 네비게이션과 채팅 알림 배지\n- components/Badge.tsx (typescript): 카테고리/상태 표시용 작은 배지\n- components/ProductRow.tsx (typescript): 홈 피드의 상품 카드 행\n- components/ProductDetail.tsx (typescript): 상품 상세 전체 화면과 거래 CTA\n- components/ChatDetail.tsx (typescript): 거래 채팅 상세와 빠른 답장/메시지 입력\n- pages/HomeFeed.tsx (typescript): 검색, 필터, 동네 인증 배너, 상품 목록\n- pages/LifeFeed.tsx (typescript): 동네생활 커뮤니티 글 목록\n- pages/ChatList.tsx (typescript): 거래 채팅방 목록\n- pages/Profile.tsx (typescript): 나의 당근 프로필, 매너온도, 거래 메뉴\n- App.tsx (typescript): 앱 상태, 탭 전환, 관심 토글, 채팅 생성/전송 흐름",
+  "design_doc": {
+    "project_name": "당근마켓 스타일 동네거래 앱",
+    "description": "실제 지역 중고거래 앱처럼 보이는 모바일 우선 React 앱. 홈 거래 피드, 상세 화면, 채팅, 동네생활, 프로필/매너온도까지 한 파일에 포함한다.",
+    "users": [
+      "지역 기반 중고거래 앱을 탐색하는 사용자",
+      "모바일 커머스 UI 패턴을 학습하는 학생"
+    ],
+    "features": [
+      {
+        "name": "동네 거래 홈 피드",
+        "description": "지역 헤더, 검색, 카테고리 필터, 동네 인증 배너, 상품 리스트를 제공한다.",
+        "priority": "mvp"
+      },
+      {
+        "name": "상품 상세",
+        "description": "상품 사진, 가격, 설명, 조회/관심/채팅 수, 판매자 매너온도, 거래 장소, 채팅/바로구매 버튼을 제공한다.",
+        "priority": "mvp"
+      },
+      {
+        "name": "관심 토글",
+        "description": "상품 행과 상세 화면에서 관심 상태와 관심 수가 즉시 반영된다.",
+        "priority": "mvp"
+      },
+      {
+        "name": "채팅",
+        "description": "거래 상품 카드가 붙은 채팅 목록과 상세 대화 화면, 빠른 답장, 메시지 전송 상태를 제공한다.",
+        "priority": "mvp"
+      },
+      {
+        "name": "동네생활",
+        "description": "질문, 동네소식, 맛집 등 지역 커뮤니티 게시글 피드를 제공한다.",
+        "priority": "nice_to_have"
+      },
+      {
+        "name": "나의 당근",
+        "description": "프로필, 매너온도, 판매/구매/관심/후기 진입점, 동네 설정과 결제/영수증 메뉴를 제공한다.",
+        "priority": "mvp"
+      }
+    ],
+    "pages": [
+      {
+        "name": "홈",
+        "description": "지역 기반 상품 피드와 검색/필터/글쓰기 CTA",
+        "components": ["HomeFeed", "ProductRow"]
+      },
+      {
+        "name": "상품 상세",
+        "description": "전체 화면 상세와 하단 거래 액션 바",
+        "components": ["ProductDetail", "Badge"]
+      },
+      {
+        "name": "채팅",
+        "description": "채팅방 목록과 거래 대화 화면",
+        "components": ["ChatList", "ChatDetail"]
+      },
+      {
+        "name": "동네생활",
+        "description": "지역 커뮤니티 게시글 목록",
+        "components": ["LifeFeed"]
+      },
+      {
+        "name": "나의 당근",
+        "description": "사용자 프로필과 거래 메뉴",
+        "components": ["Profile"]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Product",
+        "description": "상품 카드와 상세 화면에 필요한 거래 데이터",
+        "fields": [
+          "id",
+          "title",
+          "price",
+          "image",
+          "location/distance",
+          "seller/avatar",
+          "temperature",
+          "condition",
+          "likes/chats/views",
+          "status",
+          "instantBuy"
+        ]
+      },
+      {
+        "name": "ChatRoom",
+        "description": "채팅 목록과 상세 상단 거래 카드 데이터",
+        "fields": [
+          "productId",
+          "title",
+          "image",
+          "price",
+          "seller",
+          "temperature",
+          "last",
+          "unread"
+        ]
+      },
+      {
+        "name": "Message",
+        "description": "채팅 말풍선 및 시스템 안내 메시지",
+        "fields": ["mine", "system", "text", "time"]
+      }
+    ],
+    "user_flows": [
+      "앱 실행 → 홈에서 동네 상품 탐색 → 상품 상세 열기 → 관심 토글 또는 채팅 시작",
+      "채팅 탭 → 안 읽은 대화 확인 → 빠른 답장 또는 직접 메시지 전송",
+      "동네생활 탭 → 질문/소식/맛집 게시글 탐색",
+      "나의 당근 탭 → 매너온도와 거래 내역 확인"
+    ],
+    "strengths": [
+      "실제 중고거래 앱과 유사한 정보 밀도와 모바일 내비게이션 구조",
+      "홈·상세·채팅·프로필 상태가 연결되어 관심/메시지 반응이 즉시 반영됨",
+      "이미지 기반 상품 피드와 매너온도/동네 인증 등 신뢰 요소를 포함"
+    ],
+    "weaknesses": [
+      "목업 데이터 기반이라 서버 저장, 로그인, 실제 결제/지도 연동은 없음",
+      "글쓰기 버튼은 진입점만 있고 작성 폼은 아직 미구현",
+      "외부 이미지 URL에 의존한다"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "큰 앱을 폴더별로 나누면 길을 잃지 않는 이유",
+      "what": "당근 앱처럼 화면이 여러 개인 서비스는 한 파일에 전부 넣으면 금방 복잡해져요. 그래서 데이터는 data 폴더, 반복해서 쓰는 버튼과 카드는 components 폴더, 실제 화면은 pages 폴더에 나눠 담았어요. 마치 서랍마다 이름표를 붙여 물건을 정리해 두는 것과 같아요.",
+      "why": "파일을 나누지 않으면 상품 가격 하나를 바꾸려고 해도 긴 코드 더미 속을 계속 찾아야 해요. 화면을 고치다가 데이터까지 실수로 건드릴 수도 있고요. 역할별로 나누면 어디를 고쳐야 하는지 바로 보이고, 새 기능을 붙일 때도 기존 코드를 덜 망가뜨려요.",
+      "where": "인스타그램도 게시물 데이터, 게시물 카드, 프로필 화면이 따로 나뉘어 있고, 쿠팡도 상품 데이터와 상품 카드 UI가 분리돼 있어요. 실제 앱 개발에서 가장 먼저 배우는 정리 습관입니다."
+    },
+    {
+      "title": "관심 버튼을 누르면 숫자까지 같이 바뀌는 원리",
+      "what": "상품마다 liked와 likes라는 값을 가지고 있어요. 하트를 누르면 liked는 참/거짓이 뒤집히고, likes 숫자는 1 올라가거나 내려가요. 화면은 이 값을 보고 빨간 하트인지 빈 하트인지, 숫자를 몇으로 보여줄지 결정합니다.",
+      "why": "버튼 색만 바꾸고 숫자를 안 바꾸면 사용자는 앱이 제대로 반응했는지 헷갈려요. 반대로 숫자만 바꾸고 하트를 안 채워도 이상하죠. 관련된 상태를 한 번에 업데이트해야 화면이 자연스럽고 믿을 만하게 느껴집니다.",
+      "where": "당근 관심 목록, 인스타 좋아요, 쿠팡 찜 버튼이 모두 같은 구조예요. 사용자의 작은 행동 하나가 데이터와 화면을 동시에 바꾸는 패턴입니다."
+    },
+    {
+      "title": "탭 하나로 여러 화면을 바꾸는 모바일 앱 구조",
+      "what": "현재 선택한 탭을 tab이라는 상태로 기억해요. tab이 home이면 홈 피드, life면 동네생활, chat이면 채팅 목록, me면 프로필을 보여줍니다. 하단 메뉴는 이 tab 값을 바꾸는 리모컨 역할을 합니다.",
+      "why": "모바일 앱은 화면 공간이 작아서 모든 기능을 한 번에 펼쳐둘 수 없어요. 대신 자주 쓰는 큰 영역을 탭으로 나누고, 선택한 화면만 보여주면 앱이 훨씬 깔끔해져요. 코드도 화면별 컴포넌트로 나뉘어 읽기 쉬워집니다.",
+      "where": "당근, 카카오톡, 인스타그램 모두 하단 탭을 눌러 홈, 채팅, 프로필 같은 큰 화면을 전환해요. 모바일 앱의 대표적인 길찾기 방식입니다."
+    },
+    {
+      "title": "검색과 필터가 상품 목록을 걸러내는 방식",
+      "what": "전체 상품 목록은 그대로 두고, 검색어와 카테고리 조건에 맞는 상품만 visibleProducts로 골라 보여줘요. 사용자가 검색어를 입력하거나 필터 버튼을 누르면 조건이 바뀌고, 화면에는 맞는 상품만 남습니다.",
+      "why": "원본 상품 목록을 직접 지워버리면 검색어를 지웠을 때 다시 되돌리기 어렵습니다. 원본은 보존하고 보여줄 목록만 계산하면 안전하고 빠르게 화면을 바꿀 수 있어요. 그래서 필터 기능은 보통 원본 데이터와 표시 데이터를 구분합니다.",
+      "where": "당근에서 동네 물건을 검색하거나 쿠팡에서 카테고리를 고를 때 같은 일이 일어나요. 전체 상품 중 조건에 맞는 것만 골라 보여주는 방식입니다."
+    },
+    {
+      "title": "채팅방과 메시지를 id로 연결하는 이유",
+      "what": "각 채팅방은 p1, p2 같은 id를 가지고 있고, 메시지 목록도 같은 id 아래에 저장돼 있어요. 채팅방을 열면 그 id에 맞는 메시지만 꺼내서 보여줍니다. 상품 카드와 대화 내용이 서로 같은 이름표를 공유하는 셈이에요.",
+      "why": "id가 없으면 어떤 메시지가 어떤 상품 대화인지 섞일 수 있어요. 새 채팅방을 만들거나 읽지 않은 숫자를 없앨 때도 정확히 한 방만 골라야 합니다. id로 연결해두면 목록, 상세, 메시지를 안전하게 묶을 수 있어요.",
+      "where": "카카오톡 채팅방, 당근 거래 대화, 이메일 스레드가 모두 고유한 id로 대화와 메시지를 연결합니다. 많은 데이터를 다룰 때 꼭 필요한 방식이에요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "data/market.ts",
+      "line": 1,
+      "title": "앱에서 쓰는 데이터 모양을 먼저 정하기",
+      "explanation": "Product, ChatRoom, Message 같은 타입을 먼저 정의해두면 각 파일이 어떤 데이터를 기대하는지 분명해져요."
+    },
+    {
+      "file": "data/market.ts",
+      "line": 60,
+      "title": "상품 목록을 한 곳에 모아두기",
+      "explanation": "productsSeed는 홈 피드와 상세 화면에서 함께 쓰는 원본 상품 데이터예요. 화면 코드와 분리되어 있어서 수정하기 쉽습니다."
+    },
+    {
+      "file": "utils/market.ts",
+      "line": 3,
+      "title": "가격 표시 규칙 재사용하기",
+      "explanation": "0원 상품은 나눔으로, 나머지는 쉼표가 들어간 원화 가격으로 바꿔요. 여러 화면에서 같은 규칙을 재사용합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 21,
+      "title": "현재 탭과 앱 상태 기억하기",
+      "explanation": "useState로 현재 탭, 상품 목록, 선택한 상품, 채팅방, 메시지를 기억해요. 이 값들이 바뀌면 화면도 다시 그려집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 32,
+      "title": "검색어와 필터로 보여줄 상품 계산하기",
+      "explanation": "useMemo 안에서 전체 상품 중 검색어와 카테고리 조건에 맞는 항목만 골라 visibleProducts를 만듭니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 48,
+      "title": "관심 상태와 관심 수를 함께 바꾸기",
+      "explanation": "toggleLike는 클릭한 상품만 찾아 liked를 뒤집고 likes 숫자도 같이 조정해요."
+    },
+    {
+      "file": "pages/HomeFeed.tsx",
+      "line": 15,
+      "title": "필터 버튼 목록을 배열로 관리하기",
+      "explanation": "필터 이름을 배열에 넣고 map으로 버튼을 만들면 필터가 늘어나도 코드 구조를 크게 바꿀 필요가 없어요."
+    },
+    {
+      "file": "components/ProductRow.tsx",
+      "line": 11,
+      "title": "상품 하나를 카드 행으로 만드는 컴포넌트",
+      "explanation": "ProductRow는 상품 데이터 하나를 받아 이미지, 제목, 가격, 채팅 수, 관심 버튼을 한 줄 카드로 보여줍니다."
+    },
+    {
+      "file": "components/ProductDetail.tsx",
+      "line": 13,
+      "title": "매너온도를 막대 너비로 바꾸기",
+      "explanation": "판매자 온도를 숫자로만 보여주지 않고, 퍼센트 너비로 바꿔 시각적인 막대로 표시합니다."
+    },
+    {
+      "file": "components/ChatDetail.tsx",
+      "line": 13,
+      "title": "빠른 답장 문구를 배열로 만들기",
+      "explanation": "자주 쓰는 채팅 문구를 배열에 담고 반복해서 버튼으로 보여줘요. 문구를 추가하거나 바꾸기 쉽습니다."
+    },
+    {
+      "file": "pages/Profile.tsx",
+      "line": 15,
+      "title": "프로필 메뉴도 데이터처럼 다루기",
+      "explanation": "내 동네 설정, 당근페이, 거래 영수증 같은 메뉴를 배열로 관리해서 같은 모양의 메뉴 행을 반복 생성합니다."
+    },
+    {
+      "file": "components/BottomNav.tsx",
+      "line": 11,
+      "title": "하단 탭 항목을 배열로 정리하기",
+      "explanation": "탭 id, 이름, 아이콘을 한 배열에 모아두고 map으로 네비게이션 버튼을 만듭니다."
+    }
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "content": "당근마켓같은 동네 기반 중고거래 앱을 만들어줘. 홈 피드, 상품 상세, 채팅, 동네생활, 나의 당근까지 실제 앱처럼 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "서초 1동을 배경으로 상품 피드, 상세 화면, 거래 채팅, 동네생활, 프로필까지 갖춘 당근마켓 스타일 모바일 앱을 만들게요."
+    }
+  ],
+  "conversation": "학습자: 소프트웨어로 할게요\n튜터: 좋아요, 웹·앱을 만들어볼게요! 무엇이든 편하게 설명해 주세요.\n학습자: 당근마켓처럼 동네 중고거래 앱을 만들고 싶어\n튜터: 서초 1동 기반의 거래 피드, 상품 상세, 채팅, 동네생활, 나의 당근 프로필이 있는 모바일 앱을 만들게요.\n학습자: 실제 앱처럼 만들고, 코드 보기도 폴더별로 잘 나눠줘\n튜터: 데이터, 유틸, 컴포넌트, 페이지로 폴더를 나누고 학습 노트와 코드 설명까지 함께 정리했어요."
+}

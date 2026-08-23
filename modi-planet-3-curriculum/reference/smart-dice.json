@@ -1,0 +1,177 @@
+{
+  "session_id": "reference_smart-dice",
+  "title": "스마트 주사위",
+  "description": "모듈을 흔들면 1~6 숫자가 무작위로 디스플레이에 표시되는 MODI 주사위",
+  "phase": "implement",
+  "diagram": "(아직 다이어그램이 없습니다)",
+  "generated_code": {},
+  "coding_type": "blockly",
+  "blockly_xml": "<xml xmlns=\"http://www.w3.org/1999/xhtml\">\n  <variables>\n    <variable id=\"var_dice\">dice</variable>\n  </variables>\n  <block type=\"network_upload\" deletable=\"false\">\n    <next>\n      <block type=\"controls_whileInfinite\">\n        <statement name=\"DO\">\n          <block type=\"controls_whileUntil\">\n            <field name=\"MODE\">WHILE</field>\n            <value name=\"BOOL\">\n              <block type=\"input_imu_shaking\">\n                <field name=\"INDEX\">0</field>\n                <field name=\"OP\">&gt;</field>\n                <value name=\"VALUE\">\n                  <shadow type=\"math_number_min0_max100\"><field name=\"NUM\">30</field></shadow>\n                </value>\n              </block>\n            </value>\n            <statement name=\"DO\">\n              <block type=\"variables_set\">\n                <field name=\"VAR\" id=\"var_dice\">dice</field>\n                <value name=\"VALUE\">\n                  <block type=\"math_random_int\">\n                    <value name=\"FROM\">\n                      <shadow type=\"math_decimal_number_min-99999_max99999\"><field name=\"NUM\">1</field></shadow>\n                    </value>\n                    <value name=\"TO\">\n                      <shadow type=\"math_decimal_number_min-99999_max99999\"><field name=\"NUM\">6</field></shadow>\n                    </value>\n                  </block>\n                <shadow type=\"math_decimal_number_min-99999_max99999\"><field name=\"NUM\">0</field></shadow></value>\n                <next>\n                  <block type=\"output_display_variable\">\n                    <field name=\"INDEX\">0</field>\n                    <field name=\"FUNC\">0</field>\n                    <value name=\"VALUE\">\n                      <shadow type=\"math_number_min0_max100\"><field name=\"NUM\">0</field></shadow>\n                      <block type=\"variables_get\"><field name=\"VAR\" id=\"var_dice\">dice</field></block>\n                    </value>\n                  </block>\n                </next>\n              </block>\n            </statement>\n            <next>\n              <block type=\"output_display_variable\">\n                <field name=\"INDEX\">0</field>\n                <field name=\"FUNC\">0</field>\n                <value name=\"VALUE\">\n                  <shadow type=\"math_number_min0_max100\"><field name=\"NUM\">0</field></shadow>\n                  <block type=\"variables_get\"><field name=\"VAR\" id=\"var_dice\">dice</field></block>\n                </value>\n              </block>\n            </next>\n          </block>\n        </statement>\n      </block>\n    </next>\n  </block>\n</xml>",
+  "blockly_flowchart": [
+    {
+      "type": "start",
+      "label": "시작"
+    },
+    {
+      "type": "loop",
+      "label": "무한 반복",
+      "children": [
+        {
+          "type": "loop",
+          "label": "흔들림 > 30 인 동안 반복",
+          "children": [
+            {
+              "type": "action",
+              "label": "dice = 1~6 무작위 숫자"
+            },
+            {
+              "type": "action",
+              "label": "디스플레이에 dice 표시"
+            }
+          ]
+        },
+        {
+          "type": "action",
+          "label": "디스플레이에 dice 표시"
+        }
+      ]
+    }
+  ],
+  "blockly_code_langs": {
+    "python": "import modi\nimport random\nimport time\n\nbundle = modi.MODI()\nimu = bundle.imus[0]\ndisplay = bundle.displays[0]\n\ndice = 0\n\nwhile True:\n    while imu.angular_vel_z > 30:\n        dice = random.randint(1, 6)\n        display.write_text(str(dice))\n        time.sleep(0.1)\n    display.write_text(str(dice))\n    time.sleep(0.1)",
+    "javascript": "const modi = require('modi');\n\nconst bundle = new modi.MODI();\nconst imu = bundle.imus[0];\nconst display = bundle.displays[0];\n\nlet dice = 0;\n\nwhile (true) {\n    while (imu.shaking > 30) {\n        dice = Math.floor(Math.random() * 6) + 1;\n        display.writeText(String(dice));\n    }\n    display.writeText(String(dice));\n}",
+    "c": "#include \"modi.h\"\n#include <stdlib.h>\n\nint main() {\n    modi_init();\n    int dice = 0;\n    while (1) {\n        while (imu_get_shaking(0) > 30) {\n            dice = rand() % 6 + 1;\n            display_write_number(0, dice);\n        }\n        display_write_number(0, dice);\n    }\n    return 0;\n}"
+  },
+  "modi_modules": {
+    "modules": [
+      {
+        "key": "network",
+        "role": "필수",
+        "reason": "PC와 통신하고 전원을 공급해요",
+        "count": 1
+      },
+      {
+        "key": "imu",
+        "role": "입력",
+        "reason": "기울기·움직임을 감지해요",
+        "count": 1
+      },
+      {
+        "key": "display",
+        "role": "출력",
+        "reason": "글자·그림을 표시해요",
+        "count": 1
+      }
+    ],
+    "layout": [
+      {
+        "key": "network",
+        "pos": [
+          0.0,
+          0.0
+        ],
+        "usbFace": "left"
+      },
+      {
+        "key": "imu",
+        "pos": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "key": "display",
+        "pos": [
+          0.0,
+          2.0
+        ]
+      }
+    ],
+    "assembly": [
+      "네트워크 모듈을 놓고 USB 케이블을 PC에 연결하세요.",
+      "자이로(IMU) 모듈을 자석 면에 맞대어 연결하세요.",
+      "디스플레이 모듈을 자석 면에 맞대어 연결하세요."
+    ],
+    "title": "스마트 주사위",
+    "description": "모듈을 흔들면 1~6 숫자가 무작위로 디스플레이에 표시되는 MODI 주사위"
+  },
+  "files": "아직 생성된 파일이 없습니다.",
+  "design_doc": {
+    "project_name": "스마트 주사위",
+    "description": "모듈을 흔들면 1~6 숫자가 무작위로 디스플레이에 표시되는 MODI 주사위",
+    "users": [
+      "보드게임을 좋아하는 학생",
+      "MODI로 재미있는 작품을 만들고 싶은 초보자"
+    ],
+    "features": [
+      {
+        "name": "흔들림 감지",
+        "description": "IMU 모듈로 모듈이 흔들리는지 감지해요",
+        "priority": "mvp"
+      },
+      {
+        "name": "무작위 숫자 생성",
+        "description": "1부터 6까지의 숫자를 무작위로 뽑아요",
+        "priority": "mvp"
+      },
+      {
+        "name": "숫자 디스플레이 표시",
+        "description": "선택된 주사위 숫자를 디스플레이에 보여줘요",
+        "priority": "mvp"
+      }
+    ],
+    "pages": [],
+    "data_models": [],
+    "user_flows": [
+      "전원 켜기 → 흔들림 감지 → 흔드는 동안 무작위 숫자 갱신 → 멈추면 마지막 숫자 표시"
+    ],
+    "strengths": [],
+    "weaknesses": []
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "기계가 절대 잠들지 않는 비밀",
+      "what": "프로그램이 '계속 반복해서 확인하기'를 하는 부분이 있어요. 마치 경비 아저씨가 밤새 한자리에서 계속 주변을 살피는 것과 같아요. 한 번 확인하고 끝나는 게 아니라, 같은 일을 끝없이 되풀이하면서 항상 대기하고 있는 거죠. 그래서 우리가 언제 주사위를 흔들어도 기계가 바로 반응할 수 있어요.",
+      "why": "만약 이게 없다면 기계는 딱 한 번만 확인하고 그대로 멈춰버려요. 그럼 주사위를 흔들어도 아무 반응이 없어서, 매번 전원을 껐다 켜야 하는 불편함이 생기죠. 계속 반복해서 살피기 때문에 우리가 언제든 다시 흔들어서 주사위를 굴릴 수 있는 거예요. 한 번 만들어두면 계속 쓸 수 있게 해주는 핵심이에요.",
+      "where": "카톡이 새 메시지가 왔는지 계속 확인해서 알림을 띄워주는 것도 이런 원리예요. 인스타도 화면을 내릴 때마다 새 게시물이 있는지 끊임없이 확인하죠. 게임 캐릭터가 우리가 버튼 누르길 항상 기다리고 있는 것도 마찬가지랍니다."
+    },
+    {
+      "title": "기계는 어떻게 '흔들림'을 느낄까?",
+      "what": "이 주사위는 자기가 흔들리고 있는지 아닌지를 스스로 느낄 수 있어요. 우리 귀 안에 평형 감각이 있어서 빙글빙글 돌면 어지러운 걸 아는 것처럼요. 기계 안에도 움직임을 감지하는 작은 감각 기관이 들어있어서, 흔들면 '지금 흔들리는 중!'이라고 알아챕니다. 그리고 흔들기를 멈추면 '이제 조용해졌네'라고 판단하죠.",
+      "why": "이 감각이 없으면 주사위는 우리가 흔드는지 가만히 두는지 전혀 알 수 없어요. 그럼 진짜 주사위처럼 '흔들면 굴러가고 멈추면 숫자가 나오는' 느낌을 만들 수 없겠죠. 움직임을 느낄 수 있어서 비로소 손맛 나는 진짜 주사위 같은 동작이 가능해지는 거예요. 사람의 행동에 자연스럽게 반응하게 해주는 중요한 부분이에요.",
+      "where": "휴대폰을 가로로 눕히면 화면이 자동으로 돌아가는 것도 이 움직임 감각 덕분이에요. 만보기 앱이 우리가 걸은 걸음 수를 세는 것도, 게임에서 폰을 기울여 자동차를 운전하는 것도 다 같은 원리랍니다. 닌텐도 스위치 게임기를 흔들어서 조작하는 것도 이거예요."
+    },
+    {
+      "title": "매번 다른 숫자가 나오는 마법",
+      "what": "주사위를 흔들 때마다 1부터 6 중에서 아무 숫자나 하나가 뽑혀요. 마치 제비뽑기 통에 1~6 번호표를 넣고 눈 감고 하나 꺼내는 것과 같아요. 미리 정해진 답이 아니라, 그때그때 우연히 정해지는 거죠. 그래서 흔들 때마다 결과가 달라지는 진짜 주사위 느낌이 나요.",
+      "why": "이게 없으면 매번 똑같은 숫자만 나와서 주사위로서 아무 재미가 없어요. 항상 '4'만 나오는 주사위로 게임을 하면 이상하겠죠? 매번 예측할 수 없는 숫자가 나와야 공정하고 흥미진진한 게임이 됩니다. 우연과 운이라는 재미 요소를 만들어주는 핵심이에요.",
+      "where": "뽑기 이벤트나 게임의 랜덤 박스에서 아이템이 나올 때 이 원리가 쓰여요. 음악 앱의 '랜덤 재생' 버튼을 누르면 다음 곡이 뭐가 나올지 모르는 것도 마찬가지죠. 인스타 추천 게시물이 매번 다르게 뜨는 것에도 이런 '무작위' 개념이 들어있어요."
+    },
+    {
+      "title": "잊어버리지 않게 적어두는 메모장",
+      "what": "뽑힌 숫자를 잠깐 어딘가에 적어두는 메모장 같은 공간이 있어요. 이걸 'dice(주사위)'라는 이름표가 붙은 서랍이라고 생각하면 돼요. 새 숫자가 뽑히면 이 서랍에 넣어두고, 화면에 보여줄 때 다시 꺼내 쓰는 거죠. 같은 숫자를 여러 곳에서 써야 할 때 이 서랍에서 꺼내오면 편해요.",
+      "why": "이런 저장 공간이 없으면 뽑은 숫자를 바로 잊어버려서 화면에 보여줄 수도 없어요. 흔드는 동안에도, 멈춘 뒤에도 같은 숫자를 보여주려면 어딘가에 기억해둬야 하죠. 이름표 붙은 서랍에 담아두기 때문에 필요할 때마다 정확히 그 숫자를 다시 쓸 수 있는 거예요. 정보를 잠시 보관했다가 다시 쓰게 해주는 기본 도구랍니다.",
+      "where": "쇼핑할 때 장바구니에 담아둔 물건이 결제할 때까지 그대로 남아있는 것도 이런 보관 원리예요. 카톡에서 내 프로필 이름을 한 번 정하면 모든 채팅방에 똑같이 보이는 것도 마찬가지죠. 게임에서 내 점수가 계속 기억되어 표시되는 것도 이 메모장 덕분이에요."
+    },
+    {
+      "title": "흔들 땐 빙글빙글, 멈추면 짠!",
+      "what": "이 주사위는 흔드는 동안에는 숫자가 계속 빠르게 바뀌고, 멈추는 순간 마지막 숫자에서 딱 멈춰요. 마치 룰렛 판이 돌아갈 땐 숫자가 휙휙 지나가다가 멈추면 한 칸에 정착하는 것과 같아요. '흔들리는 동안에는 계속 바꿔라'라는 조건을 걸어둔 거죠. 그 조건이 사라지면(멈추면) 비로소 결과가 확정돼요.",
+      "why": "이 '조건에 따라 행동하기'가 없으면 흔들든 말든 똑같이 동작해서 주사위 느낌이 안 나요. 흔들 때만 숫자가 돌아가고 멈추면 결과가 나와야 진짜 주사위를 굴리는 것 같은 긴장감이 생기죠. 상황을 판단해서 그에 맞게 다르게 행동하는 능력이 기계를 똑똑하게 만들어줘요. 사용자의 행동에 딱 맞춰 반응하게 하는 핵심이에요.",
+      "where": "엘리베이터가 문 앞에 사람이 있으면 문을 안 닫고 기다리는 것도 '조건에 따라 행동하기'예요. 폰 배터리가 부족하면 자동으로 절전 모드로 바뀌는 것, 와이파이가 잡히면 자동 연결되는 것도 마찬가지죠. 게임에서 체력이 0이 되면 게임 오버 화면이 뜨는 것도 같은 원리랍니다."
+    }
+  ],
+  "code_annotations": [],
+  "app_type": "",
+  "conversation": "학습자: 하드웨어로 할게요\n튜터: 좋아요, MODI로 만들어볼게요! 어떤 **동작**을 만들고 싶은지 설명해 주세요.\n예: \"버튼을 누르면 LED가 켜지게\"\n학습자: 모듈을 흔들었다가 멈추면 1부터 6까지 숫자로 디스플레이에 표시되는 스마트 주사위 만들고 싶어",
+  "messages": [
+    {
+      "role": "user",
+      "content": "모듈을 흔들었다 멈추면 1~6 숫자가 디스플레이에 표시되는 스마트 주사위를 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "흔들다 멈추면 1~6 숫자가 표시되는 스마트 주사위를 만들게요."
+    }
+  ]
+}

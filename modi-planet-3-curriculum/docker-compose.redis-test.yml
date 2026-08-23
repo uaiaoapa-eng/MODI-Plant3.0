@@ -1,0 +1,25 @@
+# Redis Stack 벡터 검색 단독 스모크 테스트 (온프렘 서버)
+#
+# 목적: 전체(Aurora+앱) 배선 전에, RediSearch HNSW 벡터 + 태그 필터가
+#       온프렘 docker-compose 환경에서 동작하는지만 격리 검증한다.
+#
+# 실행:
+#   docker compose -f docker-compose.redis-test.yml up -d
+#   python scripts/redis_vector_smoke.py           # (호스트에서, .venv 활성화)
+#   docker compose -f docker-compose.redis-test.yml down     # 정리
+#
+# 주의: 프로덕션 세션락 redis(6379)와 충돌 방지 위해 호스트 6380 사용.
+#       RedisInsight UI 는 http://<서버>:8001 에서 확인 가능.
+
+services:
+  redis-stack-test:
+    image: redis/redis-stack:latest      # redis-stack = 서버 + RedisInsight UI 포함
+    container_name: edu-agent-redis-stack-test
+    ports:
+      - "6380:6379"     # 벡터/검색 (호스트 6380 → 컨테이너 6379)
+      - "8001:8001"     # RedisInsight 웹 UI (선택)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5

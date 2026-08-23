@@ -1,0 +1,343 @@
+{
+  "session_id": "reference_instagram-clone",
+  "title": "Instagram 클론",
+  "description": "스토리와 피드를 통해 사진을 공유하고 좋아요·저장으로 소통하는 소셜 미디어 앱",
+  "phase": "implement",
+  "diagram": "(아직 다이어그램이 없습니다)",
+  "generated_code": {
+    "data/posts.ts": "export interface Story {\n  id: number;\n  username: string;\n  avatar: string;\n  hasNew: boolean;\n}\n\nexport interface Post {\n  id: number;\n  username: string;\n  avatar: string;\n  location?: string;\n  image: string;\n  likes: number;\n  caption: string;\n  comments: number;\n  time: string;\n  liked: boolean;\n  saved: boolean;\n}\n\nexport const stories: Story[] = [\n  { id: 1, username: 'your_story', avatar: 'https://i.pravatar.cc/150?img=12', hasNew: false },\n  { id: 2, username: 'jenny.kim', avatar: 'https://i.pravatar.cc/150?img=5', hasNew: true },\n  { id: 3, username: 'travel_lee', avatar: 'https://i.pravatar.cc/150?img=33', hasNew: true },\n  { id: 4, username: 'foodie_park', avatar: 'https://i.pravatar.cc/150?img=14', hasNew: true },\n  { id: 5, username: 'daily_choi', avatar: 'https://i.pravatar.cc/150?img=47', hasNew: true },\n  { id: 6, username: 'art_jung', avatar: 'https://i.pravatar.cc/150?img=20', hasNew: false },\n  { id: 7, username: 'min.studio', avatar: 'https://i.pravatar.cc/150?img=60', hasNew: true },\n];\n\nexport const initialPosts: Post[] = [\n  {\n    id: 1,\n    username: 'travel_lee',\n    avatar: 'https://i.pravatar.cc/150?img=33',\n    location: 'Santorini, Greece',\n    image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=800&q=80',\n    likes: 1284,\n    caption: '그리스의 노을은 정말 잊을 수 없네요 🌅 #산토리니 #여행스타그램',\n    comments: 42,\n    time: '2시간 전',\n    liked: false,\n    saved: false,\n  },\n  {\n    id: 2,\n    username: 'foodie_park',\n    avatar: 'https://i.pravatar.cc/150?img=14',\n    location: 'Seoul, Korea',\n    image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80',\n    likes: 892,\n    caption: '오늘의 브런치 🍕 너무 맛있었어요!',\n    comments: 28,\n    time: '5시간 전',\n    liked: true,\n    saved: false,\n  },\n  {\n    id: 3,\n    username: 'art_jung',\n    avatar: 'https://i.pravatar.cc/150?img=20',\n    image: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=800&q=80',\n    likes: 2103,\n    caption: '작업실에서의 조용한 오후 🎨',\n    comments: 67,\n    time: '어제',\n    liked: false,\n    saved: true,\n  },\n];\n",
+    "components/Header.tsx": "import { Heart, Send, Camera } from 'lucide-react';\n\nexport default function Header() {\n  return (\n    <header className=\"sticky top-0 z-20 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur\">\n      <div className=\"flex items-center gap-2\">\n        <Camera className=\"h-6 w-6\" />\n        <span className=\"text-xl font-semibold tracking-tight\" style={{ fontFamily: 'cursive' }}>\n          Instagram\n        </span>\n      </div>\n      <div className=\"flex items-center gap-5\">\n        <Heart className=\"h-6 w-6\" />\n        <div className=\"relative\">\n          <Send className=\"h-6 w-6\" />\n          <span className=\"absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white\">\n            3\n          </span>\n        </div>\n      </div>\n    </header>\n  );\n}\n",
+    "components/Stories.tsx": "import { Plus } from 'lucide-react';\nimport { stories } from '../data/posts';\n\nexport default function Stories() {\n  return (\n    <div className=\"flex gap-4 overflow-x-auto border-b border-neutral-200 px-4 py-3 scrollbar-hide\">\n      {stories.map((story, idx) => (\n        <div key={story.id} className=\"flex w-16 flex-shrink-0 flex-col items-center gap-1\">\n          <div className=\"relative\">\n            <div\n              className={`rounded-full p-[2px] ${\n                story.hasNew\n                  ? 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600'\n                  : 'bg-neutral-200'\n              }`}\n            >\n              <div className=\"rounded-full border-2 border-white\">\n                <img\n                  src={story.avatar}\n                  alt={story.username}\n                  className=\"h-14 w-14 rounded-full object-cover\"\n                />\n              </div>\n            </div>\n            {idx === 0 && (\n              <span className=\"absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-blue-500\">\n                <Plus className=\"h-3 w-3 text-white\" />\n              </span>\n            )}\n          </div>\n          <span className=\"w-full truncate text-center text-xs text-neutral-700\">\n            {idx === 0 ? '내 스토리' : story.username}\n          </span>\n        </div>\n      ))}\n    </div>\n  );\n}\n",
+    "components/PostCard.tsx": "import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from 'lucide-react';\nimport type { Post } from '../data/posts';\n\ninterface Props {\n  post: Post;\n  onLike: (id: number) => void;\n  onSave: (id: number) => void;\n}\n\nexport default function PostCard({ post, onLike, onSave }: Props) {\n  return (\n    <article className=\"border-b border-neutral-200 bg-white pb-3\">\n      <div className=\"flex items-center justify-between px-4 py-3\">\n        <div className=\"flex items-center gap-3\">\n          <div className=\"rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px]\">\n            <img\n              src={post.avatar}\n              alt={post.username}\n              className=\"h-9 w-9 rounded-full border-2 border-white object-cover\"\n            />\n          </div>\n          <div className=\"leading-tight\">\n            <p className=\"text-sm font-semibold\">{post.username}</p>\n            {post.location && (\n              <p className=\"text-xs text-neutral-500\">{post.location}</p>\n            )}\n          </div>\n        </div>\n        <MoreHorizontal className=\"h-5 w-5 text-neutral-700\" />\n      </div>\n\n      <img src={post.image} alt=\"post\" className=\"aspect-square w-full object-cover\" />\n\n      <div className=\"flex items-center justify-between px-4 pt-3\">\n        <div className=\"flex items-center gap-4\">\n          <button onClick={() => onLike(post.id)}>\n            <Heart\n              className={`h-7 w-7 transition ${\n                post.liked ? 'fill-red-500 text-red-500' : 'text-neutral-800'\n              }`}\n            />\n          </button>\n          <button>\n            <MessageCircle className=\"h-7 w-7 text-neutral-800\" />\n          </button>\n          <button>\n            <Send className=\"h-7 w-7 text-neutral-800\" />\n          </button>\n        </div>\n        <button onClick={() => onSave(post.id)}>\n          <Bookmark\n            className={`h-7 w-7 transition ${\n              post.saved ? 'fill-neutral-800 text-neutral-800' : 'text-neutral-800'\n            }`}\n          />\n        </button>\n      </div>\n\n      <div className=\"px-4 pt-2\">\n        <p className=\"text-sm font-semibold\">\n          좋아요 {post.likes.toLocaleString()}개\n        </p>\n        <p className=\"mt-1 text-sm\">\n          <span className=\"font-semibold\">{post.username}</span>{' '}\n          <span className=\"text-neutral-800\">{post.caption}</span>\n        </p>\n        <p className=\"mt-1 text-sm text-neutral-500\">\n          댓글 {post.comments}개 모두 보기\n        </p>\n        <p className=\"mt-1 text-[11px] uppercase tracking-wide text-neutral-400\">\n          {post.time}\n        </p>\n      </div>\n    </article>\n  );\n}\n",
+    "components/BottomNav.tsx": "import { Home, Search, Circle, Film, User } from 'lucide-react';\n\nexport type Tab = 'home' | 'search' | 'create' | 'reels' | 'profile';\n\ninterface Props {\n  active: Tab;\n  onChange: (tab: Tab) => void;\n}\n\nexport default function BottomNav({ active, onChange }: Props) {\n  return (\n    <nav className=\"sticky bottom-0 z-20 flex items-center justify-around border-t border-neutral-200 bg-white px-2 py-2.5\">\n      <button onClick={() => onChange('home')}>\n        <Home\n          className={`h-7 w-7 ${\n            active === 'home'\n              ? 'fill-neutral-900 text-neutral-900'\n              : 'text-neutral-900'\n          }`}\n        />\n      </button>\n      <button onClick={() => onChange('search')}>\n        <Search\n          className={`h-7 w-7 ${\n            active === 'search' ? 'stroke-[2.5]' : ''\n          } text-neutral-900`}\n        />\n      </button>\n      <button onClick={() => onChange('create')}>\n        <Circle\n          className={`h-7 w-7 ${\n            active === 'create' ? 'stroke-[2.5]' : ''\n          } text-neutral-900`}\n        />\n      </button>\n      <button onClick={() => onChange('reels')}>\n        <Film\n          className={`h-7 w-7 ${\n            active === 'reels' ? 'stroke-[2.5]' : ''\n          } text-neutral-900`}\n        />\n      </button>\n      <button onClick={() => onChange('profile')}>\n        <img\n          src=\"https://i.pravatar.cc/150?img=12\"\n          alt=\"profile\"\n          className={`h-7 w-7 rounded-full object-cover ${\n            active === 'profile'\n              ? 'border-2 border-neutral-900'\n              : 'border border-neutral-300'\n          }`}\n        />\n      </button>\n    </nav>\n  );\n}\n",
+    "App.tsx": "import { useState } from 'react';\nimport Header from './components/Header';\nimport BottomNav from './components/BottomNav';\nimport type { Tab } from './components/BottomNav';\nimport Home from './pages/Home';\nimport Search from './pages/Search';\nimport Create from './pages/Create';\nimport Reels from './pages/Reels';\nimport Profile from './pages/Profile';\n\nconst titles: Record<Tab, string> = {\n  home: '',\n  search: '검색',\n  create: '새 게시물',\n  reels: '릴스',\n  profile: 'modi',\n};\n\nexport default function App() {\n  const [tab, setTab] = useState<Tab>('home');\n\n  return (\n    <div className=\"flex h-full flex-col bg-white text-neutral-900\">\n      <style>{`html,body,#root{height:100%;margin:0}`}</style>\n      {tab === 'home' && <Header />}\n      {tab !== 'home' && tab !== 'reels' && (\n        <header className=\"sticky top-0 z-20 border-b border-neutral-200 bg-white px-4 py-3\">\n          <h1 className=\"text-base font-semibold\">{titles[tab]}</h1>\n        </header>\n      )}\n\n      <main className=\"flex-1 overflow-y-auto\">\n        {tab === 'home' && <Home />}\n        {tab === 'search' && <Search />}\n        {tab === 'create' && <Create />}\n        {tab === 'reels' && <Reels />}\n        {tab === 'profile' && <Profile />}\n      </main>\n\n      <BottomNav active={tab} onChange={setTab} />\n    </div>\n  );\n}\n",
+    "pages/Home.tsx": "import { useState } from 'react';\nimport Stories from '../components/Stories';\nimport PostCard from '../components/PostCard';\nimport { initialPosts } from '../data/posts';\n\nexport default function Home() {\n  const [posts, setPosts] = useState(initialPosts);\n\n  const handleLike = (id: number) => {\n    setPosts((prev) =>\n      prev.map((p) =>\n        p.id === id\n          ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }\n          : p\n      )\n    );\n  };\n\n  const handleSave = (id: number) => {\n    setPosts((prev) =>\n      prev.map((p) => (p.id === id ? { ...p, saved: !p.saved } : p))\n    );\n  };\n\n  return (\n    <>\n      <Stories />\n      {posts.map((post) => (\n        <PostCard\n          key={post.id}\n          post={post}\n          onLike={handleLike}\n          onSave={handleSave}\n        />\n      ))}\n    </>\n  );\n}\n",
+    "pages/Search.tsx": "import { Search as SearchIcon } from 'lucide-react';\n\nconst images = [\n  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&q=80',\n  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&q=80',\n  'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400&q=80',\n  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&q=80',\n  'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=400&q=80',\n  'https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400&q=80',\n  'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?w=400&q=80',\n  'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=400&q=80',\n  'https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?w=400&q=80',\n  'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=400&q=80',\n  'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&q=80',\n  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&q=80',\n];\n\nexport default function Search() {\n  return (\n    <div>\n      <div className=\"sticky top-0 z-10 bg-white px-4 py-3\">\n        <div className=\"flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2\">\n          <SearchIcon className=\"h-4 w-4 text-neutral-500\" />\n          <input\n            placeholder=\"검색\"\n            className=\"w-full bg-transparent text-sm outline-none placeholder:text-neutral-500\"\n          />\n        </div>\n      </div>\n      <div className=\"grid grid-cols-3 gap-0.5\">\n        {images.map((src, i) => (\n          <img\n            key={i}\n            src={src}\n            alt=\"explore\"\n            className=\"aspect-square w-full object-cover\"\n          />\n        ))}\n      </div>\n    </div>\n  );\n}\n",
+    "pages/Reels.tsx": "import { Heart, MessageCircle, Send, MoreHorizontal, Music } from 'lucide-react';\n\nexport default function Reels() {\n  return (\n    <div className=\"relative h-full w-full bg-black\">\n      <img\n        src=\"https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&q=80\"\n        alt=\"reel\"\n        className=\"h-full w-full object-cover opacity-90\"\n      />\n      <div className=\"absolute right-3 bottom-24 flex flex-col items-center gap-6 text-white\">\n        <button className=\"flex flex-col items-center gap-1\">\n          <Heart className=\"h-7 w-7\" />\n          <span className=\"text-xs\">12.4천</span>\n        </button>\n        <button className=\"flex flex-col items-center gap-1\">\n          <MessageCircle className=\"h-7 w-7\" />\n          <span className=\"text-xs\">328</span>\n        </button>\n        <button className=\"flex flex-col items-center gap-1\">\n          <Send className=\"h-7 w-7\" />\n          <span className=\"text-xs\">공유</span>\n        </button>\n        <MoreHorizontal className=\"h-6 w-6\" />\n      </div>\n      <div className=\"absolute bottom-6 left-4 right-20 text-white\">\n        <div className=\"flex items-center gap-2\">\n          <img\n            src=\"https://i.pravatar.cc/150?img=33\"\n            alt=\"user\"\n            className=\"h-8 w-8 rounded-full border border-white object-cover\"\n          />\n          <span className=\"text-sm font-semibold\">travel_lee</span>\n          <button className=\"rounded-md border border-white/70 px-2 py-0.5 text-xs\">\n            팔로우\n          </button>\n        </div>\n        <p className=\"mt-2 text-sm\">노을 지는 해변에서 🌊 #릴스 #여행</p>\n        <div className=\"mt-2 flex items-center gap-1.5 text-xs\">\n          <Music className=\"h-3.5 w-3.5\" />\n          <span>원본 오디오 · travel_lee</span>\n        </div>\n      </div>\n    </div>\n  );\n}\n",
+    "pages/Profile.tsx": "import { Circle, Bookmark } from 'lucide-react';\n\nconst posts = [\n  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80',\n  'https://images.unsplash.com/photo-1551963831-b3b1ca40c98e?w=400&q=80',\n  'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=400&q=80',\n  'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80',\n  'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&q=80',\n  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80',\n  'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=400&q=80',\n  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80',\n  'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&q=80',\n];\n\nexport default function Profile() {\n  return (\n    <div>\n      <div className=\"px-4 py-4\">\n        <div className=\"flex items-center gap-6\">\n          <img\n            src=\"https://i.pravatar.cc/150?img=12\"\n            alt=\"me\"\n            className=\"h-20 w-20 rounded-full object-cover\"\n          />\n          <div className=\"flex flex-1 justify-around text-center\">\n            <div>\n              <p className=\"text-lg font-semibold\">128</p>\n              <p className=\"text-xs text-neutral-600\">게시물</p>\n            </div>\n            <div>\n              <p className=\"text-lg font-semibold\">8,420</p>\n              <p className=\"text-xs text-neutral-600\">팔로워</p>\n            </div>\n            <div>\n              <p className=\"text-lg font-semibold\">312</p>\n              <p className=\"text-xs text-neutral-600\">팔로잉</p>\n            </div>\n          </div>\n        </div>\n        <div className=\"mt-3\">\n          <p className=\"text-sm font-semibold\">modi</p>\n          <p className=\"text-sm text-neutral-700\">일상을 기록합니다 ✨</p>\n          <p className=\"text-sm text-neutral-500\">📍 Seoul, Korea</p>\n        </div>\n        <div className=\"mt-4 flex gap-2\">\n          <button className=\"flex-1 rounded-lg bg-neutral-100 py-1.5 text-sm font-semibold\">\n            프로필 편집\n          </button>\n          <button className=\"flex-1 rounded-lg bg-neutral-100 py-1.5 text-sm font-semibold\">\n            프로필 공유\n          </button>\n        </div>\n      </div>\n\n      <div className=\"flex border-t border-neutral-200\">\n        <button className=\"flex flex-1 justify-center border-t-2 border-neutral-900 py-2.5\">\n          <Circle className=\"h-5 w-5\" />\n        </button>\n        <button className=\"flex flex-1 justify-center py-2.5 text-neutral-400\">\n          <Bookmark className=\"h-5 w-5\" />\n        </button>\n        <button className=\"flex flex-1 justify-center py-2.5 text-neutral-400\">\n          <Circle className=\"h-5 w-5\" />\n        </button>\n      </div>\n\n      <div className=\"grid grid-cols-3 gap-0.5\">\n        {posts.map((src, i) => (\n          <img\n            key={i}\n            src={src}\n            alt=\"post\"\n            className=\"aspect-square w-full object-cover\"\n          />\n        ))}\n      </div>\n    </div>\n  );\n}\n",
+    "pages/Create.tsx": "import { Circle } from 'lucide-react';\n\nexport default function Create() {\n  return (\n    <div className=\"flex h-full flex-col items-center justify-center gap-4 px-8 text-center\">\n      <div className=\"flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100\">\n        <Circle className=\"h-9 w-9 text-neutral-700\" />\n      </div>\n      <p className=\"text-lg font-semibold\">새 게시물 만들기</p>\n      <p className=\"text-sm text-neutral-500\">\n        사진과 동영상을 여기로 끌어다 놓으세요\n      </p>\n      <button className=\"mt-2 rounded-lg bg-blue-500 px-6 py-2 text-sm font-semibold text-white\">\n        컴퓨터에서 선택\n      </button>\n    </div>\n  );\n}\n"
+  },
+  "coding_type": "react",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": null,
+  "files": "- pages/Home.tsx (typescript): 홈 피드 페이지 - 스토리와 게시물 목록\n- pages/Search.tsx (typescript): 검색/탐색 페이지 - 검색바와 이미지 그리드\n- pages/Reels.tsx (typescript): 릴스 페이지 - 풀스크린 영상 스타일 카드\n- pages/Profile.tsx (typescript): 프로필 페이지 - 프로필 정보와 게시물 그리드\n- pages/Create.tsx (typescript): 새 게시물 만들기 페이지\n- components/BottomNav.tsx (typescript): 하단 네비게이션 - 탭 클릭 시 화면 전환\n- App.tsx (typescript): 메인 앱 - 탭 상태에 따라 페이지 전환",
+  "design_doc": {
+    "project_name": "Instagram 클론",
+    "description": "스토리와 피드를 통해 사진을 공유하고 좋아요·저장으로 소통하는 소셜 미디어 앱",
+    "users": [
+      "일반 사용자"
+    ],
+    "features": [
+      {
+        "name": "스토리 보기",
+        "description": "상단 가로 스크롤 영역에서 사용자 스토리를 표시하며, 새 스토리(hasNew)는 그라데이션 링으로 구분하고 첫 항목('내 스토리')에는 추가(+) 버튼을 표시",
+        "priority": "mvp"
+      },
+      {
+        "name": "피드 게시물 표시",
+        "description": "사용자명, 아바타, 위치, 이미지, 좋아요 수, 캡션, 댓글 수, 작성 시간을 포함한 게시물 카드를 세로로 나열",
+        "priority": "mvp"
+      },
+      {
+        "name": "좋아요 토글",
+        "description": "하트 버튼 클릭 시 liked 상태가 토글되고 좋아요 수가 +1/-1로 즉시 반영",
+        "priority": "mvp"
+      },
+      {
+        "name": "게시물 저장 토글",
+        "description": "북마크 버튼 클릭 시 saved 상태가 토글되어 채워진/빈 아이콘으로 표시",
+        "priority": "mvp"
+      },
+      {
+        "name": "하단 네비게이션",
+        "description": "홈, 검색, 게시물 작성, 릴스, 프로필 5개 탭으로 화면 전환 진입점 제공",
+        "priority": "mvp"
+      },
+      {
+        "name": "헤더 알림",
+        "description": "상단 헤더에 좋아요·메시지 아이콘 및 메시지 알림 카운트(3) 배지 표시",
+        "priority": "nice_to_have"
+      }
+    ],
+    "pages": [
+      {
+        "name": "홈 피드 화면",
+        "description": "헤더, 스토리 바, 게시물 피드, 하단 네비게이션으로 구성된 단일 스크롤 화면",
+        "components": [
+          "Header",
+          "Stories",
+          "PostCard",
+          "BottomNav"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Story",
+        "fields": [
+          "id: number",
+          "username: string",
+          "avatar: string",
+          "hasNew: boolean"
+        ],
+        "description": "상단 스토리 항목 데이터"
+      },
+      {
+        "name": "Post",
+        "fields": [
+          "id: number",
+          "username: string",
+          "avatar: string",
+          "location?: string",
+          "image: string",
+          "likes: number",
+          "caption: string",
+          "comments: number",
+          "time: string",
+          "liked: boolean",
+          "saved: boolean"
+        ],
+        "description": "피드 게시물 데이터"
+      }
+    ],
+    "user_flows": [
+      "앱 실행 → 헤더/스토리/피드 표시 → 게시물 좋아요·저장",
+      "스토리 바 가로 스크롤 → 스토리 확인",
+      "하단 네비 탭 선택 → 홈·검색·작성·릴스·프로필 이동"
+    ],
+    "strengths": [
+      "컴포넌트가 Header/Stories/PostCard/BottomNav로 명확히 분리되어 재사용성이 높음",
+      "좋아요·저장 상태가 useState로 즉시 반영되어 반응성이 좋음",
+      "인스타그램 특유의 세로 피드 UI를 충실히 구현"
+    ],
+    "weaknesses": [
+      "하단 네비와 검색·릴스·프로필 화면이 버튼만 존재하고 실제 라우팅/페이지가 없음",
+      "게시물 데이터가 initialPosts로 고정되어 새 게시물 작성·서버 연동 미구현",
+      "댓글 보기, 스토리 상세 보기 등 인터랙션이 표시만 되고 동작하지 않음",
+      "좋아요/저장 상태가 새로고침 시 사라짐(영속성 없음)"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "하트를 누르면 빨갛게 변하는 진짜 이유",
+      "what": "앱은 '지금 좋아요를 눌렀는지 아닌지'를 항상 기억하는 작은 메모장을 가지고 있어요. 이 메모장 내용이 바뀌면 화면도 그에 맞춰 자동으로 다시 그려져요. 그래서 하트를 누르면 메모에 '눌렀음'이라고 적히고, 화면은 곧바로 빨간 하트로 바뀌는 거예요. 사람이 일일이 색을 칠하는 게 아니라 메모만 바꾸면 알아서 따라오는 구조예요.",
+      "why": "이 기억하는 메모장이 없으면, 하트를 눌러도 화면은 그대로 멈춰 있어요. 내가 뭘 눌렀는지 앱이 잊어버리니까 좋아요 숫자도 안 늘고 색도 안 변하죠. 그러면 사용자는 '버튼이 고장 났나?' 하고 답답해할 거예요. 변화를 기억하고 화면에 반영하는 이 구조 덕분에 앱이 살아있는 것처럼 반응해요.",
+      "where": "인스타에서 사진에 하트를 누르면 바로 빨개지고 숫자가 올라가죠. 카톡에서 메시지에 이모티콘 반응을 달면 즉시 표시되는 것도 같은 원리예요. 쿠팡에서 찜 버튼을 누르면 하트가 채워지는 것도 마찬가지고요."
+    },
+    {
+      "title": "똑같은 게시물 카드를 100개 만들어도 안 힘든 비결",
+      "what": "게시물 하나의 모양(사진, 이름, 하트, 댓글)을 '도장' 하나로 미리 만들어 둬요. 그 다음엔 내용만 바꿔서 이 도장을 여러 번 찍기만 하면 돼요. 산토리니 사진이든 브런치 사진이든 같은 틀에 내용물만 갈아 끼우는 거예요. 그래서 게시물이 아무리 많아도 틀은 딱 하나만 만들면 끝나요.",
+      "why": "이 도장 방식이 없으면 게시물 하나하나를 처음부터 똑같이 다시 만들어야 해요. 사진 백 개면 똑같은 작업을 백 번 반복하는 셈이라 시간도 오래 걸리고 실수도 많아져요. 또 디자인을 살짝 바꾸고 싶을 때 백 군데를 다 고쳐야 하죠. 도장 하나만 고치면 모든 게시물이 같이 바뀌니 훨씬 편하고 안전해요.",
+      "where": "인스타 피드를 내리면 나오는 수많은 게시물이 사실 같은 틀에 내용만 다른 거예요. 카톡 채팅 목록에서 친구마다 한 줄씩 똑같은 모양으로 뜨는 것도 같은 원리고요. 쿠팡 상품 목록도 상품 칸 하나의 틀을 계속 찍어내는 방식이에요."
+    },
+    {
+      "title": "스토리 동그라미에 무지개 테두리가 생기는 조건",
+      "what": "각 친구마다 '새 스토리 있음/없음'이라는 표시가 붙어 있어요. 앱은 이 표시를 보고 새 게 있으면 무지개 테두리를, 없으면 회색 테두리를 둘러요. 마치 '읽지 않은 편지함은 색칠, 읽은 편지함은 흑백'처럼 상태에 따라 모습을 다르게 보여주는 거예요. 조건을 따져서 보여줄 모습을 그때그때 고르는 셈이죠.",
+      "why": "이 조건 따지기가 없으면 새 스토리가 있든 없든 전부 똑같이 보여요. 그러면 어떤 친구가 새 글을 올렸는지 한눈에 알 수 없어서 일일이 다 눌러봐야 하죠. 빨간 알림 숫자나 채워진 하트도 다 이 조건 판단으로 만들어져요. 상황에 맞게 모습을 바꿔주니까 사용자가 중요한 걸 빠르게 알아챌 수 있어요.",
+      "where": "인스타 스토리에서 안 본 친구는 무지개 테두리, 본 친구는 회색으로 바뀌죠. 카톡에서 안 읽은 채팅방에만 빨간 숫자가 붙는 것도 같은 원리예요. 쿠팡에서 품절 상품에만 '품절' 표시가 뜨는 것도 조건을 따져 보여주는 거예요."
+    },
+    {
+      "title": "화면을 내려도 위쪽 메뉴가 따라다니는 마법",
+      "what": "맨 위의 인스타 로고 바와 맨 아래 메뉴 바는 화면에 '붙박이'로 고정돼 있어요. 사진을 아무리 위아래로 넘겨도 이 두 바는 그 자리에 딱 멈춰 있죠. 가운데 게시물 부분만 스크롤로 움직이고, 위아래 틀은 액자처럼 가만히 있는 거예요. 덕분에 메뉴를 찾으려고 맨 위나 맨 아래로 굳이 갈 필요가 없어요.",
+      "why": "이 고정 기능이 없으면 메뉴 바도 게시물과 함께 위로 밀려 올라가 사라져요. 그러면 홈으로 가거나 검색하려고 매번 화면을 끝까지 올려야 하니 정말 불편하죠. 자주 쓰는 버튼은 항상 손이 닿는 곳에 있어야 편해요. 그래서 중요한 메뉴는 화면에 붙여두는 거예요.",
+      "where": "인스타에서 피드를 내려도 아래 홈·검색·프로필 메뉴가 늘 보이죠. 카톡 채팅방에서 위로 올려도 맨 아래 입력창이 고정돼 있는 것도 같아요. 쿠팡 앱에서 스크롤해도 아래 장바구니 메뉴가 따라다니는 것도 같은 원리예요."
+    },
+    {
+      "title": "내용물과 디자인을 따로 보관하는 정리 정돈 습관",
+      "what": "게시물의 글·사진·이름 같은 '내용'은 한 곳에 모아두고, 그걸 보여주는 '디자인'은 따로 만들어요. 마치 요리 재료는 냉장고에, 요리법은 요리책에 따로 두는 것과 같아요. 그래서 내용을 바꿀 땐 냉장고만 열면 되고, 모양을 바꿀 땐 요리책만 보면 돼요. 둘이 섞여 있지 않아서 찾고 고치기가 쉬워요.",
+      "why": "내용과 디자인이 뒤섞여 있으면, 글자 하나 바꾸려다가 디자인까지 망가뜨릴 수 있어요. 어디에 뭐가 있는지 헷갈려서 수정할 때마다 한참 헤매게 되죠. 새 게시물을 추가하려 해도 어디에 넣어야 할지 막막해져요. 따로 정리해두면 누가 봐도 어디를 고쳐야 할지 금방 알 수 있어요.",
+      "where": "쿠팡에서 상품 가격이 바뀌어도 화면 디자인은 그대로인 건 내용과 모양이 분리돼 있어서예요. 인스타가 새 게시물을 계속 보여주면서도 틀은 똑같은 것도 같은 이유고요. 뉴스 앱에서 기사 내용만 매일 바뀌고 화면 구성은 유지되는 것도 마찬가지예요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "data/posts.ts",
+      "line": 1,
+      "title": "데이터의 모양을 미리 정해두기 (인터페이스)",
+      "explanation": "Story가 어떤 정보(id, username 등)를 가져야 하는지 틀을 미리 정의해요. 이렇게 하면 실수로 빠뜨리거나 잘못된 값을 넣는 걸 막아줍니다."
+    },
+    {
+      "file": "data/posts.ts",
+      "line": 11,
+      "title": "물음표(?)는 있어도 되고 없어도 되는 값",
+      "explanation": "location 뒤의 ?는 이 값이 선택사항이라는 뜻이에요. 어떤 게시물은 위치 정보가 없을 수도 있어서 이렇게 표시합니다."
+    },
+    {
+      "file": "data/posts.ts",
+      "line": 22,
+      "title": "여러 데이터를 묶어 담는 배열",
+      "explanation": "stories는 여러 개의 스토리 정보를 순서대로 담은 목록(배열)이에요. 대괄호 [] 안에 항목들을 쉼표로 나열합니다."
+    },
+    {
+      "file": "components/Stories.tsx",
+      "line": 8,
+      "title": "목록을 반복해서 화면에 그리기 (map)",
+      "explanation": "map은 배열의 항목을 하나씩 꺼내 같은 모양의 화면 조각을 자동으로 만들어줘요. 스토리가 7개면 7개의 동그라미가 생깁니다."
+    },
+    {
+      "file": "components/Stories.tsx",
+      "line": 8,
+      "title": "각 항목을 구분하는 key",
+      "explanation": "반복으로 만든 항목마다 고유한 key를 붙여야 해요. 그래야 화면이 바뀔 때 어떤 게 어떤 건지 정확히 알아볼 수 있습니다."
+    },
+    {
+      "file": "components/Stories.tsx",
+      "line": 12,
+      "title": "조건에 따라 다른 스타일 주기",
+      "explanation": "story.hasNew가 참이면 알록달록한 테두리를, 거짓이면 회색 테두리를 보여줘요. 상황에 맞게 모양을 바꾸는 방법입니다."
+    },
+    {
+      "file": "components/PostCard.tsx",
+      "line": 4,
+      "title": "부모에게서 받아오는 값 (props)",
+      "explanation": "이 컴포넌트는 post 데이터와 버튼을 눌렀을 때 실행할 함수들을 밖에서 전달받아요. 이렇게 받은 값을 props라고 부릅니다."
+    },
+    {
+      "file": "components/PostCard.tsx",
+      "line": 38,
+      "title": "클릭하면 함수 실행하기",
+      "explanation": "하트 버튼을 누르면 onLike 함수에 이 게시물의 id를 넘겨서 실행해요. 사용자의 동작에 반응하는 부분입니다."
+    },
+    {
+      "file": "components/PostCard.tsx",
+      "line": 67,
+      "title": "숫자를 보기 좋게 바꾸기",
+      "explanation": "toLocaleString()은 1284 같은 숫자를 1,284처럼 쉼표를 넣어 읽기 쉽게 만들어줘요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 9,
+      "title": "변하는 값을 기억하는 상태(state)",
+      "explanation": "useState는 화면에서 바뀔 수 있는 값을 저장해요. posts가 바뀌면 화면도 자동으로 새로 그려집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 11,
+      "title": "특정 게시물만 골라 수정하기",
+      "explanation": "map으로 모든 게시물을 살펴보다가 id가 일치하는 것만 좋아요 상태를 뒤집고, 나머지는 그대로 둡니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 14,
+      "title": "기존 값을 복사하고 일부만 바꾸기 (...)",
+      "explanation": "...p는 기존 게시물 정보를 그대로 복사한 뒤, liked와 likes만 새 값으로 덮어써요. 원본을 안전하게 보존하는 방법입니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 36,
+      "title": "함수를 자식에게 전달하기",
+      "explanation": "onLike와 onSave 함수를 PostCard에 넘겨줘요. 자식 컴포넌트에서 버튼을 누르면 부모가 만든 이 함수가 실행됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 33,
+      "title": "게시물 목록을 카드로 펼치기",
+      "explanation": "posts 배열을 map으로 돌면서 각 게시물마다 PostCard 하나씩 만들어 화면에 차례대로 보여줍니다."
+    },
+    {
+      "file": "data/posts.ts",
+      "line": 1,
+      "title": "데이터의 모양을 미리 정해두기 (인터페이스)",
+      "explanation": "Story가 어떤 정보(id, username 등)를 가져야 하는지 미리 틀을 정해두는 거예요. 이렇게 하면 실수로 빠뜨린 값을 쉽게 찾을 수 있어요."
+    },
+    {
+      "file": "data/posts.ts",
+      "line": 12,
+      "title": "있어도 되고 없어도 되는 값 (선택 항목)",
+      "explanation": "물음표(?)가 붙으면 그 값은 꼭 넣지 않아도 된다는 뜻이에요. 게시물에 위치 정보가 없을 수도 있으니까요."
+    },
+    {
+      "file": "data/posts.ts",
+      "line": 22,
+      "title": "같은 모양 데이터를 여러 개 모아둔 목록 (배열)",
+      "explanation": "대괄호 [] 안에 여러 스토리를 줄줄이 담아둔 목록이에요. 나중에 하나씩 꺼내서 화면에 보여줄 수 있어요."
+    },
+    {
+      "file": "components/Stories.tsx",
+      "line": 8,
+      "title": "목록을 돌면서 화면 만들기 (map)",
+      "explanation": "stories 목록에 든 항목 하나하나를 반복해서 같은 모양의 화면 조각으로 바꿔줘요. 7개가 있으면 7개의 동그란 스토리가 만들어져요."
+    },
+    {
+      "file": "components/Stories.tsx",
+      "line": 12,
+      "title": "조건에 따라 다른 모양 보여주기",
+      "explanation": "새 스토리가 있으면(hasNew) 알록달록한 테두리를, 없으면 회색 테두리를 보여줘요. 상황에 따라 다른 스타일을 고르는 거예요."
+    },
+    {
+      "file": "components/PostCard.tsx",
+      "line": 3,
+      "title": "부모가 자식에게 정보 건네주기 (props)",
+      "explanation": "PostCard는 게시물 데이터(post)와 버튼을 눌렀을 때 실행할 기능(onLike, onSave)을 바깥에서 받아와요. 부품에 필요한 재료를 넣어주는 셈이에요."
+    },
+    {
+      "file": "components/PostCard.tsx",
+      "line": 37,
+      "title": "버튼을 눌렀을 때 동작 연결하기",
+      "explanation": "하트 버튼을 클릭하면 onLike 함수에 이 게시물의 id를 넘겨 실행해요. 어떤 게시물인지 알려줘야 그 게시물만 좋아요가 되니까요."
+    },
+    {
+      "file": "components/PostCard.tsx",
+      "line": 71,
+      "title": "숫자를 보기 좋게 바꾸기",
+      "explanation": "toLocaleString()은 1284 같은 숫자에 콤마를 넣어 1,284처럼 읽기 쉽게 만들어줘요."
+    },
+    {
+      "file": "components/BottomNav.tsx",
+      "line": 3,
+      "title": "정해진 값들 중 하나만 고르기 (타입)",
+      "explanation": "탭은 home, search, create, reels, profile 다섯 가지 중 하나만 될 수 있어요. 엉뚱한 값이 들어가는 걸 막아줘요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 20,
+      "title": "변하는 값을 기억하는 상자 (상태)",
+      "explanation": "useState로 현재 어떤 탭이 선택됐는지 기억해요. tab 값이 바뀌면 화면이 알아서 다시 그려져요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 33,
+      "title": "선택한 탭에 맞는 화면 보여주기",
+      "explanation": "tab 값이 'home'이면 Home 화면을, 'search'면 Search 화면을 보여줘요. 조건에 따라 보여줄 페이지를 골라요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 40,
+      "title": "자식이 보낸 신호로 상태 바꾸기",
+      "explanation": "아래 메뉴(BottomNav)에서 탭을 누르면 setTab이 실행돼 선택한 탭이 바뀌어요. 화면 전환의 핵심이에요."
+    },
+    {
+      "file": "pages/Home.tsx",
+      "line": 7,
+      "title": "게시물 목록을 상태로 관리하기",
+      "explanation": "게시물 목록을 useState에 담아두면 좋아요나 저장이 바뀔 때마다 화면이 자동으로 새로 그려져요."
+    },
+    {
+      "file": "pages/Home.tsx",
+      "line": 10,
+      "title": "원본은 그대로 두고 새 목록 만들기",
+      "explanation": "map으로 목록을 돌면서 클릭한 게시물(id가 같은 것)만 좋아요 상태를 뒤집고, 나머지는 그대로 둬요. 기존 데이터를 직접 고치지 않고 새 목록으로 교체하는 방식이에요."
+    },
+    {
+      "file": "pages/Search.tsx",
+      "line": 32,
+      "title": "사진 목록을 격자로 펼치기",
+      "explanation": "images 목록을 map으로 돌면서 사진을 하나씩 만들고, 3칸짜리 격자(grid)에 차곡차곡 채워 넣어요."
+    }
+  ],
+  "app_type": "mobile",
+  "conversation": "학습자: 소프트웨어로 할게요\n튜터: 좋아요, 웹·앱을 만들어볼게요! 무엇이든 편하게 설명해 주세요.\n진행 방식은 아래에서 언제든 바꿀 수 있어요.\n학습자: 인스타그램같은 앱 만들고 싶어\n튜터: 인스타그램 스타일의 피드 앱을 만들게요.\n학습자: 탭들도 누르면 동작하게 해줘",
+  "messages": [
+    {
+      "role": "user",
+      "content": "인스타그램처럼 스토리·피드·릴스·프로필 탭이 있는 소셜 앱을 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "탭 전환이 되는 인스타그램 스타일 소셜 앱을 만들게요."
+    }
+  ]
+}

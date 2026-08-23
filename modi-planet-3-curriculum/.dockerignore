@@ -1,0 +1,23 @@
+# 빌드 컨텍스트에서 제외 — 이미지 경량화 + 비밀/로컬 파일 유입 방지
+.git
+.github
+.venv
+__pycache__/
+*.pyc
+*.egg-info/
+.build_cache/
+output/
+.claude
+.DS_Store
+
+# 세션 저장소는 런타임 볼륨으로 마운트하므로 이미지에 굽지 않음
+projects/
+
+# 빌드체크용 node_modules 는 이미지 빌드 단계에서 새로 설치 (호스트 것 복사 방지)
+build_template/node_modules
+
+# 설계 산출물/그래프 — 런타임에 불필요
+graphify-out/
+
+# .env 는 compose 의 env_file 로 주입하므로 이미지에 포함하지 않음
+.env
