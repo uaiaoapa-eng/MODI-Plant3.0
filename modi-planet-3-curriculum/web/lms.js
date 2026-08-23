@@ -58,6 +58,35 @@
     return Array.isArray(value) ? value : [];
   }
 
+  function isQuizSlide(slide) {
+    return ["quiz", "check", "exit"].includes(slide.type);
+  }
+
+  function renderBulletList(items, className) {
+    const values = asList(items);
+    if (!values.length) {
+      return "";
+    }
+    return '<ul class="' + escapeHtml(className || "slide-body") + '">' + values.map((item) => (
+      "<li>" + escapeHtml(item) + "</li>"
+    )).join("") + "</ul>";
+  }
+
+  function renderRubricTable(rows) {
+    const values = asList(rows);
+    if (!values.length) {
+      return "";
+    }
+    return [
+      '<div class="rubric-wrap"><table class="rubric-table"><thead><tr><th>평가 기준</th><th>기초</th><th>도달</th><th>심화</th></tr></thead><tbody>',
+      values.map((row) => [
+        "<tr><th>", escapeHtml(row.criterion), "</th><td>", escapeHtml(row.basic), "</td><td>",
+        escapeHtml(row.proficient), "</td><td>", escapeHtml(row.advanced), "</td></tr>"
+      ].join("")).join(""),
+      "</tbody></table></div>"
+    ].join("");
+  }
+
   function loadProgress() {
     try {
       const data = JSON.parse(window.localStorage.getItem(PROGRESS_KEY) || "{}");
@@ -316,7 +345,7 @@
       escapeHtml(mode.label), "</span></div><h3>", escapeHtml(lesson.title), "</h3><p>", escapeHtml(lesson.summary), "</p>",
       '<div class="standard-list">', asList(lesson.standards).map((standard) => (
         '<span class="standard-chip">' + escapeHtml(standard.code) + "</span>"
-      )).join(""), "</div>",
+      )).join(""), '<span class="deck-chip">', String(asList(lesson.slides).length), "페이지 · 교실 실행형</span></div>",
       '<div class="lesson-actions"><button class="open-plan" type="button" data-plan-lesson="', String(lesson.no),
       '">교안 보기</button><button class="start-lesson" type="button" data-start-lesson="', String(lesson.no),
       '">', completed ? "다시 수업" : "수업 시작", "</button></div></article>"
@@ -336,12 +365,15 @@
 
     const assessments = [];
     asList(lesson.slides).forEach((slide) => {
-      if (slide.type === "quiz") {
-        assessments.push({ title: "형성평가", text: slide.question + " · 정답: " + asList(slide.choices)[slide.answer] });
-      } else if (slide.type === "activity") {
-        assessments.push({ title: "활동 관찰", text: slide.title });
-      } else if (slide.type === "ai") {
-        assessments.push({ title: "제작 체크포인트", text: slide.title });
+      if (isQuizSlide(slide)) {
+        assessments.push({
+          title: slide.type === "exit" ? "마무리 평가" : "형성평가",
+          text: slide.question + " · 정답: " + asList(slide.choices)[slide.answer] + " · " + slide.explanation
+        });
+      } else if (slide.type === "checkpoint") {
+        asList(slide.criteria).forEach((criterion) => assessments.push({ title: "성공 기준", text: criterion }));
+      } else if (slide.type === "build" && slide.checkpoint) {
+        assessments.push({ title: "제작 " + slide.stepNumber + "단계", text: slide.checkpoint });
       }
     });
 
@@ -349,15 +381,25 @@
       '<p class="plan-summary">', escapeHtml(lesson.summary), "</p>",
       '<div class="plan-columns">',
       '<section class="plan-section"><h3>학습 목표</h3><ul>', asList(lesson.objectives).map((objective) => "<li>" + escapeHtml(objective) + "</li>").join(""), "</ul></section>",
+      '<section class="plan-section"><h3>성공 기준</h3><ul>', asList(lesson.successCriteria).map((criterion) => "<li>" + escapeHtml(criterion) + "</li>").join(""), "</ul></section>",
       '<section class="plan-section"><h3>준비물</h3><ul>', asList(lesson.materials).map((material) => "<li>" + escapeHtml(material) + "</li>").join(""), "</ul></section>",
+      '<section class="plan-section"><h3>학생 산출물</h3><ul>', asList(lesson.studentArtifacts).map((artifact) => "<li>" + escapeHtml(artifact) + "</li>").join(""), "</ul></section>",
+      '<section class="plan-section full"><h3>핵심 어휘와 수업 예시</h3><div class="vocabulary-list compact">', asList(lesson.vocabulary).map((term) => [
+        '<article class="vocabulary-item"><strong>', escapeHtml(term.term), "</strong><span>", escapeHtml(term.meaning),
+        '</span><small>예: ', escapeHtml(term.example), "</small></article>"
+      ].join("")).join(""), "</div></section>",
       '<section class="plan-section full"><h3>연계 성취기준</h3><div class="standard-blocks">', asList(lesson.standards).map((standard) => [
         '<div class="standard-block"><strong>', escapeHtml(standard.code), "</strong>", escapeHtml(standard.text), "</div>"
       ].join("")).join(""), "</div></section>",
-      '<section class="plan-section full"><h3>차시별 수업 흐름 · 총 ', String(totalMinutes(lesson)), '분</h3><div class="lesson-timeline">',
+      '<section class="plan-section full"><h3>차시별 수업 흐름 · 총 ', String(totalMinutes(lesson)), "분 · ", String(asList(lesson.slides).length), '페이지</h3><div class="lesson-timeline">',
       asList(lesson.slides).map((slide) => [
         '<div class="timeline-row"><span class="phase">', escapeHtml(slide.phase), "</span><strong>", escapeHtml(slide.title),
         '</strong><span class="minutes">', String(slide.minutes || 0), "분</span></div>"
       ].join("")).join(""), "</div></section>",
+      '<section class="plan-section full"><h3>수준별 운영</h3><div class="differentiate-grid compact"><article><b>도움이 필요할 때</b>',
+      renderBulletList(lesson.differentiation && lesson.differentiation.support, "mini-list"),
+      '</article><article><b>더 도전할 때</b>', renderBulletList(lesson.differentiation && lesson.differentiation.challenge, "mini-list"), "</article></div></section>",
+      '<section class="plan-section full"><h3>평가 루브릭</h3>', renderRubricTable(lesson.rubric), "</section>",
       '<section class="plan-section full"><h3>평가와 체크포인트</h3><div class="assessment-list">',
       assessments.map((assessment) => '<div class="assessment-item"><b>' + escapeHtml(assessment.title) + "</b>" + escapeHtml(assessment.text) + "</div>").join(""),
       "</div></section></div>"
@@ -459,31 +501,147 @@
     ].join("");
   }
 
+  function renderQuizContent(slide) {
+    const takeaways = asList(slide.takeaways);
+    return [
+      "<h2>", escapeHtml(slide.title), "</h2>",
+      '<p class="quiz-question">Q. ', escapeHtml(slide.question), "</p>",
+      '<div class="quiz-choices">', asList(slide.choices).map((choice, index) => [
+        '<button type="button" class="quiz-choice" data-quiz-choice="', String(index), '"><b>', String(index + 1), "</b><span>", escapeHtml(choice), "</span></button>"
+      ].join("")).join(""), '</div><div class="quiz-feedback" id="quizFeedback" aria-live="polite"></div>',
+      takeaways.length ? '<div class="exit-takeaways"><strong>오늘 가져갈 것</strong>' + renderBulletList(takeaways, "mini-list") + "</div>" : ""
+    ].join("");
+  }
+
+  function renderRichSlideContent(slide) {
+    const typeLabels = {
+      goals: "학습 목표",
+      hook: "생각 열기",
+      vocabulary: "핵심 어휘",
+      concept: "개념 이해",
+      example: "작동 예시",
+      check: "형성평가",
+      setup: "제작 준비",
+      plan: "제작 계획",
+      build: "따라 만들기",
+      checkpoint: "작품 검증",
+      troubleshoot: "오류 해결",
+      differentiate: "수준별 활동",
+      rubric: "평가 루브릭",
+      exit: "마무리 평가",
+      ai: "AI와 함께 만들기",
+      activity: "학생 활동"
+    };
+    const badge = typeLabels[slide.type]
+      ? '<div class="slide-type-badge">' + escapeHtml(typeLabels[slide.type]) + "</div>"
+      : "";
+
+    if (isQuizSlide(slide)) {
+      return badge + renderQuizContent(slide);
+    }
+    if (slide.type === "goals") {
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>",
+        '<div class="goal-grid"><article><strong>할 수 있어요</strong>', renderBulletList(slide.objectives, "mini-list"),
+        '</article><article><strong>이렇게 확인해요</strong>', renderBulletList(slide.successCriteria, "mini-list"), "</article></div>"
+      ].join("");
+    }
+    if (slide.type === "vocabulary") {
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>",
+        '<div class="vocabulary-list">', asList(slide.terms).map((term) => [
+          '<article class="vocabulary-item"><strong>', escapeHtml(term.term), "</strong><span>", escapeHtml(term.meaning),
+          '</span><small>작품 예시 · ', escapeHtml(term.example), "</small></article>"
+        ].join("")).join(""), "</div>"
+      ].join("");
+    }
+    if (slide.type === "example") {
+      const scenario = Array.isArray(slide.scenario) ? slide.scenario : [slide.scenario].filter(Boolean);
+      const compare = slide.compare || {};
+      const flow = [
+        { label: "입력", values: slide.input },
+        { label: "처리", values: slide.process },
+        { label: "출력", values: slide.output }
+      ].filter((item) => asList(item.values).length);
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>",
+        scenario.length ? '<div class="example-scenario"><b>상황</b>' + scenario.map((item) => "<span>" + escapeHtml(item) + "</span>").join("") + "</div>" : "",
+        flow.length ? '<div class="example-flow">' + flow.map((item, index) => [
+          '<article><b>', escapeHtml(item.label), "</b>", renderBulletList(item.values, "mini-list"), "</article>",
+          index < flow.length - 1 ? '<span class="flow-arrow" aria-hidden="true">→</span>' : ""
+        ].join("")).join("") + "</div>" : "",
+        compare.good || compare.bad ? '<div class="compare-panel"><article class="good"><b>좋은 선택</b><span>' + escapeHtml(compare.good) +
+          '</span></article><article class="bad"><b>피할 선택</b><span>' + escapeHtml(compare.bad) + "</span></article></div>" : "",
+        asList(slide.body).length && slide.decisionQuestion ? '<div class="decision-criteria"><strong>판단 기준</strong>' + renderBulletList(slide.body, "mini-list") + "</div>" : "",
+        slide.decisionQuestion ? '<div class="checkpoint-callout"><strong>선택 근거</strong><span>' + escapeHtml(slide.decisionQuestion) + "</span></div>" : ""
+      ].join("");
+    }
+    if (slide.type === "setup") {
+      return [badge, "<h2>", escapeHtml(slide.title), "</h2>", '<div class="setup-checklist">',
+        asList(slide.checklist).map((item) => '<div><span>✓</span>' + escapeHtml(item) + "</div>").join(""), "</div>"].join("");
+    }
+    if (slide.type === "plan") {
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>",
+        '<div class="plan-step-list">', asList(slide.steps).map((step, index) => '<div><b>' + String(index + 1) + "</b><span>" + escapeHtml(step) + "</span></div>").join(""), "</div>",
+        '<div class="artifact-callout"><strong>남길 결과물</strong>', renderBulletList(slide.studentArtifacts, "mini-list"), "</div>"
+      ].join("");
+    }
+    if (slide.type === "build") {
+      return [
+        '<div class="build-step-header"><span>제작 ', String(slide.stepNumber), " / ", String(slide.stepTotal), "</span><b>",
+        escapeHtml(slide.codingType === "blockly" ? "MODI 블록" : slide.codingType === "hybrid" ? "Web + MODI" : "Web"), "</b></div>",
+        "<h2>", escapeHtml(slide.title), "</h2>",
+        '<ol class="step-instructions">', asList(slide.instructions).map((item) => "<li>" + escapeHtml(item) + "</li>").join(""), "</ol>",
+        slide.prompt ? '<div class="prompt-callout"><strong>AI에게 이렇게 요청해 보세요</strong><code>' + escapeHtml(slide.prompt) + "</code></div>" : "",
+        '<div class="checkpoint-callout"><strong>통과 조건</strong><span>', escapeHtml(slide.checkpoint), "</span></div>"
+      ].join("");
+    }
+    if (slide.type === "checkpoint") {
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>",
+        '<div class="checkpoint-grid"><article><strong>작동 확인</strong>', renderBulletList(slide.criteria, "mini-list"),
+        '</article><article><strong>증거로 남기기</strong>', renderBulletList(slide.studentArtifacts, "mini-list"), "</article></div>",
+        renderRubricTable(slide.rubric)
+      ].join("");
+    }
+    if (slide.type === "troubleshoot") {
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>",
+        '<div class="issue-table"><div class="issue-head"><b>보이는 증상</b><b>가능한 원인</b><b>확인·수정</b></div>',
+        asList(slide.issues).map((issue) => '<article><span>' + escapeHtml(issue.symptom) + "</span><span>" + escapeHtml(issue.cause) + "</span><strong>" + escapeHtml(issue.fix) + "</strong></article>").join(""),
+        "</div>"
+      ].join("");
+    }
+    if (slide.type === "differentiate") {
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>",
+        '<div class="differentiate-grid"><article><b>도움이 필요하면</b>', renderBulletList(slide.support, "mini-list"),
+        '</article><article><b>먼저 완성했다면</b>', renderBulletList(slide.challenge, "mini-list"), "</article></div>"
+      ].join("");
+    }
+    if (slide.type === "rubric") {
+      return [
+        badge, "<h2>", escapeHtml(slide.title), "</h2>", renderRubricTable(slide.rows),
+        '<div class="artifact-callout"><strong>제출 증거</strong>', renderBulletList(slide.studentArtifacts, "mini-list"), "</div>"
+      ].join("");
+    }
+
+    return [badge, "<h2>", escapeHtml(slide.title), "</h2>", renderBulletList(slide.body, "slide-body")].join("");
+  }
+
   function renderSlide() {
     const lesson = state.activeLesson;
     const slide = lesson.slides[state.slideIndex];
     const slideCard = document.getElementById("slideCard");
-    slideCard.className = "slide-card" + (slide.type === "title" ? " title-slide" : "") + (slide.type === "ai" ? " ai-slide" : "") + (slide.type === "activity" ? " activity-slide" : "");
+    slideCard.className = "slide-card type-" + escapeHtml(slide.type) + (slide.type === "title" ? " title-slide" : "") + (["ai", "build"].includes(slide.type) ? " ai-slide" : "") + (["activity", "checkpoint"].includes(slide.type) ? " activity-slide" : "");
 
     const phaseLine = '<div class="slide-phase">' + escapeHtml(slide.phase) + '<span>' + String(slide.minutes || 0) + "분</span></div>";
     let content = phaseLine;
     if (slide.type === "title") {
       content += "<h2>" + escapeHtml(slide.title) + "</h2><p class=\"slide-subtitle\">" + escapeHtml(slide.subtitle || "") + "</p>";
-    } else if (slide.type === "quiz") {
-      content += "<h2>" + escapeHtml(slide.title) + "</h2><p class=\"quiz-question\">Q. " + escapeHtml(slide.question) + "</p>";
-      content += '<div class="quiz-choices">' + asList(slide.choices).map((choice, index) => [
-        '<button type="button" class="quiz-choice" data-quiz-choice="', String(index), '"><b>', String(index + 1), "</b><span>", escapeHtml(choice), "</span></button>"
-      ].join("")).join("") + '</div><div class="quiz-feedback" id="quizFeedback" aria-live="polite"></div>';
     } else {
-      if (slide.type === "ai") {
-        content += '<div class="slide-type-badge">AI와 함께 만들기 · ' + escapeHtml(slide.codingType === "blockly" ? "MODI 블록" : "Web") + "</div>";
-      } else if (slide.type === "activity") {
-        content += '<div class="slide-type-badge">학생 활동</div>';
-      }
-      content += "<h2>" + escapeHtml(slide.title) + "</h2>";
-      if (asList(slide.body).length) {
-        content += '<ul class="slide-body">' + slide.body.map((line) => "<li>" + escapeHtml(line) + "</li>").join("") + "</ul>";
-      }
+      content += renderRichSlideContent(slide);
     }
     slideCard.innerHTML = content;
 
@@ -522,7 +680,7 @@
 
   function chooseQuiz(index) {
     const slide = state.activeLesson.slides[state.slideIndex];
-    if (slide.type !== "quiz") {
+    if (!isQuizSlide(slide)) {
       return;
     }
     document.querySelectorAll("[data-quiz-choice]").forEach((button) => {
@@ -531,7 +689,7 @@
       button.classList.toggle("wrong", choice === Number(index) && choice !== Number(slide.answer));
     });
     const correct = Number(index) === Number(slide.answer);
-    document.getElementById("quizFeedback").textContent = correct ? "정답이에요. 핵심 개념을 이해했습니다." : "한 번 더 살펴보세요. 정답을 함께 표시했습니다.";
+    document.getElementById("quizFeedback").textContent = (correct ? "정답입니다. " : "정답을 함께 표시했습니다. ") + String(slide.explanation || "핵심 개념을 다시 확인해 보세요.");
   }
 
   function renderStudio() {
@@ -552,15 +710,21 @@
     }
 
     const prompts = asList(slide.prompts);
-    const body = asList(slide.body);
+    const body = asList(slide.instructions).length ? asList(slide.instructions) : asList(slide.body);
+    const activityTitle = slide.type === "build"
+      ? "제작 " + slide.stepNumber + "/" + slide.stepTotal + " · 통과 조건을 확인하세요"
+      : slide.type === "ai" ? "AI 제작 활동" : "현재 수업 활동";
     studio.innerHTML = [
-      '<div class="activity-panel"><h3>', escapeHtml(slide.type === "ai" ? "AI 제작 활동" : "현재 수업 활동"), "</h3>",
+      '<div class="activity-panel"><h3>', escapeHtml(activityTitle), "</h3>",
       "<p>", escapeHtml(slide.title), "</p>",
+      body.length ? '<div class="activity-checklist">' + body.map((line, index) => [
+        '<label><input type="checkbox" data-checkpoint="', String(index), '"><span>', escapeHtml(line), "</span></label>"
+      ].join("")).join("") + "</div>" : "",
       prompts.length ? '<div class="prompt-list">' + prompts.map((prompt) => (
         '<button class="prompt-button" type="button" data-prompt="' + escapeHtml(prompt) + '">' + escapeHtml(prompt) + "</button>"
-      )).join("") + "</div>" : body.length ? '<div class="activity-checklist">' + body.map((line, index) => [
-        '<label><input type="checkbox" data-checkpoint="', String(index), '"><span>', escapeHtml(line), "</span></label>"
-      ].join("")).join("") + "</div>" : '<div class="studio-empty"><div><span class="empty-icon">✓</span><strong>수업 화면에 집중하세요</strong><span>활동 단계에서 체크리스트와 AI 예시가 나타납니다.</span></div></div>',
+      )).join("") + "</div>" : "",
+      !body.length && !prompts.length ? '<div class="studio-empty"><div><span class="empty-icon">✓</span><strong>수업 화면에 집중하세요</strong><span>제작 단계에서 체크리스트와 AI 예시가 나타납니다.</span></div></div>' : "",
+      slide.checkpoint ? '<div class="studio-checkpoint"><b>통과 조건</b>' + escapeHtml(slide.checkpoint) + "</div>" : "",
       renderChatThread(),
       "</div>"
     ].join("");

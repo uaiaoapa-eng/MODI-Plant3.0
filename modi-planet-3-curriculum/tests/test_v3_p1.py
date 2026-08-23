@@ -43,6 +43,7 @@ def test_create_adapter_rejects_new_or_legacy_aliases(coding_type):
 
 def test_runtime_neutral_catalog_contains_27_published_lessons():
     expected_minutes = {"elementary": 40, "middle": 45, "high": 50}
+    expected_slides = {"elementary": 17, "middle": 19, "high": 21}
     required_lesson_fields = {
         "id",
         "lesson_no",
@@ -56,6 +57,11 @@ def test_runtime_neutral_catalog_contains_27_published_lessons():
         "objectives",
         "standards",
         "materials",
+        "successCriteria",
+        "vocabulary",
+        "rubric",
+        "differentiation",
+        "studentArtifacts",
         "slides",
     }
 
@@ -64,7 +70,10 @@ def test_runtime_neutral_catalog_contains_27_published_lessons():
 
     assert [band["id"] for band in bands] == ["elementary", "middle", "high"]
     assert sum(len(band["lessons"]) for band in bands) == 27
+    assert sum(len(lesson["slides"]) for band in bands for lesson in band["lessons"]) == 513
     for band in bands:
+        assert band["deckVersion"] == 3
+        assert band["deckProfile"]["slideCountPerLesson"] == expected_slides[band["id"]]
         assert band["lesson_count"] == 9
         assert band["classMinutes"] == expected_minutes[band["id"]]
         assert band["class_minutes"] == expected_minutes[band["id"]]
@@ -79,8 +88,38 @@ def test_runtime_neutral_catalog_contains_27_published_lessons():
             assert lesson["objectives"]
             assert lesson["standards"]
             assert lesson["materials"]
-            assert lesson["slides"]
+            assert lesson["successCriteria"]
+            assert lesson["vocabulary"]
+            assert lesson["rubric"]
+            assert lesson["differentiation"]["support"]
+            assert lesson["differentiation"]["challenge"]
+            assert lesson["studentArtifacts"]
+            assert lesson["deckVersion"] == 3
+            assert len(lesson["slides"]) == expected_slides[band["id"]]
             assert sum(slide["minutes"] for slide in lesson["slides"]) == band["classMinutes"]
+            assert all(slide["teacherNote"].strip() for slide in lesson["slides"])
+            assert {slide["type"] for slide in lesson["slides"]} >= {
+                "title",
+                "goals",
+                "hook",
+                "vocabulary",
+                "concept",
+                "example",
+                "check",
+                "setup",
+                "plan",
+                "build",
+                "checkpoint",
+                "troubleshoot",
+                "differentiate",
+                "exit",
+            }
+            quiz_slides = [slide for slide in lesson["slides"] if slide["type"] in {"check", "exit"}]
+            assert len(quiz_slides) == 2
+            assert all(len(slide["choices"]) == 4 and slide["explanation"] for slide in quiz_slides)
+            build_slides = [slide for slide in lesson["slides"] if slide["type"] == "build"]
+            assert build_slides
+            assert all(slide["checkpoint"] and slide["codingType"] in SUPPORTED_CODING_TYPES for slide in build_slides)
 
 
 def test_all_lesson_standards_match_the_reviewed_2022_notice_mapping():
@@ -121,6 +160,20 @@ def test_all_lesson_standards_match_the_reviewed_2022_notice_mapping():
         "code": "[12정01-01]",
         "text": "유무선 네트워크의 특성을 이해하고, 컴퓨팅 시스템 간 공유, 협력, 소통을 위한 네트워크 환경을 구성한다.",
     }
+
+
+def test_curriculum_quiz_answers_are_not_locked_to_one_choice_position():
+    answers = [
+        slide["answer"]
+        for band in list_grade_bands()
+        for lesson in band["lessons"]
+        for slide in lesson["slides"]
+        if slide["type"] in {"check", "exit"}
+    ]
+
+    assert len(answers) == 54
+    assert len(set(answers)) >= 3
+    assert max(answers.count(position) for position in range(4)) < len(answers) * 0.7
 
 
 def test_catalog_lesson_lookup_returns_detached_detail_with_course_context():
