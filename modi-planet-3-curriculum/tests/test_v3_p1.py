@@ -1,5 +1,6 @@
 """Focused v3 product, published curriculum, and Create adapter tests."""
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -283,7 +284,8 @@ def test_lms_preview_seeds_polished_results_before_generation(client):
 
     for level in ("elementary", "middle", "high"):
         for lesson_no in range(1, 10):
-            assert script.count(f'"{level}-{lesson_no:02d}"') == 1
+            # Every lesson has one result-preview preset and one deck-scene profile.
+            assert script.count(f'"{level}-{lesson_no:02d}"') == 2
 
     assert "function renderPresetPreview" in script
     assert "function renderWebPreset" in script
@@ -331,32 +333,84 @@ def test_lms_preview_seeds_polished_results_before_generation(client):
         assert response.headers["content-type"] == "image/png"
 
 
-def test_lesson_decks_render_content_bearing_visuals_and_modi_assets(client):
+def test_lesson_decks_render_unique_layouts_scenes_and_modi_assets(client):
     script = client.get("/static/lms.js").text
     styles = client.get("/static/lms.css").text
     html = client.get("/lms").text
 
+    required_types = {
+        "title", "goals", "hook", "vocabulary", "concept",
+        "example", "check", "setup", "plan", "build",
+        "checkpoint", "troubleshoot", "differentiate", "rubric", "exit",
+    }
+    layout_pattern = (
+        r"^\s*(title|goals|hook|vocabulary|concept|example|check|setup|plan|"
+        r"build|checkpoint|troubleshoot|differentiate|rubric|exit):\s*"
+        r'\{[^\n}]*\blayout:\s*"([^"]+)"'
+    )
+    layouts = dict(re.findall(layout_pattern, script, re.MULTILINE))
+    assert set(layouts) == required_types
+    assert len(set(layouts.values())) == len(required_types)
+
+    scene_pattern = (
+        r'^\s*"((?:elementary|middle|high)-\d{2})":\s*'
+        r'\{[^\n}]*\bkind:\s*"([^"]+)"'
+    )
+    scenes = re.findall(scene_pattern, script, re.MULTILINE)
+    expected_lessons = {
+        f"{level}-{number:02d}"
+        for level in ("elementary", "middle", "high")
+        for number in range(1, 10)
+    }
+    assert len(scenes) == 27
+    assert {key for key, _kind in scenes} == expected_lessons
+    assert len({kind for _key, kind in scenes}) == 27
+
     assert "function renderLessonSlideVisual" in script
-    assert "function renderSlideVisualMedia" in script
-    assert "LESSON_VISUAL_MOTIFS" in script
+    assert "function renderLessonScene" in script
+    assert "function classifyBuildScene" in script
+    assert "function renderSlideVisualDiagram" not in script
+    assert "function renderSlideVisualMedia" not in script
+    assert "SLIDE_VISUAL_RENDERERS" in script
+    assert "LESSON_SCENE_PROFILES" in script
     assert "SLIDE_VISUAL_META" in script
     assert "MODULE_VISUAL_MATCHES" in script
     assert 'slideHeading.insertAdjacentHTML("afterend"' in script
-    assert "차시 시각화" in script
-    assert "COMMAND →" in script
-    assert "← TELEMETRY" in script
+    assert 'data-layout="' in script
+    assert 'data-scene-kind="' in script
+    assert 'data-lesson-key="' in script
+    assert 'data-slide-type="' in script
+    assert "data-visual-body" in script
+    for build_kind in (
+        "brief", "blueprint", "assembly", "logic",
+        "instrument", "testbench", "iteration", "storyboard",
+    ):
+        assert f'"{build_kind}"' in script
+
+    check_renderer = script.split("function renderCheckVisual", 1)[1].split(
+        "function renderSetupVisual", 1
+    )[0]
+    exit_renderer = script.split("function renderExitVisual", 1)[1].split(
+        "const SLIDE_VISUAL_RENDERERS", 1
+    )[0]
+    assert "slide.answer" not in check_renderer
+    assert "slide.explanation" not in check_renderer
+    assert "slide.answer" not in exit_renderer
+    assert "slide.explanation" not in exit_renderer
 
     assert ".lesson-slide-visual" in styles
-    assert ".lesson-mini-browser" in styles
-    assert ".lesson-visual-media--module" in styles
-    assert ".lesson-visual-diagram--diagnostic" in styles
-    assert "Lesson deck visual system" in styles
-    assert "20260823-lesson-visuals" in html
+    assert "Unique lesson scene system" in styles
+    assert "container-type: inline-size" in styles
+    assert "@container (max-width: 620px)" in styles
+    for layout in layouts.values():
+        assert f".visual-{layout}" in styles
+    assert "20260823-unique-scenes" in html
 
     expected_assets = {
         "modi-kit-flatlay.jpg": "image/jpeg",
         "modi-ecosystem.jpg": "image/jpeg",
         "modi-car-robot.jpg": "image/jpeg",
+        "modi-smart-farm.jpg": "image/jpeg",
         "modi-control-workspace.jpg": "image/jpeg",
         "modi-hardware-kit.png": "image/png",
         "web-modi-hybrid.png": "image/png",
@@ -365,6 +419,7 @@ def test_lesson_decks_render_content_bearing_visuals_and_modi_assets(client):
         "modi-dial.png": "image/png",
         "modi-speaker.png": "image/png",
         "modi-led.png": "image/png",
+        "modi-battery.png": "image/png",
     }
     for asset, content_type in expected_assets.items():
         response = client.get(f"/static/assets/lesson-visuals/{asset}")

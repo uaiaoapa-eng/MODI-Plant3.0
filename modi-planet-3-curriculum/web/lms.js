@@ -93,58 +93,52 @@
     "high-09": { product: "ORBIT-9 INCIDENT LAB", eyebrow: "장애 대응 데모데이", primaryLabel: "요구사항 추적", primaryValue: "12/12", status: "MISSION READY", message: "실패 화면·수신 로그·원인 가설·복구 검증을 하나의 미션 사례로 연결합니다.", metrics: [["테스트 커버리지", "94%"], ["증거", "18개"], ["브리핑", "5분"]], meter: 94, action: "비상 대응 사례 보기", activeStatus: "원인 계층 식별 완료", activePrimary: "RECOVERED", input: "장애 증거", logic: "계층 진단", output: "복구 결과" }
   };
 
-  const LESSON_VISUAL_MOTIFS = {
-    elementary: [
-      "소개 카드와 개인정보 방패",
-      "순서가 보이는 우리 반 페이지",
-      "무작위 운세와 10회 실험",
-      "버튼 → Network → LED 신호",
-      "거리 센서와 경보 기준값",
-      "다이얼 값과 모터 바람 세기",
-      "센서가 보는 탐사차 안전 구역",
-      "웹 명령과 탐사차 텔레메트리",
-      "탐험 결과를 설명하는 쇼케이스"
-    ],
-    middle: [
-      "요구사항에서 D-day 화면까지",
-      "이벤트에 따라 바뀌는 스톱워치 상태",
-      "버그 재현 → 수정 → 회귀 시험",
-      "밝기 측정과 무드등 임계값",
-      "CLOSED · OPEN · WAIT 자동문 상태",
-      "버튼·소리·빛을 잇는 전자 드럼",
-      "NOVA 무대 센서와 LIVE 상태",
-      "텔레메트리 위젯과 역방향 E-Stop",
-      "근거로 완성하는 NOVA 쇼케이스"
-    ],
-    high: [
-      "예약 충돌 정책과 수용 기준",
-      "메뉴·리뷰 데이터와 집계 파이프라인",
-      "사용자 여정과 개선 우선순위",
-      "거리 시계열에서 한 번의 통과 찾기",
-      "두 경계로 안정시키는 히스테리시스",
-      "WAIT · READY · RESULT 상태와 예외",
-      "ORBIT-9 우주선·통신·관제 아키텍처",
-      "양방향 텔레메트리와 E2E 진단",
-      "요구사항부터 증거까지 잇는 데모데이"
-    ]
+  const LESSON_SCENE_PROFILES = {
+    "elementary-01": { kind: "profile", code: "SAFE-ID 01", title: "개인정보 방패", subtitle: "별명과 취미만 안전하게 공개", tokens: ["별명 햇살", "취미 3", "개인정보 0"], route: 0 },
+    "elementary-02": { kind: "ordered-page", code: "CLASS PAGE 02", title: "우리 반 이야기 숲", subtitle: "내용을 읽기 좋은 순서로 배치", tokens: ["반 이름", "급훈", "자랑 3"], route: 1 },
+    "elementary-03": { kind: "random-wheel", code: "LUCK LAB 03", title: "응원 캡슐 머신", subtitle: "무작위 결과를 여러 번 관찰", tokens: ["문구 5", "실험 10", "유해 0"], route: 2 },
+    "elementary-04": { kind: "signal-chain", code: "SIGNAL 04", title: "보행자 신호 회로", subtitle: "입력에서 출력까지 신호 여행", tokens: ["BUTTON", "NETWORK", "LED"], route: 3 },
+    "elementary-05": { kind: "distance-alarm", code: "VAULT 05", title: "보물 경계 구역", subtitle: "거리 기준으로 경보를 판단", tokens: ["42 cm", "20 cm", "ALERT"], route: 4 },
+    "elementary-06": { kind: "dial-fan", code: "WIND 06", title: "바람 조절 링", subtitle: "다이얼 값을 세 단계 바람으로 변환", tokens: ["62%", "중풍", "128 rpm"], route: 5 },
+    "elementary-07": { kind: "rover-zone", code: "SCOUT 07", title: "크레이터 탐사차", subtitle: "센서가 보는 안전 정지 구역", tokens: ["SENSE", "STOP", "SAFE"], route: 0 },
+    "elementary-08": { kind: "remote-link", code: "BASE 08", title: "기지 원격 관제", subtitle: "명령과 거리 값이 양방향 이동", tokens: ["COMMAND", "64 cm", "RETURN"], route: 1 },
+    "elementary-09": { kind: "showcase", code: "LIVE 09", title: "별빛 탐험 브리핑", subtitle: "기능·구조·수정을 무대에서 설명", tokens: ["2분", "1분", "3/3"], route: 2 },
+    "middle-01": { kind: "requirements-trace", code: "REQ 01", title: "D-day 요구사항 추적", subtitle: "사용자 문제부터 수용 기준까지", tokens: ["사용자", "요구사항", "D-5"], route: 3 },
+    "middle-02": { kind: "stopwatch-state", code: "SPRINT 02", title: "스톱워치 상태 머신", subtitle: "이벤트에 따라 RUN·STOP 전환", tokens: ["READY", "RUN", "LAP"], route: 4 },
+    "middle-03": { kind: "debug-trace", code: "DEBUG 03", title: "중복 투표 추적기", subtitle: "재현·수정·회귀 시험을 한 흐름으로", tokens: ["2표", "FIX", "PASS"], route: 5 },
+    "middle-04": { kind: "lux-threshold", code: "MOOD 04", title: "빛 임계값 지도", subtitle: "측정값과 LED 조건을 비교", tokens: ["20 lx", "35 lx", "LED ON"], route: 0 },
+    "middle-05": { kind: "auto-door", code: "DOOR 05", title: "안전 자동문 상태", subtitle: "거리와 시간으로 OPEN·WAIT·CLOSE", tokens: ["OPEN", "3 sec", "CLOSED"], route: 1 },
+    "middle-06": { kind: "rhythm-wave", code: "BEAT 06", title: "전자 드럼 시퀀서", subtitle: "버튼·소리·빛을 박자에 맞춰 연결", tokens: ["PAD", "BEAT", "LIGHT"], route: 2 },
+    "middle-07": { kind: "sensor-stage", code: "NOVA 07", title: "NOVA 센서 무대", subtitle: "관객 움직임으로 장면을 전환", tokens: ["SENSOR", "SCENE", "LIVE"], route: 3 },
+    "middle-08": { kind: "telemetry-console", code: "NOVA OPS 08", title: "무대 관제 콘솔", subtitle: "텔레메트리와 E-Stop을 양방향 검증", tokens: ["DATA", "STALE", "E-STOP"], route: 4 },
+    "middle-09": { kind: "festival", code: "NOVA LIVE 09", title: "NOVA 메이커 페스티벌", subtitle: "근거가 보이는 팀별 라이브 쇼", tokens: ["BOOTH", "DEMO", "FEEDBACK"], route: 5 },
+    "high-01": { kind: "interval-collision", code: "BOOKING 01", title: "예약 충돌 관제", subtitle: "시간 구간 겹침과 정책을 판정", tokens: ["09:00", "OVERLAP", "REJECT"], route: 0 },
+    "high-02": { kind: "er-aggregate", code: "MEAL 02", title: "리뷰 데이터 파이프라인", subtitle: "메뉴·리뷰 관계와 평균 집계", tokens: ["MENU", "1:N", "AVG 4.0"], route: 1 },
+    "high-03": { kind: "journey-priority", code: "FOCUS 03", title: "사용자 여정 레이더", subtitle: "관찰한 불편을 개선 우선순위로", tokens: ["12초", "PAIN", "5초"], route: 2 },
+    "high-04": { kind: "timeseries-entry", code: "ENTRY 04", title: "통과 이벤트 추출", subtitle: "거리 시계열에서 한 번의 통과만 집계", tokens: ["110", "18·17·20", "+1"], route: 3 },
+    "high-05": { kind: "hysteresis-band", code: "THERMO 05", title: "히스테리시스 제어 밴드", subtitle: "켜짐·꺼짐 경계를 나눠 상태 안정화", tokens: ["29°C ON", "HOLD", "27°C OFF"], route: 4 },
+    "high-06": { kind: "reaction-state", code: "REFLEX 06", title: "반응속도 상태·파형", subtitle: "조기 입력과 정상 입력을 분리 검증", tokens: ["WAIT", "READY", "0.211s"], route: 5 },
+    "high-07": { kind: "orbit-architecture", code: "ORBIT-9 07", title: "3계층 도킹 아키텍처", subtitle: "우주선·통신·관제 계층을 분리", tokens: ["SHIP", "NETWORK", "OPS"], route: 0 },
+    "high-08": { kind: "mission-ops", code: "ORBIT-9 08", title: "심우주 미션 관제", subtitle: "명령·텔레메트리·로그를 종단 간 추적", tokens: ["74 ms", "1,284 pkt", "E-STOP"], route: 1 },
+    "high-09": { kind: "traceability-incident", code: "ORBIT-9 09", title: "장애 대응 증거망", subtitle: "요구사항부터 복구 증거까지 연결", tokens: ["REQ", "INCIDENT", "RECOVERED"], route: 2 }
   };
 
   const SLIDE_VISUAL_META = {
-    title: { label: "MISSION BRIEF", archetype: "cover" },
-    goals: { label: "GOAL MAP", archetype: "sequence" },
-    hook: { label: "WHY SCENE", archetype: "flow" },
-    vocabulary: { label: "CONCEPT ATLAS", archetype: "terms" },
-    concept: { label: "HOW IT WORKS", archetype: "flow" },
-    example: { label: "WORKED EXAMPLE", archetype: "flow" },
-    check: { label: "CONCEPT CHECK", archetype: "sequence" },
-    setup: { label: "BUILD BENCH", archetype: "sequence" },
-    plan: { label: "PROJECT ROUTE", archetype: "sequence" },
-    build: { label: "MAKER STEP", archetype: "sequence" },
-    checkpoint: { label: "EVIDENCE CHECK", archetype: "sequence" },
-    troubleshoot: { label: "DIAGNOSTIC TREE", archetype: "diagnostic" },
-    differentiate: { label: "LEVEL ROUTES", archetype: "diagnostic" },
-    rubric: { label: "EVIDENCE MATRIX", archetype: "sequence" },
-    exit: { label: "MISSION COMPLETE", archetype: "sequence" }
+    title: { label: "MISSION BRIEF", layout: "cinema" },
+    goals: { label: "GOAL MAP", layout: "mission-map" },
+    hook: { label: "WHY SCENE", layout: "contrast-stage" },
+    vocabulary: { label: "CONCEPT ATLAS", layout: "concept-atlas" },
+    concept: { label: "HOW IT WORKS", layout: "mechanism-board" },
+    example: { label: "WORKED EXAMPLE", layout: "story-filmstrip" },
+    check: { label: "CONCEPT CHECK", layout: "quiz-orbit" },
+    setup: { label: "BUILD BENCH", layout: "topdown-bench" },
+    plan: { label: "PROJECT ROUTE", layout: "route-map" },
+    build: { label: "MAKER STEP", layout: "maker-blueprint" },
+    checkpoint: { label: "EVIDENCE CHECK", layout: "evidence-pinboard" },
+    troubleshoot: { label: "DIAGNOSTIC TREE", layout: "diagnostic-tree" },
+    differentiate: { label: "LEVEL ROUTES", layout: "branch-lanes" },
+    rubric: { label: "EVIDENCE MATRIX", layout: "rubric-heatmap" },
+    exit: { label: "MISSION COMPLETE", layout: "completion-orbit" }
   };
 
   const MODULE_VISUAL_MATCHES = [
@@ -258,75 +252,6 @@
     return String(value.term || value.criterion || value.symptom || value.fix || value.title || value.label || "");
   }
 
-  function visualItems(values, labels, limit) {
-    return asList(values).slice(0, Number(limit) || 3).map((value, index) => ({
-      label: asList(labels)[index] || String(index + 1).padStart(2, "0"),
-      text: shortenVisualText(visualValue(value), 62)
-    })).filter((item) => item.text);
-  }
-
-  function getSlideVisualItems(slide, lesson) {
-    if (slide.type === "goals") {
-      return visualItems(slide.objectives, ["목표 1", "목표 2", "목표 3"]);
-    }
-    if (slide.type === "vocabulary") {
-      return visualItems(asList(slide.terms).map((term) => term.term), ["KEY 01", "KEY 02", "KEY 03"]);
-    }
-    if (slide.type === "example") {
-      return [
-        { label: "INPUT", text: shortenVisualText(asList(slide.input)[0] || slide.scenario || "입력 확인", 56) },
-        { label: "LOGIC", text: shortenVisualText(asList(slide.process)[0] || "규칙 적용", 56) },
-        { label: "OUTPUT", text: shortenVisualText(asList(slide.output)[0] || "결과 확인", 56) }
-      ];
-    }
-    if (slide.type === "setup") {
-      return visualItems(slide.checklist, ["준비", "연결", "안전"]);
-    }
-    if (slide.type === "plan") {
-      return visualItems(slide.steps, ["설계", "제작", "검증"]);
-    }
-    if (slide.type === "build") {
-      return visualItems(slide.instructions, ["지금", "다음", "확인"]);
-    }
-    if (slide.type === "checkpoint") {
-      return visualItems(slide.criteria, ["동작", "일치", "증거"]);
-    }
-    if (slide.type === "troubleshoot") {
-      const issue = asList(slide.issues)[0] || {};
-      return [
-        { label: "증상", text: shortenVisualText(issue.symptom || asList(slide.body)[0] || "문제 재현", 54) },
-        { label: "원인", text: shortenVisualText(issue.cause || "입력·연결·상태를 확인", 54) },
-        { label: "수정", text: shortenVisualText(issue.fix || "한 항목씩 고친 뒤 다시 시험", 54) }
-      ];
-    }
-    if (slide.type === "differentiate") {
-      return [
-        { label: "SUPPORT", text: shortenVisualText(asList(slide.support)[0] || "핵심 기능부터 완성", 56) },
-        { label: "CORE", text: shortenVisualText(lesson.successCriteria && lesson.successCriteria[0] || lesson.summary, 56) },
-        { label: "CHALLENGE", text: shortenVisualText(asList(slide.challenge)[0] || "새 조건으로 확장", 56) }
-      ];
-    }
-    if (slide.type === "rubric") {
-      return visualItems(asList(slide.rows).map((row) => row.criterion), ["기능", "과정", "근거"]);
-    }
-    if (["check", "exit"].includes(slide.type)) {
-      const answer = asList(slide.choices)[Number(slide.answer)];
-      return [
-        { label: "QUESTION", text: shortenVisualText(slide.question || slide.title, 58) },
-        { label: "EVIDENCE", text: shortenVisualText(answer || slide.explanation || "근거를 찾아 선택", 58) },
-        { label: slide.type === "exit" ? "NEXT" : "RECHECK", text: shortenVisualText(asList(slide.takeaways)[0] || slide.explanation || "설명으로 다시 확인", 58) }
-      ];
-    }
-    if (slide.type === "title") {
-      return [
-        { label: "MISSION", text: shortenVisualText(lesson.summary, 62) },
-        { label: "MODE", text: MODES[lesson.projectType].long },
-        { label: "RESULT", text: shortenVisualText(asList(lesson.studentArtifacts)[0] || "완성 결과와 제작 근거", 62) }
-      ];
-    }
-    return visualItems(slide.body, ["관찰", "관계", "적용"]);
-  }
-
   function resolveSlideModule(slide, lesson) {
     const slideSource = [slide.title, slide.question, asList(slide.body).join(" "), asList(slide.instructions).join(" ")].join(" ").toLowerCase();
     const directMatch = MODULE_VISUAL_MATCHES.find((candidate) => candidate.words.some((word) => slideSource.includes(word.toLowerCase())));
@@ -374,71 +299,406 @@
     return { file: "/static/assets/lesson-visuals/web-modi-hybrid.png", alt: "웹 관제 화면과 장치 사이의 양방향 데이터 흐름", kind: "cutout" };
   }
 
-  function renderSlideVisualMedia(levelId, lesson, slide, asset) {
-    const preset = PREVIEW_PRESETS[lessonKey(levelId, lesson.no)] || {};
-    if (lesson.projectType === "web") {
-      return [
-        '<div class="lesson-visual-media lesson-visual-media--web">',
-        '<img class="lesson-visual-grade-art" src="', escapeHtml(asset.file), '" alt="" aria-hidden="true">',
-        '<div class="lesson-mini-browser" role="img" aria-label="', escapeHtml(asset.alt), '">',
-        '<div class="lesson-mini-toolbar"><i></i><i></i><i></i><span>preview.modiplanet.com</span></div>',
-        '<div class="lesson-mini-app"><small>', escapeHtml(preset.eyebrow || "WEB PROJECT"), '</small><strong>', escapeHtml(shortenVisualText(preset.product || lesson.title, 30)), '</strong>',
-        '<b>', escapeHtml(shortenVisualText(preset.primaryValue || "READY", 22)), '</b><div class="lesson-mini-metrics">',
-        asList(preset.metrics).slice(0, 3).map((metric) => '<span><small>' + escapeHtml(metric[0]) + '</small><b>' + escapeHtml(metric[1]) + '</b></span>').join(""),
-        '</div></div></div></div>'
-      ].join("");
-    }
+  function getLessonSceneProfile(levelId, lesson) {
+    return LESSON_SCENE_PROFILES[lessonKey(levelId, lesson.no)] || {
+      kind: "showcase",
+      code: "MODI LAB",
+      title: lesson.title,
+      subtitle: lesson.summary,
+      tokens: ["INPUT", "LOGIC", "OUTPUT"],
+      route: 0
+    };
+  }
 
-    if (lesson.projectType === "webhw" && levelId === "high") {
-      return [
-        '<div class="lesson-visual-media lesson-visual-media--hybrid">',
-        '<img class="lesson-visual-world" src="/static/assets/worlds/', escapeHtml(levelId), '-world.png" alt="" aria-hidden="true">',
-        '<img class="lesson-visual-cutout" src="', escapeHtml(asset.file), '" alt="', escapeHtml(asset.alt), '">',
-        '<span class="lesson-data-path command">COMMAND →</span><span class="lesson-data-path telemetry">← TELEMETRY</span>',
-        '</div>'
-      ].join("");
+  function getVisualTextList(values, limit, fallback) {
+    const list = asList(values).map((value) => shortenVisualText(visualValue(value), 58)).filter(Boolean);
+    if (list.length) {
+      return list.slice(0, Number(limit) || 3);
+    }
+    return asList(fallback).slice(0, Number(limit) || 3);
+  }
+
+  function renderSceneTokenRail(profile) {
+    return '<div class="scene-token-rail">' + asList(profile.tokens).slice(0, 3).map((token, index) => (
+      '<span><i>' + String(index + 1).padStart(2, "0") + '</i><b>' + escapeHtml(token) + '</b></span>'
+    )).join("") + "</div>";
+  }
+
+  function renderLessonScene(ctx, variant) {
+    const profile = ctx.profile;
+    const tokens = asList(profile.tokens);
+    const t0 = escapeHtml(tokens[0] || "INPUT");
+    const t1 = escapeHtml(tokens[1] || "LOGIC");
+    const t2 = escapeHtml(tokens[2] || "OUTPUT");
+    let scene = "";
+
+    if (profile.kind === "profile") {
+      scene = '<div class="scene-profile-card"><span class="scene-avatar">해</span><b>햇살의 카드</b><small>그림 · 우주 · 고양이</small></div><div class="scene-privacy-shield"><i>0</i><b>개인정보</b></div>';
+    } else if (profile.kind === "ordered-page") {
+      scene = '<div class="scene-page-stack"><span><i>01</i>반 이름</span><span><i>02</i>급훈</span><span><i>03</i>우리 반 자랑</span></div><div class="scene-scroll-line"></div>';
+    } else if (profile.kind === "random-wheel") {
+      scene = '<div class="scene-fortune-wheel"><i></i><i></i><i></i><i></i><b>행운</b></div><div class="scene-trial-dots">' + Array.from({ length: 10 }, (_value, index) => '<i class="' + (index % 3 === 0 ? "hot" : "") + '"></i>').join("") + '</div>';
+    } else if (profile.kind === "signal-chain") {
+      scene = '<div class="scene-circuit"><span class="input">BUTTON</span><i></i><span class="logic">NETWORK</span><i></i><span class="output"><b></b><b></b><b></b>LED</span></div>';
+    } else if (profile.kind === "distance-alarm") {
+      scene = '<div class="scene-sensor"><i></i><i></i><i></i><b>ToF</b></div><div class="scene-distance-ruler"><span>0</span><b>20cm</b><span>42cm</span></div><div class="scene-vault">보물</div>';
+    } else if (profile.kind === "dial-fan") {
+      scene = '<div class="scene-dial"><i></i><b>62%</b></div><div class="scene-fan"><i></i><i></i><i></i><span></span></div><div class="scene-wind-lines"><i></i><i></i><i></i></div>';
+    } else if (profile.kind === "rover-zone") {
+      scene = '<div class="scene-crater"></div><div class="scene-rover"><b>M</b><i></i><i></i></div><div class="scene-sensor-cone"><i></i></div><span class="scene-stop-mark">SAFE STOP</span>';
+    } else if (profile.kind === "remote-link") {
+      scene = '<div class="scene-base-console"><b>BASE</b><span>↑</span><span>←</span><span>→</span></div><div class="scene-data-lanes"><i>COMMAND →</i><i>← 64cm</i></div><div class="scene-mini-rover"><b>M</b><i></i><i></i></div>';
+    } else if (profile.kind === "showcase") {
+      scene = '<div class="scene-stage"><div class="scene-stage-light left"></div><div class="scene-stage-light right"></div><b>STAR SCOUT</b><span>LIVE MISSION</span></div><div class="scene-run-sheet"><i>2:00</i><i>1:00</i><i>3/3</i></div>';
+    } else if (profile.kind === "requirements-trace") {
+      scene = '<div class="scene-trace"><span class="user">사용자</span><i></i><span class="requirement">요구사항</span><i></i><span class="screen">D-5</span></div><div class="scene-acceptance"><b>✓</b> 수용 기준 5/5</div>';
+    } else if (profile.kind === "stopwatch-state") {
+      scene = '<div class="scene-stopwatch"><b>00:05.20</b><span>LAP 03</span></div><div class="scene-state-loop"><i>READY</i><b>→</b><i>RUN</i><b>→</b><i>STOP</i></div>';
+    } else if (profile.kind === "debug-trace") {
+      scene = '<div class="scene-debug-before"><small>BEFORE</small><b>CLICK×2</b><span>2표</span></div><div class="scene-patch">LOCK</div><div class="scene-debug-after"><small>AFTER</small><b>CLICK×2</b><span>1표 · PASS</span></div>';
+    } else if (profile.kind === "lux-threshold") {
+      scene = '<div class="scene-lux-plot"><i style="--x:12%;--y:74%"></i><i style="--x:32%;--y:58%"></i><i style="--x:58%;--y:32%"></i><i style="--x:80%;--y:18%"></i><b>35 lx 기준</b></div><div class="scene-lamp"><i></i><span>LED ON</span></div>';
+    } else if (profile.kind === "auto-door") {
+      scene = '<div class="scene-door"><i></i><i></i><span>14cm</span></div><div class="scene-door-states"><b>OPEN</b><i>3s</i><b>WAIT</b><i>→</i><b>CLOSED</b></div>';
+    } else if (profile.kind === "rhythm-wave") {
+      scene = '<div class="scene-pads">' + ["KICK", "SNARE", "HAT", "FX"].map((label, index) => '<i class="p' + index + '">' + label + '</i>').join("") + '</div><div class="scene-wave">' + Array.from({ length: 12 }, (_value, index) => '<i style="--h:' + (18 + (index * 17) % 72) + '%"></i>').join("") + '</div>';
+    } else if (profile.kind === "sensor-stage") {
+      scene = '<div class="scene-rig"><i></i><i></i><i></i><span class="beam one"></span><span class="beam two"></span><b>NOVA LIVE</b></div><div class="scene-audience"><i></i><i></i><i></i></div>';
+    } else if (profile.kind === "telemetry-console") {
+      scene = '<div class="scene-console-screen"><b>LIVE</b><div>' + Array.from({ length: 8 }, (_value, index) => '<i style="--h:' + (24 + (index * 23) % 68) + '%"></i>').join("") + '</div><span>74 ms</span></div><span class="scene-estop">E-STOP</span>';
+    } else if (profile.kind === "festival") {
+      scene = '<div class="scene-festival-booths"><span>A<small>센서 무대</small></span><span>B<small>관제 콘솔</small></span><span>C<small>증거 전시</small></span></div><div class="scene-crowd">' + Array.from({ length: 7 }, () => "<i></i>").join("") + '</div>';
+    } else if (profile.kind === "interval-collision") {
+      scene = '<div class="scene-calendar"><span>09</span><span>10</span><span>11</span><i class="booking one">A</i><i class="booking two">B</i><b>OVERLAP</b></div>';
+    } else if (profile.kind === "er-aggregate") {
+      scene = '<div class="scene-erd"><span><b>MENU</b><i>menuId</i></span><em>1 : N</em><span><b>REVIEW</b><i>rating</i></span></div><div class="scene-aggregate">Σ ÷ n <b>4.0</b></div>';
+    } else if (profile.kind === "journey-priority") {
+      scene = '<div class="scene-journey"><span>발견</span><i class="pain">12s</i><span>시작</span><i>→</i><span>완료</span><b>5s</b></div><div class="scene-priority"><i>효과 ↑</i><b>NOW</b></div>';
+    } else if (profile.kind === "timeseries-entry") {
+      scene = '<div class="scene-timeseries"><span>110</span><i style="--x:8%;--y:18%"></i><i style="--x:28%;--y:72%"></i><i style="--x:45%;--y:76%"></i><i style="--x:62%;--y:70%"></i><i style="--x:84%;--y:16%"></i><b>ENTRY +1</b></div>';
+    } else if (profile.kind === "hysteresis-band") {
+      scene = '<div class="scene-hysteresis"><span class="on">29°C · FAN ON</span><div><i></i><b>상태 유지 구간</b></div><span class="off">27°C · FAN OFF</span></div>';
+    } else if (profile.kind === "reaction-state") {
+      scene = '<div class="scene-reaction-lights"><i></i><i></i><i class="ready"></i></div><div class="scene-reaction-wave"><span>WAIT</span><i></i><span>READY</span><b>0.211s</b></div>';
+    } else if (profile.kind === "orbit-architecture") {
+      scene = '<div class="scene-orbit"><span class="ship">SHIP</span><i class="orbit-ring one"></i><span class="network">NETWORK</span><i class="orbit-ring two"></i><span class="ops">OPS</span></div>';
+    } else if (profile.kind === "mission-ops") {
+      scene = '<div class="scene-spacecraft"><i></i><b>ORBIT-9</b></div><div class="scene-uplink"><span>COMMAND ↑</span><span>↓ TELEMETRY</span></div><div class="scene-mission-panels"><i>74ms</i><i>1,284pkt</i><i>E2E OK</i></div>';
+    } else {
+      scene = '<div class="scene-incident-chain"><span>REQ</span><i></i><span>FAIL</span><i></i><span>LOG</span><i></i><span>FIX</span><i></i><span>PASS</span></div><div class="scene-recovered">RECOVERED</div>';
     }
 
     return [
-      '<div class="lesson-visual-media lesson-visual-media--', escapeHtml(asset.kind), '">',
-      '<img src="', escapeHtml(asset.file), '" alt="', escapeHtml(asset.alt), '">',
-      asset.kind === "module" ? '<span class="lesson-module-name">MODI · ' + escapeHtml(asset.moduleLabel) + '</span>' : '',
-      lesson.projectType === "webhw" ? '<span class="lesson-data-path command">COMMAND →</span><span class="lesson-data-path telemetry">← TELEMETRY</span>' : '',
-      '</div>'
+      '<div class="lesson-scene scene--', escapeHtml(profile.kind), ' scene-variant--', escapeHtml(variant || "standard"), '" role="img" aria-label="',
+      escapeHtml(profile.title + " — " + profile.subtitle), '"><div class="lesson-scene-art">', scene, '</div>',
+      variant === "compact" ? "" : renderSceneTokenRail(profile),
+      '<span class="sr-only">', t0, " → ", t1, " → ", t2, "</span></div>"
     ].join("");
   }
 
-  function renderSlideVisualDiagram(meta, items) {
-    const safeItems = asList(items).slice(0, 3);
-    if (meta.archetype === "terms") {
-      return '<div class="lesson-visual-diagram lesson-visual-diagram--terms">' + safeItems.map((item, index) => [
-        '<article><span>', String(index + 1).padStart(2, "0"), '</span><b>', escapeHtml(item.text), '</b><i aria-hidden="true"></i></article>'
-      ].join("")).join("") + "</div>";
-    }
-    if (meta.archetype === "diagnostic") {
-      return '<div class="lesson-visual-diagram lesson-visual-diagram--diagnostic">' + safeItems.map((item, index) => [
-        '<article><small>', escapeHtml(item.label), '</small><b>', escapeHtml(item.text), '</b></article>',
-        index < safeItems.length - 1 ? '<span class="lesson-visual-arrow" aria-hidden="true">→</span>' : ''
-      ].join("")).join("") + "</div>";
-    }
-    return '<div class="lesson-visual-diagram lesson-visual-diagram--' + escapeHtml(meta.archetype) + '">' + safeItems.map((item, index) => [
-      '<article><span>', String(index + 1).padStart(2, "0"), '</span><small>', escapeHtml(item.label), '</small><b>', escapeHtml(item.text), '</b></article>',
-      index < safeItems.length - 1 ? '<span class="lesson-visual-arrow" aria-hidden="true">→</span>' : ''
-    ].join("")).join("") + "</div>";
+  function createSlideVisualContext(levelId, lesson, slide, slideIndex) {
+    const profile = getLessonSceneProfile(levelId, lesson);
+    return {
+      levelId,
+      lesson,
+      slide,
+      slideIndex,
+      profile,
+      preset: PREVIEW_PRESETS[lessonKey(levelId, lesson.no)] || {},
+      asset: resolveLessonVisualAsset(levelId, lesson, slide),
+      meta: SLIDE_VISUAL_META[slide.type] || { label: "VISUAL NOTE", layout: "mechanism-board" }
+    };
   }
+
+  function renderVisualShell(ctx, body, options) {
+    const settings = options || {};
+    const layout = settings.layout || ctx.meta.layout;
+    const buildKind = settings.buildKind || "";
+    const layoutFingerprint = [layout, ctx.profile.kind, buildKind].filter(Boolean).join(":");
+    return [
+      '<figure class="lesson-slide-visual visual-layout--', escapeHtml(layout), " mode-", escapeHtml(ctx.lesson.projectType), " level-", escapeHtml(ctx.levelId),
+      '" data-layout="', escapeHtml(layoutFingerprint), '" data-scene="', escapeHtml(ctx.profile.kind), '" data-scene-kind="', escapeHtml(ctx.profile.kind),
+      '" data-lesson-key="', escapeHtml(lessonKey(ctx.levelId, ctx.lesson.no)), '" data-slide-type="', escapeHtml(ctx.slide.type), '" data-visual-level="', escapeHtml(ctx.levelId),
+      '" data-visual-lesson="', String(ctx.lesson.no), '" data-visual-slide="', String(Number(ctx.slideIndex) + 1), '"',
+      buildKind ? ' data-build-kind="' + escapeHtml(buildKind) + '"' : "", ">",
+      '<div class="lesson-visual-topline"><span>', escapeHtml(ctx.meta.label), '</span><b>', escapeHtml(ctx.profile.code), '</b><small>', escapeHtml(ctx.profile.title), "</small></div>",
+      '<div class="lesson-visual-stage" data-visual-body>', body, "</div>",
+      '<figcaption><span>', escapeHtml(ctx.profile.code), '</span><b>', escapeHtml(shortenVisualText(ctx.slide.title, 72)),
+      '</b><small>', escapeHtml(MODES[ctx.lesson.projectType].long), " · ", escapeHtml(WORLD_PROFILES[ctx.levelId].name), "</small></figcaption></figure>"
+    ].join("");
+  }
+
+  function renderAtmosphereAsset(ctx, className) {
+    return '<img class="' + escapeHtml(className || "visual-atmosphere-image") + '" src="' + escapeHtml(ctx.asset.file) + '" alt="' + escapeHtml(ctx.asset.alt) + '">';
+  }
+
+  function renderTitleVisual(ctx) {
+    const artifacts = getVisualTextList(ctx.lesson.studentArtifacts, 2, ["완성 작품", "제작 근거"]);
+    return [
+      '<section class="visual-cinema"><div class="visual-cinema-backdrop">', renderAtmosphereAsset(ctx), '<div class="visual-cinema-shade"></div></div>',
+      '<div class="visual-cinema-copy"><small>', escapeHtml(ctx.profile.code), '</small><strong>', escapeHtml(ctx.profile.title), '</strong><p>', escapeHtml(ctx.profile.subtitle), "</p></div>",
+      '<div class="visual-cinema-scene">', renderLessonScene(ctx, "hero"), "</div>",
+      '<div class="visual-result-plaque"><span>FINAL ARTIFACT</span>', artifacts.map((item, index) => '<b><i>' + String(index + 1).padStart(2, "0") + "</i>" + escapeHtml(item) + "</b>").join(""), "</div></section>"
+    ].join("");
+  }
+
+  function renderGoalsVisual(ctx) {
+    const objectives = getVisualTextList(ctx.slide.objectives, 3, getVisualTextList(ctx.slide.body, 3, ["문제 이해", "작품 제작", "근거 설명"]));
+    const success = getVisualTextList(ctx.slide.successCriteria || ctx.lesson.successCriteria, 1, ["완성 결과를 근거로 설명"]);
+    return [
+      '<section class="visual-goal-map visual-mission-map goal-route--', String(ctx.profile.route || 0), '"><div class="goal-map-watermark">', renderLessonScene(ctx, "compact"), "</div>",
+      '<div class="goal-map-origin"><small>START</small><b>', escapeHtml(ctx.profile.code), "</b></div><ol>",
+      objectives.map((item, index) => '<li style="--goal-index:' + index + '"><span>' + String(index + 1).padStart(2, "0") + "</span><b>" + escapeHtml(item) + "</b></li>").join(""),
+      '</ol><div class="goal-success-ring"><span>SUCCESS</span><b>', escapeHtml(success[0]), "</b><i></i></div></section>"
+    ].join("");
+  }
+
+  function renderHookVisual(ctx) {
+    const body = getVisualTextList(ctx.slide.body, 2, [ctx.profile.subtitle, "무엇이 달라져야 할까요?"]);
+    const before = ctx.profile.tokens[0] || "현재";
+    const after = ctx.profile.tokens[2] || "개선";
+    return [
+      '<section class="visual-contrast-stage"><article class="contrast-panel contrast-before"><small>BEFORE · 문제 장면</small><b>', escapeHtml(before),
+      '</b><p>', escapeHtml(body[0]), '</p><div class="contrast-scene">', renderLessonScene(ctx, "compact"), "</div></article>",
+      '<div class="contrast-lens"><span>WHY?</span><i></i></div><article class="contrast-panel contrast-after"><small>AFTER · 바라는 장면</small><b>',
+      escapeHtml(after), '</b><p>', escapeHtml(body[1] || ctx.profile.subtitle), '</p><div class="contrast-proof"><i>01</i><i>02</i><i>03</i></div></article></section>'
+    ].join("");
+  }
+
+  function renderVocabularyVisual(ctx) {
+    const terms = asList(ctx.slide.terms).slice(0, 3);
+    const fallback = asList(ctx.profile.tokens).map((token) => ({ term: token, definition: ctx.profile.subtitle }));
+    const items = terms.length ? terms : fallback;
+    return [
+      '<section class="visual-concept-atlas"><div class="atlas-index"><small>FIELD GUIDE</small><b>', escapeHtml(ctx.profile.title), '</b>',
+      renderLessonScene(ctx, "compact"), '</div><div class="atlas-entries">',
+      items.map((term, index) => '<article class="atlas-entry atlas-entry--' + (index + 1) + '"><span>' + String(index + 1).padStart(2, "0") + '</span><div class="atlas-glyph"><i></i><i></i><i></i></div><b>' + escapeHtml(term.term || visualValue(term)) + '</b><p>' + escapeHtml(shortenVisualText(term.definition || asList(ctx.slide.body)[index] || ctx.profile.subtitle, 76)) + "</p></article>").join(""),
+      "</div></section>"
+    ].join("");
+  }
+
+  function renderConceptVisual(ctx) {
+    const notes = getVisualTextList(ctx.slide.body, 4, asList(ctx.profile.tokens));
+    return [
+      '<section class="visual-mechanism-board"><div class="mechanism-grid"></div><div class="mechanism-scene">', renderLessonScene(ctx, "mechanism"), "</div>",
+      '<div class="mechanism-notes">', notes.map((note, index) => '<span class="note-' + (index + 1) + '"><i>' + String(index + 1).padStart(2, "0") + "</i><b>" + escapeHtml(note) + "</b></span>").join(""),
+      '</div><div class="mechanism-legend"><small>MODEL</small><b>', escapeHtml(ctx.profile.subtitle), "</b></div></section>"
+    ].join("");
+  }
+
+  function renderExampleVisual(ctx) {
+    const input = getVisualTextList(ctx.slide.input, 2, [ctx.profile.tokens[0] || "입력"]);
+    const process = getVisualTextList(ctx.slide.process, 2, [ctx.profile.tokens[1] || "규칙"]);
+    const output = getVisualTextList(ctx.slide.output, 2, [ctx.profile.tokens[2] || "결과"]);
+    const frames = [
+      { label: "01 · INPUT", values: input },
+      { label: "02 · PROCESS", values: process },
+      { label: "03 · OUTPUT", values: output }
+    ];
+    return [
+      '<section class="visual-story-filmstrip"><div class="film-perforation top"></div><div class="story-frames">',
+      frames.map((frame, index) => '<article class="story-frame frame-' + (index + 1) + '"><small>' + frame.label + '</small>' + (index === 1 ? renderLessonScene(ctx, "compact") : '<div class="story-number">' + escapeHtml(ctx.profile.tokens[index] || String(index + 1)) + '</div>') + '<p>' + frame.values.map((value) => '<b>' + escapeHtml(value) + '</b>').join("") + "</p></article>").join(""),
+      '</div><div class="film-compare"><span>SCENARIO</span><b>', escapeHtml(shortenVisualText(ctx.slide.scenario || ctx.slide.compare || ctx.profile.subtitle, 90)), '</b></div><div class="film-perforation bottom"></div></section>'
+    ].join("");
+  }
+
+  function renderCheckVisual(ctx) {
+    const choices = asList(ctx.slide.choices).slice(0, 4);
+    const safeChoices = choices.length ? choices : ["입력을 먼저 확인한다", "규칙을 다시 읽는다", "결과를 근거로 비교한다"];
+    return [
+      '<section class="visual-quiz-orbit"><div class="quiz-radar"><i class="ring-one"></i><i class="ring-two"></i><i class="sweep"></i><div class="quiz-core"><small>CHECK</small><b>',
+      escapeHtml(shortenVisualText(ctx.slide.question || ctx.slide.title, 92)), '</b></div>',
+      safeChoices.map((choice, index) => '<div class="quiz-choice choice-' + (index + 1) + '"><span>' + String.fromCharCode(65 + index) + "</span><b>" + escapeHtml(shortenVisualText(choice, 48)) + "</b></div>").join(""),
+      '</div><p class="quiz-no-spoiler"><i>?</i> 먼저 근거를 찾고 실제 선택은 아래 활동에서 확인하세요.</p></section>'
+    ].join("");
+  }
+
+  function renderSetupVisual(ctx) {
+    const checklist = getVisualTextList(ctx.slide.checklist, 4, ["재료 확인", "연결 확인", "안전 확인"]);
+    return [
+      '<section class="visual-topdown-bench"><div class="bench-surface"><div class="bench-photo">', renderAtmosphereAsset(ctx, "bench-product-image"),
+      ctx.asset.kind === "module" ? '<span class="bench-module-label">MODI · ' + escapeHtml(ctx.asset.moduleLabel) + "</span>" : "", '</div><div class="bench-scene-card">', renderLessonScene(ctx, "compact"),
+      '</div><div class="bench-tape tape-one"></div><div class="bench-tape tape-two"></div></div><div class="bench-checklist"><small>BEFORE POWER ON</small>',
+      checklist.map((item, index) => '<label><span>' + (index + 1) + "</span><b>" + escapeHtml(item) + '</b><i aria-hidden="true">✓</i></label>').join(""), "</div></section>"
+    ].join("");
+  }
+
+  function renderPlanVisual(ctx) {
+    const steps = getVisualTextList(ctx.slide.steps, 5, ["설계", "제작", "시험", "개선", "공유"]);
+    const artifact = getVisualTextList(ctx.slide.studentArtifacts || ctx.lesson.studentArtifacts, 1, ["완성 작품"]);
+    return [
+      '<section class="visual-route-map route-variant--', String(ctx.profile.route || 0), '"><div class="route-map-compass"><i></i><b>N</b></div><ol>',
+      steps.map((step, index) => '<li style="--route-step:' + index + '"><span>' + String(index + 1).padStart(2, "0") + "</span><b>" + escapeHtml(step) + "</b><i></i></li>").join(""),
+      '</ol><div class="route-destination">FINISH<b>', escapeHtml(artifact[0]), '</b></div><div class="route-scene">', renderLessonScene(ctx, "compact"), "</div></section>"
+    ].join("");
+  }
+
+  function classifyBuildScene(slide) {
+    const titleSource = String(slide.title || "").toLowerCase();
+    const source = [slide.title, asList(slide.instructions).join(" "), slide.checkpoint].join(" ").toLowerCase();
+    if (["범위", "사용자와 문제", "역할 분담", "팀 역할"].some((word) => titleSource.includes(word))) {
+      return "brief";
+    }
+    const titleRules = [
+      { kind: "iteration", words: ["수정", "개선", "디버그", "회귀", "보완"] },
+      { kind: "assembly", words: ["연결", "조립", "배선", "회로", "장착", "모듈 구성"] },
+      { kind: "logic", words: ["구현", "상태 변화", "제어", "코드", "알고리즘", "로그 만들기", "계산"] },
+      { kind: "blueprint", words: ["설계", "구조", "스키마", "화면", "대시보드", "데이터 모델", "요구사항"] },
+      { kind: "instrument", words: ["측정", "수집", "관찰", "기록", "센서 보정", "텔레메트리 분석"] },
+      { kind: "testbench", words: ["시험", "검증", "테스트", "체크리스트", "e2e"] },
+      { kind: "storyboard", words: ["발표", "시연", "리허설", "데모", "포트폴리오", "공유"] },
+      { kind: "brief", words: ["범위", "목표", "문제", "사용자", "역할", "안전", "고정"] }
+    ];
+    const titleMatch = titleRules.find((rule) => rule.words.some((word) => titleSource.includes(word)));
+    if (titleMatch) {
+      return titleMatch.kind;
+    }
+    const rules = [
+      { kind: "iteration", words: ["수정", "개선", "오류", "디버그", "회귀", "보완", "리팩터"] },
+      { kind: "storyboard", words: ["발표", "시연", "리허설", "데모", "설명", "포트폴리오", "공유"] },
+      { kind: "assembly", words: ["연결", "조립", "배선", "모듈", "회로", "장착", "전원"] },
+      { kind: "instrument", words: ["측정", "관찰", "수집", "기록", "센서", "보정", "텔레메트리", "로그"] },
+      { kind: "testbench", words: ["시험", "검증", "테스트", "확인", "경계", "종단", "e2e"] },
+      { kind: "logic", words: ["구현", "상태", "제어", "코드", "블록", "알고리즘", "정렬", "계산", "처리"] },
+      { kind: "blueprint", words: ["설계", "구조", "스키마", "데이터", "화면", "요구사항", "정책", "모델"] },
+      { kind: "brief", words: ["안전", "역할", "문제", "사용자", "범위", "목표", "고정"] }
+    ];
+    const match = rules.find((rule) => rule.words.some((word) => source.includes(word)));
+    if (match) {
+      return match.kind;
+    }
+    return ["brief", "blueprint", "assembly", "logic", "instrument", "testbench", "iteration", "storyboard"][(Math.max(1, Number(slide.stepNumber) || 1) - 1) % 8];
+  }
+
+  function renderBuildBrief(ctx, instructions) {
+    return '<div class="build-brief-canvas"><div class="build-brief-target"><small>WHO · NEED · RESULT</small><b>' + escapeHtml(instructions[0]) + '</b></div><div class="build-sticky-cloud">' + instructions.slice(1).map((item, index) => '<span class="sticky-' + (index + 1) + '">' + escapeHtml(item) + "</span>").join("") + '</div><div class="build-brief-scene">' + renderLessonScene(ctx, "compact") + "</div></div>";
+  }
+
+  function renderBuildBlueprint(ctx, instructions) {
+    return '<div class="build-blueprint-sheet"><div class="blueprint-grid"></div><div class="blueprint-scene">' + renderLessonScene(ctx, "mechanism") + '</div><div class="blueprint-specs">' + instructions.map((item, index) => '<span><i>' + String(index + 1).padStart(2, "0") + "</i><b>" + escapeHtml(item) + "</b></span>").join("") + "</div></div>";
+  }
+
+  function renderBuildAssembly(ctx, instructions) {
+    return '<div class="build-assembly-bench"><div class="assembly-product">' + renderAtmosphereAsset(ctx, "assembly-product-image") + '<span class="assembly-ring ring-a"></span><span class="assembly-ring ring-b"></span></div><ol>' + instructions.map((item, index) => '<li><span>' + (index + 1) + "</span><b>" + escapeHtml(item) + "</b></li>").join("") + "</ol></div>";
+  }
+
+  function renderBuildLogic(ctx, instructions) {
+    const rails = instructions.slice(0, 3);
+    return '<div class="build-logic-console"><div class="logic-state-rail">' + asList(ctx.profile.tokens).map((token, index) => '<span><i>' + (index ? "→" : "●") + "</i><b>" + escapeHtml(token) + "</b></span>").join("") + '</div><div class="logic-blocks">' + rails.map((item, index) => '<code><span>' + ["IF", "THEN", "VERIFY"][index] + "</span>" + escapeHtml(item) + "</code>").join("") + '</div><div class="logic-monitor">' + renderLessonScene(ctx, "compact") + "</div></div>";
+  }
+
+  function renderBuildInstrument(ctx, instructions) {
+    return '<div class="build-instrument-panel"><div class="instrument-chart">' + Array.from({ length: 14 }, (_value, index) => '<i style="--bar:' + (16 + (index * 29) % 78) + '%"></i>').join("") + '<span>LIVE SAMPLE</span></div><div class="instrument-gauge"><i></i><b>' + escapeHtml(ctx.profile.tokens[1] || "MEASURE") + '</b></div><ul>' + instructions.map((item) => "<li>" + escapeHtml(item) + "</li>").join("") + "</ul></div>";
+  }
+
+  function renderBuildTestbench(ctx, instructions) {
+    return '<div class="build-testbench"><div class="testbench-head"><span>CASE</span><span>EXPECTED</span><span>EVIDENCE</span></div>' + instructions.slice(0, 4).map((item, index) => '<div class="testbench-row"><b>T-' + String(index + 1).padStart(2, "0") + "</b><span>" + escapeHtml(item) + '</span><i class="' + (index % 3 === 2 ? "watch" : "pass") + '">' + (index % 3 === 2 ? "WATCH" : "PASS") + "</i></div>").join("") + '<div class="testbench-scene">' + renderLessonScene(ctx, "compact") + "</div></div>";
+  }
+
+  function renderBuildIteration(ctx, instructions) {
+    return '<div class="build-iteration"><article><small>BEFORE</small><b>' + escapeHtml(instructions[0]) + '</b><div class="iteration-bug">!</div></article><div class="iteration-diff"><i>−</i><span>원인 한 가지씩 분리</span><i>+</i></div><article><small>AFTER</small><b>' + escapeHtml(instructions[1] || instructions[0]) + '</b><div class="iteration-pass">PASS</div></article></div>';
+  }
+
+  function renderBuildStoryboard(ctx, instructions) {
+    return '<div class="build-storyboard"><div class="storyboard-stage">' + renderLessonScene(ctx, "compact") + '</div><ol>' + instructions.slice(0, 4).map((item, index) => '<li><span>' + String(index + 1).padStart(2, "0") + "</span><b>" + escapeHtml(item) + "</b><i>" + (index + 1) * 30 + "s</i></li>").join("") + "</ol></div>";
+  }
+
+  function renderBuildVisual(ctx) {
+    const buildKind = classifyBuildScene(ctx.slide);
+    const instructions = getVisualTextList(ctx.slide.instructions, 4, getVisualTextList(ctx.slide.body, 4, ["핵심 단계 실행", "결과 확인", "증거 남기기"]));
+    const renderers = {
+      brief: renderBuildBrief,
+      blueprint: renderBuildBlueprint,
+      assembly: renderBuildAssembly,
+      logic: renderBuildLogic,
+      instrument: renderBuildInstrument,
+      testbench: renderBuildTestbench,
+      iteration: renderBuildIteration,
+      storyboard: renderBuildStoryboard
+    };
+    const body = [
+      '<section class="visual-maker-blueprint build-scene--', buildKind, '"><header><span>STEP ', String(ctx.slide.stepNumber || 1), " / ", String(ctx.slide.stepTotal || "?"), "</span><b>",
+      escapeHtml(ctx.slide.title), "</b></header>", renderers[buildKind](ctx, instructions),
+      '<footer><span>CHECKPOINT</span><b>', escapeHtml(shortenVisualText(ctx.slide.checkpoint || "실행 결과와 근거를 확인하세요.", 92)), "</b></footer></section>"
+    ].join("");
+    return renderVisualShell(ctx, body, { buildKind });
+  }
+
+  function renderCheckpointVisual(ctx) {
+    const criteria = getVisualTextList(ctx.slide.criteria, 4, ["동작 증거", "설계 일치", "수정 기록"]);
+    const artifacts = getVisualTextList(ctx.slide.studentArtifacts || ctx.lesson.studentArtifacts, 2, ["완성 화면", "제작 기록"]);
+    return [
+      '<section class="visual-evidence-pinboard"><div class="pinboard-title"><small>EVIDENCE WALL</small><b>', escapeHtml(ctx.profile.title), '</b></div><div class="evidence-polaroids">',
+      artifacts.map((item, index) => '<article class="polaroid-' + (index + 1) + '"><div>' + renderLessonScene(ctx, "compact") + '</div><b>' + escapeHtml(item) + "</b><i></i></article>").join(""),
+      '</div><ul>', criteria.map((item, index) => '<li><span>' + (index + 1) + "</span><b>" + escapeHtml(item) + '<i class="evidence-stamp">PROOF</i></b></li>').join(""), "</ul></section>"
+    ].join("");
+  }
+
+  function renderTroubleshootVisual(ctx) {
+    const issues = asList(ctx.slide.issues).slice(0, 3);
+    const safeIssues = issues.length ? issues : [{ symptom: "예상과 다른 결과", cause: "입력·상태·연결 중 하나", fix: "한 항목씩 고치고 다시 시험" }];
+    return [
+      '<section class="visual-diagnostic-tree"><div class="diagnostic-root"><span>?</span><b>', escapeHtml(ctx.profile.title), '</b><small>증상을 먼저 재현</small></div><div class="diagnostic-trunk"></div><div class="diagnostic-branches">',
+      safeIssues.map((issue, index) => '<article><div class="symptom"><small>SYMPTOM ' + String(index + 1).padStart(2, "0") + "</small><b>" + escapeHtml(shortenVisualText(issue.symptom || "문제 재현", 58)) + '</b></div><i></i><div class="cause"><small>CAUSE</small><b>' + escapeHtml(shortenVisualText(issue.cause || "원인 분리", 58)) + '</b></div><i></i><div class="fix"><small>FIX</small><b>' + escapeHtml(shortenVisualText(issue.fix || "수정 후 재시험", 58)) + "</b></div></article>").join(""),
+      "</div></section>"
+    ].join("");
+  }
+
+  function renderDifferentiateVisual(ctx) {
+    const support = getVisualTextList(ctx.slide.support, 2, ["핵심 기능부터 완성", "제공된 예시로 다시 시도"]);
+    const challenge = getVisualTextList(ctx.slide.challenge, 2, ["새 조건으로 확장", "다른 상황까지 시험"]);
+    const core = getVisualTextList(ctx.lesson.successCriteria, 1, [ctx.profile.subtitle]);
+    return [
+      '<section class="visual-branch-lanes"><div class="branch-core">CORE<b>', escapeHtml(core[0]), '</b><i></i></div><div class="branch-split"><i></i><i></i></div>',
+      '<article class="branch-support"><span>SUPPORT ROUTE</span>', support.map((item, index) => '<b><i>' + (index + 1) + "</i>" + escapeHtml(item) + "</b>").join(""), '</article>',
+      '<article class="branch-challenge"><span>CHALLENGE ROUTE</span>', challenge.map((item, index) => '<b><i>' + (index + 1) + "</i>" + escapeHtml(item) + "</b>").join(""), '</article>',
+      '<div class="branch-finish">같은 목표 · 다른 경로</div></section>'
+    ].join("");
+  }
+
+  function renderRubricVisual(ctx) {
+    const rows = asList(ctx.slide.rows).slice(0, 4);
+    const safeRows = rows.length ? rows : [{ criterion: "기능", basic: "도움 받아 동작", proficient: "스스로 동작", advanced: "새 조건까지 확장" }];
+    return [
+      '<section class="visual-rubric-heatmap"><div class="heatmap-head"><b>CRITERION</b><span>기초</span><span>도달</span><span>심화</span></div>',
+      safeRows.map((row, index) => '<div class="heatmap-row"><b>' + escapeHtml(row.criterion) + '</b><span data-level="1">' + escapeHtml(shortenVisualText(row.basic, 38)) + '</span><span data-level="2">' + escapeHtml(shortenVisualText(row.proficient, 38)) + '</span><span data-level="3">' + escapeHtml(shortenVisualText(row.advanced, 38)) + "</span><i>" + String(index + 1).padStart(2, "0") + "</i></div>").join(""),
+      '<div class="heatmap-evidence">평가는 작품이 아니라 <b>작품 + 과정 + 근거</b>를 함께 봅니다.</div></section>'
+    ].join("");
+  }
+
+  function renderExitVisual(ctx) {
+    const takeaways = getVisualTextList(ctx.slide.takeaways, 3, asList(ctx.profile.tokens));
+    return [
+      '<section class="visual-completion-orbit"><div class="completion-core"><i></i><span>MISSION</span><b>COMPLETE</b><small>', escapeHtml(ctx.profile.code), '</small></div><div class="completion-ring ring-a"></div><div class="completion-ring ring-b"></div>',
+      takeaways.map((item, index) => '<article class="takeaway-' + (index + 1) + '"><span>' + String(index + 1).padStart(2, "0") + "</span><b>" + escapeHtml(item) + "</b></article>").join(""),
+      '<div class="next-gate"><small>NEXT MISSION</small><b>', escapeHtml(shortenVisualText(ctx.slide.question || "오늘의 근거를 다음 프로젝트에 연결하세요.", 82)), "</b><i>→</i></div></section>"
+    ].join("");
+  }
+
+  const SLIDE_VISUAL_RENDERERS = {
+    title: renderTitleVisual,
+    goals: renderGoalsVisual,
+    hook: renderHookVisual,
+    vocabulary: renderVocabularyVisual,
+    concept: renderConceptVisual,
+    example: renderExampleVisual,
+    check: renderCheckVisual,
+    setup: renderSetupVisual,
+    plan: renderPlanVisual,
+    checkpoint: renderCheckpointVisual,
+    troubleshoot: renderTroubleshootVisual,
+    differentiate: renderDifferentiateVisual,
+    rubric: renderRubricVisual,
+    exit: renderExitVisual
+  };
 
   function renderLessonSlideVisual(levelId, lesson, slide, slideIndex) {
-    const meta = SLIDE_VISUAL_META[slide.type] || { label: "VISUAL NOTE", archetype: "sequence" };
-    const motif = asList(LESSON_VISUAL_MOTIFS[levelId])[Number(lesson.no) - 1] || lesson.title;
-    const asset = resolveLessonVisualAsset(levelId, lesson, slide);
-    const items = getSlideVisualItems(slide, lesson);
-    return [
-      '<figure class="lesson-slide-visual lesson-slide-visual--', escapeHtml(meta.archetype), ' mode-', escapeHtml(lesson.projectType), ' level-', escapeHtml(levelId), '" data-visual-level="', escapeHtml(levelId), '" data-visual-lesson="', String(lesson.no), '" data-visual-slide="', String(Number(slideIndex) + 1), '">',
-      '<div class="lesson-visual-topline"><span>', escapeHtml(meta.label), '</span><b>', escapeHtml(shortenVisualText(motif, 54)), '</b></div>',
-      '<div class="lesson-visual-canvas">', renderSlideVisualMedia(levelId, lesson, slide, asset), renderSlideVisualDiagram(meta, items), '</div>',
-      '<figcaption><span>차시 시각화</span><b>', escapeHtml(shortenVisualText(slide.title, 68)), '</b><small>', escapeHtml(MODES[lesson.projectType].long), ' · ', escapeHtml(WORLD_PROFILES[levelId].name), '</small></figcaption>',
-      '</figure>'
-    ].join("");
+    const ctx = createSlideVisualContext(levelId, lesson, slide, slideIndex);
+    if (slide.type === "build") {
+      return renderBuildVisual(ctx);
+    }
+    const renderer = SLIDE_VISUAL_RENDERERS[slide.type] || renderConceptVisual;
+    return renderVisualShell(ctx, renderer(ctx));
   }
 
   function totalMinutes(lesson) {
