@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>edu-agent · 페르소나 온톨로지 · 하이브리드 검색</title>
+<style>
+  :root{--bg:#0f1420;--card:#1a2233;--line:#2a3550;--fg:#e6ecf7;--mut:#8ea1c4;--acc:#5b9dff;--ok:#39d98a;--warn:#ffb454;--reg:#ff6b8a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,"Apple SD Gothic Neo",sans-serif;background:var(--bg);color:var(--fg);line-height:1.5}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 16px 80px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:16px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  label{font-size:12px;color:var(--mut);display:block;margin-bottom:6px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  select,input[type=text]{background:#0d1220;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:14px}
+  input[type=text]{flex:1;min-width:220px}
+  button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  button.ghost{background:#0d1220;border:1px solid var(--line);color:var(--mut)}
+  .tabs{display:flex;gap:6px;margin-bottom:16px}
+  .tab{flex:0 0 auto;background:#0d1220;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer}
+  .tab.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{background:#0d1220;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer}
+  .chip:hover{border-color:var(--acc);color:var(--fg)}
+  .badge{display:inline-block;border-radius:6px;padding:3px 9px;font-size:12px;font-weight:600}
+  .b-ok{background:rgba(57,217,138,.15);color:var(--ok)}
+  .b-warn{background:rgba(255,180,84,.15);color:var(--warn)}
+  .b-reg{background:rgba(255,107,138,.15);color:var(--reg)}
+  .b-lv{background:#0d1220;color:var(--mut);border:1px solid var(--line)}
+  .flow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+  .node{background:#0d1220;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+  .arrow{color:var(--mut)}
+  .sec{font-size:13px;color:var(--mut);margin:16px 0 8px;font-weight:600;letter-spacing:.02em}
+  .card{background:#0d1220;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:8px;padding:11px 13px;margin-bottom:8px}
+  .card.reuse{border-left-color:var(--ok)} .card.review{border-left-color:var(--warn)} .card.register{border-left-color:var(--reg)}
+  .card .t{font-weight:600;font-size:14px}
+  .card .c{color:var(--mut);font-size:12.5px;margin-top:4px}
+  .card .m{color:#5f6f8f;font-size:11px;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .note{background:rgba(255,180,84,.1);border:1px solid rgba(255,180,84,.3);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13px;margin:12px 0}
+  .empty{color:var(--mut);font-size:13px}
+  .bar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin:10px 0}
+  .bar>div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0d1220;min-width:0}
+  .bar .s-reuse{background:var(--ok)} .bar .s-review{background:var(--warn)} .bar .s-register{background:var(--reg)}
+  .kv{color:var(--mut);font-size:12px}
+  .vflag{font-size:11px;color:var(--mut);margin-top:6px}
+  .card.clk{cursor:pointer} .card.clk:hover{border-color:var(--acc);background:#111a2e}
+  .hint{color:#5f6f8f;font-size:11px;margin-top:6px}
+  /* 검색 결과 클릭 → chat 카드 동일 렌더 오버레이(#44) */
+  .ov{position:fixed;inset:0;background:rgba(6,10,20,.72);display:none;align-items:flex-start;
+      justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+  .ov.on{display:flex}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:14px;max-width:680px;
+         width:100%;padding:20px 22px}
+  .modal h2{font-size:18px;margin:0 0 4px} .modal .kind{color:var(--acc);font-size:12px;font-weight:700;letter-spacing:.04em}
+  .nb{background:#0d1220;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+  .nb .lb{font-size:12px;color:var(--acc);font-weight:700;margin-bottom:4px}
+  .nb .bd{font-size:14px;color:var(--fg);white-space:pre-wrap}
+  .feat{border-left:3px solid var(--acc);padding:6px 10px;margin:6px 0;background:#0d1220;border-radius:6px}
+  .codeblk{background:#0b1020;border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre;overflow:auto;max-height:280px}
+  .x{float:right;background:#0d1220;border:1px solid var(--line);color:var(--mut);border-radius:8px;
+     padding:4px 12px;cursor:pointer;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧩 페르소나 온톨로지 · 하이브리드 검색</h1>
+  <div class="sub">벡터(BGE-m3)+부분일치 하이브리드 · 유사도 게이팅으로 <b>일부는 재사용(가져오기) · 일부는 신규 등록</b></div>
+
+  <div class="tabs">
+    <div class="tab on" data-t="search" onclick="tab('search')">🔎 검색</div>
+    <div class="tab" data-t="derive" onclick="tab('derive')">🧭 도출</div>
+    <div class="tab" data-t="coverage" onclick="tab('coverage')">📊 커버리지(%)</div>
+  </div>
+
+  <!-- 검색 탭 -->
+  <div id="pane-search">
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label>coding_type</label>
+          <select id="s-ctype">
+            <option value="any">전체</option><option value="blockly">blockly</option>
+            <option value="react">react</option><option value="hybrid">hybrid</option>
+          </select>
+        </div>
+        <div>
+          <label>user_id (uuid·선택)</label>
+          <input type="text" id="s-uid" placeholder="비우면 전체 통합" style="min-width:150px;width:150px">
+        </div>
+        <input type="text" id="s-q" placeholder="예: 로봇이 앞에 장애물 있으면 알아서 서게">
+        <button onclick="runSearch()">검색</button>
+      </div>
+      <div class="chips" id="s-chips"></div>
+    </div>
+    <div id="s-out"></div>
+  </div>
+
+  <!-- 도출 탭 -->
+  <div id="pane-derive" style="display:none">
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label>학년</label>
+          <select id="d-grade">
+            <option value="1">초1</option><option value="2">초2</option><option value="3">초3</option>
+            <option value="4" selected>초4</option><option value="5">초5</option><option value="6">초6</option>
+            <option value="7">중1</option><option value="8">중2</option><option value="9">중3</option>
+          </select>
+        </div>
+        <div>
+          <label>coding_type</label>
+          <select id="d-ctype">
+            <option value="any">전체</option><option value="blockly">blockly</option>
+            <option value="react">react</option><option value="hybrid">hybrid</option>
+          </select>
+        </div>
+        <input type="text" id="d-q" placeholder="예: 자동차가 벽을 보고 스스로 멈추게 하고 싶어요">
+        <button onclick="runDerive()">도출</button>
+      </div>
+      <div class="chips" id="d-chips"></div>
+    </div>
+    <div id="d-out"></div>
+  </div>
+
+  <!-- 커버리지 탭 -->
+  <div id="pane-coverage" style="display:none">
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label>coding_type</label>
+          <select id="c-ctype">
+            <option value="any">전체</option><option value="blockly">blockly</option>
+            <option value="react">react</option><option value="hybrid">hybrid</option>
+          </select>
+        </div>
+        <button onclick="runCoverage()">기본 질문 묶음 평가</button>
+      </div>
+      <div class="sub" style="margin-top:10px">질문 묶음을 임계값으로 분류해 <b>재사용/근접/등록 비율(%)</b>을 계산합니다. τ_reuse·τ_near(환경변수)로 목표 히트율 튜닝.</div>
+    </div>
+    <div id="c-out"></div>
+  </div>
+</div>
+
+<!-- 검색 결과 클릭 시 payload 를 chat 카드와 동일 구조로 렌더(#44) -->
+<div class="ov" id="cardOv" onclick="if(event.target===this)closeCard()">
+  <div class="modal" id="cardBody"></div>
+</div>
+
+<script>
+const S_EX = ["로봇이 앞에 장애물 있으면 알아서 서게","빙글빙글 돌리는 손잡이로 숫자 바꾸기",
+  "스마트폰마다 게임 빠르기가 달라져요","숫자를 천 단위 콤마로 예쁘게","깜깜해지면 불이 켜지는 장치"];
+const D_EX = ["자동차가 벽을 보고 스스로 멈추게 하고 싶어요","좋아요 버튼을 누르면 하트 색이 바뀌게",
+  "카드 100개를 똑같이 만들고 싶어요","두더지가 랜덤한 곳에서 튀어나오게"];
+
+function esc(s){return (s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+function lv(n){return `<span class="badge b-lv">L${n}</span>`}
+function decBadge(d){
+  if(d==='reuse')return '<span class="badge b-ok">재사용</span>';
+  if(d==='review')return '<span class="badge b-warn">근접·검수</span>';
+  return '<span class="badge b-reg">등록 후보</span>';
+}
+function fillChips(id, arr, targetInput, run){
+  const el=document.getElementById(id);
+  arr.forEach(e=>{const c=document.createElement('span');c.className='chip';c.textContent=e;
+    c.onclick=()=>{document.getElementById(targetInput).value=e;run()};el.appendChild(c)});
+}
+fillChips('s-chips', S_EX, 's-q', runSearch);
+fillChips('d-chips', D_EX, 'd-q', runDerive);
+
+function tab(t){
+  ['search','derive','coverage'].forEach(x=>{
+    document.getElementById('pane-'+x).style.display = x===t?'block':'none';
+    document.querySelector(`.tab[data-t="${x}"]`).classList.toggle('on', x===t);
+  });
+}
+
+async function runSearch(){
+  const q=document.getElementById('s-q').value.trim(); if(!q)return;
+  const ct=document.getElementById('s-ctype').value;
+  const uid=document.getElementById('s-uid').value.trim();
+  const out=document.getElementById('s-out'); out.innerHTML='<div class="panel empty">검색 중…</div>';
+  const url=`/api/search?q=${encodeURIComponent(q)}&coding_type=${ct}`+(uid?`&user_id=${encodeURIComponent(uid)}`:'');
+  const d=await(await fetch(url)).json();
+  if(!d.ok){out.innerHTML=`<div class="panel empty">❌ ${esc(d.reason)}</div>`;return}
+  let h=`<div class="panel">`;
+  h+=`<div class="sec">이 질문의 결정 ${decBadge(d.decision)} <span class="kv">· top1 ${d.top1_score} · τ재사용 ${d.thresholds.reuse}/τ근접 ${d.thresholds.near}</span></div>`;
+  if(d.decision==='register')h+=`<div class="note">⚠ 재사용 가능한 노트가 없어요(콜드셀). → 아래에서 결과물을 <b>등록</b>하면 즉시 검색에 반영됩니다.</div>`;
+  h+=`<div class="sec">📚 매칭된 학습노트 (하이브리드 랭킹) <span class="kv">· 카드를 클릭하면 chat이 준 결과가 그대로 열려요</span></div>`;
+  window._last = d.results;  // 클릭 시 payload 조회용
+  if(d.results.length){
+    h+=d.results.map((c,i)=>`<div class="card clk ${c.decision}" onclick="showCard(${i})">
+        <div class="t">${esc(c.title)} ${c.source==='registered'?'<span class="badge b-lv">등록됨</span>':''}
+          ${c.payload?'<span class="badge b-ok">카드</span>':''}</div>
+        <div class="c">${esc((c.content||'').slice(0,150))}…</div>
+        <div class="m">${decBadge(c.decision)}
+          <span class="kv">score ${c.score} (벡터 ${c.vec} · 어휘 ${c.lex})</span>
+          <span class="kv">[${esc(c.coding_type||'?')}] &lt;${esc(c.concept_key||'-')}&gt;</span>
+          ${c.difficulty?`<span class="kv">난이도 ${esc(c.difficulty)}</span>`:''}
+          ${c.domain?`<span class="kv">${esc(c.domain)}</span>`:''}</div>
+      </div>`).join('');
+  } else h+=`<div class="empty">일치하는 노트가 없어요.</div>`;
+  h+=`<div class="vflag">벡터: ${d.vector.enabled?'✅ BGE-m3 사용':'⚠ 부분일치 폴백 ('+esc(d.vector.error||'')+')'}</div>`;
+  // 등록 폼 (결과물 → DB 등록 → 즉시 검색 반영)
+  h+=`<div class="sec">📝 결과물 등록 (RAG 되먹임)</div>
+    <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+      <input type="text" id="r-title" placeholder="학습노트 제목 (예: 앞 장애물 감지 후 정지)">
+      <textarea id="r-content" rows="3" placeholder="결과물 내용(무엇을·왜·어디에)" style="background:#0d1220;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
+      <div class="row">
+        <button onclick="registerNote()">이 질문의 결과물 등록</button>
+        <span class="kv" id="r-msg"></span>
+      </div>
+    </div>`;
+  h+=`</div>`;
+  out.innerHTML=h;
+}
+
+// 검색 결과 클릭 → payload(chat 카드 구조)를 그대로 렌더. payload 부재 시 title/content 폴백.
+function showCard(i){
+  const c=(window._last||[])[i]; if(!c)return;
+  const p=c.payload;
+  let b=`<button class="x" onclick="closeCard()">닫기 ✕</button>`;
+  if(p && p.kind){
+    b+=renderPayload(p, c);
+  }else{
+    b+=`<div class="kind">RESULT</div><h2>${esc(c.title)}</h2><div class="nb"><div class="bd">${esc(c.content||'')}</div></div>`;
+  }
+  b+=`<div class="hint">source ${esc(c.source||'base')} · ${esc(c.coding_type||'?')} · &lt;${esc(c.concept_key||'-')}&gt;`
+    +`${c.intent?' · '+esc(c.intent):''}${c.difficulty?' · '+esc(c.difficulty):''}`
+    +`${(c.modi_keys&&c.modi_keys.length)?' · MODI: '+c.modi_keys.map(esc).join(', '):''}</div>`;
+  document.getElementById('cardBody').innerHTML=b;
+  document.getElementById('cardOv').classList.add('on');
+}
+function closeCard(){document.getElementById('cardOv').classList.remove('on')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCard()});
+
+function renderPayload(p, c){
+  if(p.kind==='learning_note'){
+    const seg=(lb,v)=> v?`<div class="nb"><div class="lb">${lb}</div><div class="bd">${esc(v)}</div></div>`:'';
+    return `<div class="kind">📚 학습노트</div><h2>${esc(p.title||c.title)}</h2>`
+      + seg('무엇을', p.what) + seg('왜 중요한지', p.why) + seg('어디에 쓰이나', p.where);
+  }
+  if(p.kind==='design_doc'){
+    let h=`<div class="kind">🧭 설계문서</div><h2>${esc(p.project_name||c.title)}</h2>`;
+    if(p.description)h+=`<div class="nb"><div class="bd">${esc(p.description)}</div></div>`;
+    if(p.features&&p.features.length){h+=`<div class="lb" style="color:var(--acc);font-weight:700;margin-top:8px">기능</div>`
+      +p.features.map(f=>`<div class="feat"><b>${esc(f.name||'')}</b> <span class="kv">${esc(f.priority||'')}</span><div class="c">${esc(f.description||'')}</div></div>`).join('');}
+    if(p.pages&&p.pages.length){h+=`<div class="lb" style="color:var(--acc);font-weight:700;margin-top:8px">화면</div>`
+      +p.pages.map(pg=>`<div class="feat"><b>${esc(pg.name||'')}</b><div class="c">${esc(pg.description||'')}</div></div>`).join('');}
+    return h;
+  }
+  if(p.kind==='code'){
+    let h=`<div class="kind">💻 생성 코드</div><h2>${esc(c.title)}</h2>`;
+    const files=p.files||{};
+    if(Array.isArray(files)){ h+=`<div class="nb"><div class="bd">${files.map(esc).join('\n')}</div></div>`; }
+    else { for(const [fn,code] of Object.entries(files)){ h+=`<div class="lb" style="color:var(--acc);font-weight:700">${esc(fn)}</div><div class="codeblk">${esc(code)}</div>`; } }
+    return h;
+  }
+  return `<div class="kind">${esc(p.kind)}</div><h2>${esc(c.title)}</h2><div class="nb"><div class="bd">${esc(c.content||'')}</div></div>`;
+}
+
+async function registerNote(){
+  const q=document.getElementById('s-q').value.trim();
+  const title=document.getElementById('r-title').value.trim();
+  const content=document.getElementById('r-content').value.trim();
+  const ct=document.getElementById('s-ctype').value;
+  const uid=document.getElementById('s-uid').value.trim();
+  const msg=document.getElementById('r-msg');
+  if(!title && !content){msg.textContent='제목 또는 내용을 입력하세요.';return}
+  msg.textContent='등록 중…';
+  const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({question:q,title,content,coding_type:ct==='any'?null:ct,user_id:uid||null})});
+  const d=await r.json();
+  if(d.ok){msg.textContent=`✅ 등록됨(#${d.id}, 총 ${d.count}건) — 재검색 반영`; setTimeout(runSearch,400);}
+  else msg.textContent='❌ '+(d.reason||'등록 실패');
+}
+
+async function runDerive(){
+  const q=document.getElementById('d-q').value.trim(); if(!q)return;
+  const grade=document.getElementById('d-grade').value, ct=document.getElementById('d-ctype').value;
+  const out=document.getElementById('d-out'); out.innerHTML='<div class="panel empty">도출 중…</div>';
+  const d=await(await fetch(`/api/query?question=${encodeURIComponent(q)}&grade=${grade}&coding_type=${ct}`)).json();
+  if(!d.ok){out.innerHTML=`<div class="panel empty">❌ ${esc(d.reason)}</div>`;return}
+  const p=d.primary;
+  const pbadge=p.within_grade?'<span class="badge b-ok">학년 적합</span>':'<span class="badge b-warn">학년 심화</span>';
+  let h=`<div class="panel">`;
+  h+=`<div class="sec">📍 매칭된 핵심 개념</div>`;
+  h+=`<div style="font-size:17px;font-weight:700">${esc(p.label)} ${lv(p.level)} ${pbadge}</div>`;
+  h+=`<div class="sub" style="margin-top:6px">후보: ${d.matched.map(m=>`${esc(m.label)}(${m.score})`).join(' · ')}</div>`;
+  if(d.note)h+=`<div class="note">⚠ ${esc(d.note)}</div>`;
+  h+=`<div class="sec">🪜 선수학습 (먼저 알아야 할 것)</div>`;
+  if(d.prerequisites.length){
+    h+=`<div class="flow">`+d.prerequisites.map(x=>`<span class="node">${esc(x.label)} ${lv(x.level)}</span>`).join('<span class="arrow">→</span>')+`<span class="arrow">→</span><span class="node" style="border-color:var(--acc)">${esc(p.label)}</span></div>`;
+  } else h+=`<div class="empty">기초 개념(선수학습 없음)</div>`;
+  h+=`<div class="sec">🔗 함께 보면 좋은 개념</div>`;
+  h+= d.related.length? `<div class="chips">`+d.related.map(x=>`<span class="chip">${esc(x.label)} · ${x.weight}</span>`).join('')+`</div>` : `<div class="empty">-</div>`;
+  if(d.modi_modules.length){
+    h+=`<div class="sec">🔌 관련 MODI 모듈</div><div class="chips">`+d.modi_modules.map(m=>`<span class="chip">${esc(m)}</span>`).join('')+`</div>`;
+  }
+  h+=`<div class="sec">📚 재사용 학습노트 (포괄 카드) ${d.coding_type_fallback?'· <span style="color:var(--warn)">해당 coding_type 없어 전체에서</span>':''}</div>`;
+  if(d.cards.length){
+    h+=d.cards.map(c=>`<div class="card"><div class="t">${esc(c.title)}</div><div class="c">${esc((c.content||'').slice(0,140))}…</div><div class="m">[${esc(c.coding_type||'?')}] ${esc(c.session_id)}</div></div>`).join('');
+  } else h+=`<div class="empty">재사용 가능한 노트가 아직 없어요(콜드 셀 → 사전제작 후보)</div>`;
+  h+=`</div>`;
+  out.innerHTML=h;
+}
+
+async function runCoverage(){
+  const ct=document.getElementById('c-ctype').value;
+  const out=document.getElementById('c-out'); out.innerHTML='<div class="panel empty">평가 중…</div>';
+  const d=await(await fetch(`/api/coverage?coding_type=${ct}`)).json();
+  const p=d.percent;
+  let h=`<div class="panel">`;
+  h+=`<div class="sec">📊 결정 분포 (${d.total}개 질문)</div>`;
+  h+=`<div class="bar">
+      <div class="s-reuse" style="flex:${p.reuse||0.01}">${p.reuse>7?'재사용 '+p.reuse+'%':''}</div>
+      <div class="s-review" style="flex:${p.review||0.01}">${p.review>7?'근접 '+p.review+'%':''}</div>
+      <div class="s-register" style="flex:${p.register||0.01}">${p.register>7?'등록 '+p.register+'%':''}</div>
+    </div>`;
+  h+=`<div class="kv">✅ 재사용 가능(재사용+근접) <b style="color:var(--ok)">${d.reuse_rate}%</b> · 🆕 신규 등록 <b style="color:var(--reg)">${d.register_rate}%</b> · 벡터 ${d.vector_enabled?'ON':'폴백'}</div>`;
+  h+=`<div class="sec">질문별 결정</div>`;
+  h+=d.rows.map(r=>`<div class="card ${r.decision}"><div class="t" style="font-size:13px">${esc(r.query)}</div><div class="m">${decBadge(r.decision)} <span class="kv">top1 ${r.top1_score}</span></div></div>`).join('');
+  h+=`</div>`;
+  out.innerHTML=h;
+}
+</script>
+</body>
+</html>

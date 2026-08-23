@@ -1,0 +1,926 @@
+<style>
+  :root{
+    --paper:#F4F5F7;--paper-2:#FBFBFC;--ink:#13171F;--ink-2:#3C434F;--ink-3:#6A7280;
+    --line:#DEE1E7;--line-2:#C9CDD6;
+    --signal:#0F766E;--signal-soft:#E6F0EE;--rust:#9A6A50;--rust-soft:#F0E7E1;
+    --good:#3F7E5E;--warn:#94724A;--crit:#A6543F;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    --maxw:960px;
+  }
+  *{box-sizing:border-box}body{margin:0}
+  .doc{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 26px}
+
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--signal);margin:0 0 14px;display:flex;align-items:center;gap:10px}
+  .eyebrow::before{content:"";width:26px;height:1.5px;background:var(--signal)}
+  .eyebrow .no{color:var(--ink-3)}
+
+  /* cover */
+  .cover{background:var(--ink);color:#EDEFF3;padding:76px 0 56px;border-bottom:3px solid var(--signal)}
+  .cover .eyebrow{color:#5BC7D0}.cover .eyebrow::before{background:#5BC7D0}
+  .cover h1{font-size:clamp(30px,5vw,50px);line-height:1.08;letter-spacing:-.02em;font-weight:800;margin:0 0 18px;text-wrap:balance;max-width:20ch}
+  .cover h1 em{font-style:normal;color:#5BC7D0}
+  .cover .lede{font-size:clamp(15px,2vw,18px);color:#AEB6C2;max-width:62ch;margin:0}
+  .cover .meta{font-family:var(--mono);font-size:12px;color:#7C8494;margin-top:32px;display:flex;flex-wrap:wrap;gap:10px 22px;border-top:1px solid #2A303B;padding-top:20px}
+  .cover .meta b{color:#C6CCD6;font-weight:500}
+
+  /* exec summary */
+  .summary{background:var(--signal);color:#fff;padding:34px 0}
+  .summary h2{margin:0 0 16px;font-size:20px;letter-spacing:-.01em}
+  .summary .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  .summary .kpi{background:rgba(255,255,255,.12);border-radius:4px;padding:14px 16px}
+  .summary .kpi .n{font-family:var(--mono);font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .summary .kpi .l{font-size:12px;opacity:.9;margin-top:7px;line-height:1.4}
+  .summary p{margin:0;max-width:none;font-size:15px;opacity:.96}
+  .summary p b{font-weight:700}
+
+  /* TOC */
+  .toc{padding:44px 0;border-bottom:1px solid var(--line)}
+  .toc ol{margin:0;padding:0;list-style:none;counter-reset:t;columns:2;column-gap:40px}
+  .toc li{counter-increment:t;padding:9px 0;border-bottom:1px dashed var(--line);break-inside:avoid;display:flex;gap:12px;align-items:baseline}
+  .toc li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);font-size:12px;color:var(--signal);font-weight:700;flex:none}
+  .toc a{color:var(--ink);text-decoration:none;font-size:14.5px;font-weight:550}
+  .toc a:hover{color:var(--signal)}
+  .toc .d{color:var(--ink-3);font-weight:400;font-size:12.5px}
+
+  section{padding:54px 0}
+  section+section{border-top:1px solid var(--line)}
+  h2{font-size:clamp(21px,3vw,29px);letter-spacing:-.015em;font-weight:750;margin:0 0 8px;text-wrap:balance}
+  h3{font-size:17px;font-weight:700;margin:30px 0 10px;letter-spacing:-.01em}
+  .sub{color:var(--ink-3);font-size:15px;margin:0 0 30px;max-width:66ch}
+  p{max-width:70ch}
+  .kicker{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin:22px 0 0;line-height:1.7}
+  .kicker b{color:var(--ink-2)}
+
+  .thesis{background:var(--paper-2);border:1px solid var(--line);border-left:4px solid var(--signal);padding:24px 26px;border-radius:2px}
+  .thesis p{margin:0;font-size:16.5px;max-width:none}.thesis strong{color:var(--signal)}
+
+  /* tables */
+  .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:3px;margin:8px 0}
+  table{border-collapse:collapse;width:100%;min-width:600px;background:var(--paper-2);font-size:13.5px}
+  thead th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:12px 15px;border-bottom:2px solid var(--line-2);background:#EFF1F4;white-space:nowrap}
+  tbody td{padding:13px 15px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+  tbody tr:last-child td{border-bottom:none}
+  td.dim{font-weight:650;color:var(--ink);white-space:nowrap}
+  td.was{color:var(--rust)}td.now b{color:var(--signal)}
+  td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.save{font-family:var(--mono);font-weight:700;color:var(--good);font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody tr:hover{background:#F0F2F5}
+  .hirow{background:#EAF4F4}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 26px}
+  .stat{border:1px solid var(--line);background:var(--paper-2);border-radius:3px;padding:17px 17px 15px}
+  .stat .big{font-family:var(--mono);font-size:25px;font-weight:700;color:var(--signal);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .stat .big.rust{color:var(--rust)}
+  .stat .lbl{font-size:12px;color:var(--ink-3);margin-top:8px;line-height:1.4}
+
+  .assump{font-family:var(--mono);font-size:12px;color:var(--ink-3);background:#EFF1F4;border:1px solid var(--line);border-radius:3px;padding:12px 16px;margin:0 0 24px;line-height:1.7}
+  .assump b{color:var(--ink-2);font-weight:600}
+
+  .band{background:var(--signal);color:#fff;border-radius:4px;padding:22px 26px;margin:8px 0;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+  .band .bnum{font-family:var(--mono);font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1;white-space:nowrap}
+  .band .btxt{font-size:14.5px;max-width:56ch;opacity:.96}.band .btxt b{font-weight:700}
+
+  /* before/after */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  .col{border:1px solid var(--line);border-radius:3px;background:var(--paper-2);overflow:hidden}
+  .col-head{padding:14px 18px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+  .col.before .col-head{background:var(--rust-soft);color:var(--rust);border-bottom:1px solid var(--line)}
+  .col.after .col-head{background:var(--signal-soft);color:var(--signal);border-bottom:1px solid var(--line)}
+  .col-body{padding:14px 18px 18px}.col-body ul{margin:0;padding:0;list-style:none}
+  .col-body li{font-size:13.8px;padding:8px 0 8px 20px;position:relative;border-bottom:1px dashed var(--line);color:var(--ink-2)}
+  .col-body li:last-child{border-bottom:none}
+  .col.before li::before{content:"×";position:absolute;left:0;top:8px;color:var(--rust);font-family:var(--mono);font-weight:700}
+  .col.after li::before{content:"→";position:absolute;left:0;top:8px;color:var(--signal);font-family:var(--mono);font-weight:700}
+  .col-body li b{color:var(--ink);font-weight:650}
+  .tagpill{font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 8px;border-radius:2px}
+  .before .tagpill{background:#fff;color:var(--rust);border:1px solid #E6C6B5}
+  .after .tagpill{background:#fff;color:var(--signal);border:1px solid #B9DBDD}
+
+  /* layer pipeline */
+  .pipe{display:flex;flex-direction:column}
+  .layer{display:grid;grid-template-columns:60px 1fr}
+  .layer .rail{display:flex;flex-direction:column;align-items:center}
+  .layer .node{width:36px;height:36px;border-radius:50%;background:var(--paper-2);border:2px solid var(--signal);color:var(--signal);font-family:var(--mono);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;z-index:2;flex:none}
+  .layer .stem{width:2px;flex:1;background:var(--line-2);min-height:12px}
+  .layer:first-child .stem.top,.layer:last-child .stem.bot{background:transparent}
+  .layer .card{border:1px solid var(--line);background:var(--paper-2);border-radius:3px;padding:14px 18px;margin:0 0 12px 8px;flex:1}
+  .layer .card h4{margin:0 0 4px;font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .layer .card .tag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--signal);background:var(--signal-soft);padding:2px 7px;border-radius:2px;text-transform:uppercase;letter-spacing:.04em}
+  .layer .card p{margin:0;font-size:13.5px;color:var(--ink-2);max-width:none}
+  .layer.store .node{border-color:var(--rust);color:var(--rust)}
+  .layer.store .card .tag{color:var(--rust);background:var(--rust-soft)}
+
+  /* mechanism steps */
+  .mech{display:flex;flex-direction:column;counter-reset:m}
+  .step{display:grid;grid-template-columns:42px 1fr;gap:15px;padding:14px 0;border-bottom:1px solid var(--line);align-items:baseline}
+  .step:last-child{border-bottom:none}
+  .step .mk{counter-increment:m;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--signal);border:1.5px solid var(--signal);border-radius:2px;width:29px;height:29px;display:flex;align-items:center;justify-content:center}
+  .step .mk::before{content:counter(m)}
+  .step h4{margin:0 0 3px;font-size:14.5px;font-weight:700}
+  .step p{margin:0;font-size:13.6px;color:var(--ink-2);max-width:none}
+  .step .cost{font-family:var(--mono);font-size:11.5px}
+  .step .cost.down{color:var(--good)}.step .cost.up{color:var(--rust)}
+
+  /* two-lane factory */
+  .lane{border:1px solid var(--line);border-radius:4px;background:var(--paper-2);margin:14px 0;overflow:hidden}
+  .lane-h{padding:12px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .lane.admin .lane-h{background:var(--ink);color:#EDEFF3}
+  .lane.user .lane-h{background:var(--signal);color:#fff}
+  .lane-h .mdl{font-size:10.5px;opacity:.85}
+  .lane-flow{display:flex;gap:0;overflow-x:auto;padding:18px}
+  .fstep{flex:none;width:150px;padding:0 8px;position:relative}
+  .fstep:not(:last-child)::after{content:"→";position:absolute;right:-6px;top:12px;color:var(--line-2);font-family:var(--mono);font-weight:700}
+  .fstep .fn{font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.05em}
+  .fstep h5{margin:4px 0 4px;font-size:13px;font-weight:700;line-height:1.25}
+  .fstep p{margin:0;font-size:11.5px;color:var(--ink-2);line-height:1.4;max-width:none}
+  .fstep .m{font-family:var(--mono);font-size:10px;margin-top:5px;display:inline-block;padding:1px 6px;border-radius:2px}
+  .fstep .m.o{background:#DCE8E7;color:#0B3F45}.fstep .m.s{background:#E3EDEC;color:#2F8F93}.fstep .m.h{background:var(--signal-soft);color:var(--signal)}.fstep .m.z{background:#E2EFE9;color:var(--good)}
+
+  /* stack decision */
+  .stackrow{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);align-items:baseline}
+  .stackrow:last-child{border-bottom:none}
+  .stackrow .comp{font-weight:700;color:var(--ink);font-size:14.5px}
+  .stackrow .comp .have{font-family:var(--mono);font-size:10px;color:var(--good);display:block;margin-top:3px}
+  .stackrow .comp .new{font-family:var(--mono);font-size:10px;color:var(--rust);display:block;margin-top:3px}
+  .stackrow .pick{font-size:13.8px;color:var(--ink-2)}
+  .stackrow .pick b{color:var(--signal)}
+  .stackrow code{font-family:var(--mono);font-size:12px;background:#EFF1F4;padding:1px 5px;border-radius:2px;color:var(--ink)}
+
+  /* risk */
+  .sev{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:2px;white-space:nowrap;display:inline-block;text-transform:uppercase;letter-spacing:.04em}
+  .sev.high{background:#F7E0DD;color:var(--crit)}.sev.mid{background:#F7EDD4;color:var(--warn)}.sev.low{background:#E2EFE9;color:var(--good)}
+  td.rk{font-weight:650;color:var(--ink);white-space:nowrap}
+
+  /* roadmap */
+  .road{display:flex;flex-direction:column}
+  .phase{display:grid;grid-template-columns:130px 1fr;gap:18px;padding:15px 0;border-bottom:1px solid var(--line);align-items:baseline}
+  .phase:last-child{border-bottom:none}
+  .phase .pk{font-family:var(--mono);font-size:12px;color:var(--signal);font-weight:600;letter-spacing:.03em}
+  .phase.gate .pk{color:var(--rust)}
+  .phase h4{margin:0 0 4px;font-size:15px;font-weight:700}
+  .phase p{margin:0;font-size:13.8px;color:var(--ink-2);max-width:none}
+  .phase .cost{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:5px;display:block}
+
+  .curve-wrap{border:1px solid var(--line);border-radius:3px;background:var(--paper-2);padding:20px 22px;margin:10px 0}
+  .curve-legend{display:flex;gap:20px;font-family:var(--mono);font-size:12px;margin-top:12px;flex-wrap:wrap}
+  .curve-legend span{display:flex;align-items:center;gap:7px;color:var(--ink-2)}
+  .swatch{width:16px;height:3px;display:inline-block;border-radius:2px}
+
+  .foot{background:var(--ink);color:#8B93A1;font-family:var(--mono);font-size:12px;padding:28px 0;line-height:1.7}
+  .foot b{color:#C6CCD6;font-weight:500}
+  sup{font-size:.7em}
+
+  @media(max-width:760px){
+    .summary .grid,.stats{grid-template-columns:repeat(2,1fr)}
+    .split{grid-template-columns:1fr}.toc ol{columns:1}
+    .layer{grid-template-columns:46px 1fr}.stackrow{grid-template-columns:1fr;gap:4px}
+    .phase{grid-template-columns:1fr;gap:3px}
+  }
+  @media(prefers-reduced-motion:no-preference){.col,.layer .card,tbody tr{transition:background .15s}}
+</style>
+
+<div class="doc">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="wrap">
+      <p class="eyebrow">edu-agent · 기술 리포트 · v2</p>
+      <h1>관측 데이터로 <em>생성 비용을 줄이는</em> 설계 리포트</h1>
+      <p class="lede">현재 코드(FastAPI · Langfuse v4 · Sentry · Redis)를 기반으로, Langfuse·Sentry 데이터를 백그라운드로 자동 축적하고 RAG로 재사용해 LLM 비용을 줄인다. 관리자는 상위 모델로 콘텐츠를 자동 생성하고, 사용자는 최저가 모델로 이를 변형해 서빙한다.</p>
+      <div class="meta">
+        <span><b>대상</b> 코딩 + 하드웨어연계SW (MODI)</span>
+        <span><b>현재 모델</b> claude-haiku-4-5</span>
+        <span><b>현 인프라</b> FastAPI·Redis·Langfuse·Sentry</span>
+        <span><b>신규</b> 벡터스토어 + 임베딩 + ETL 워커</span>
+        <span><b>상태</b> Draft 제안</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <div class="summary">
+    <div class="wrap">
+      <h2>요약 (Executive Summary)</h2>
+      <div class="grid">
+        <div class="kpi"><div class="n">$0.029</div><div class="l">현재 턴당 생성 원가 (Haiku 4.5)</div></div>
+        <div class="kpi"><div class="n">49~72%</div><div class="l">RAG 재사용 시 절감 (코퍼스 1.5k~10k)</div></div>
+        <div class="kpi"><div class="n">~$82</div><div class="l">콘텐츠 팩토리 초기 구축 토큰비 (1회)</div></div>
+        <div class="kpi"><div class="n">11×</div><div class="l">라이브 Opus는 Haiku의 11배 — 저술에만</div></div>
+      </div>
+      <p><b>핵심 결론:</b> ① Langfuse는 관측 원천, RAG는 별도 벡터스토어로 <b>역할 분리</b>. ② 비용은 코퍼스 <b>총량이 아니라 카테고리 포화</b>의 함수 — 상위 ~15셀 × 100건 = <b>약 1,500건이 절감의 대부분</b>. ③ 하드웨어는 모듈이 유한·카탈로그화(<code style="background:rgba(255,255,255,.15);padding:1px 5px;border-radius:2px">modi_modules.py</code>)라 사전 제작에 유리. ④ <b>비쌀 땐 한 번(Opus 저술), 쌀 땐 매번(Haiku 어댑트)</b> — 품질과 서빙 단가를 분리하는 최대 지렛대.</p>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="wrap">
+      <p class="eyebrow">목차 <span class="no">· Table of Contents</span></p>
+      <ol>
+        <li><a href="#s1">현황 진단 <span class="d">— 현재 코드·인프라·Langfuse 7.5/10</span></a></li>
+        <li><a href="#s2">목표와 핵심 원칙 <span class="d">— 관측 ≠ 검색</span></a></li>
+        <li><a href="#s3">목표 아키텍처 <span class="d">— 5계층 + 코드 매핑</span></a></li>
+        <li><a href="#s4">데이터 소스 통합 <span class="d">— Langfuse + Sentry 백그라운드 자동 저장</span></a></li>
+        <li><a href="#s5">RAG 스택 결정 <span class="d">— 무엇을 어떤 스택으로</span></a></li>
+        <li><a href="#s6">데이터 모델 · 저장 스키마 <span class="d">— AS-IS + 메타 카탈로그 + MySQL/Redis 스키마</span></a></li>
+        <li><a href="#s7">콘텐츠 팩토리 프로세스 <span class="d">— 관리자 생성 ↔ 사용자 변형</span></a></li>
+        <li><a href="#s8">모델 선택 전략 <span class="d">— 어떤 모델로 만드나</span></a></li>
+        <li><a href="#s9">비용 분석 (종합) <span class="d">— 시뮬레이션·규모·그래프</span></a></li>
+        <li><a href="#s10">리스크와 완화 <span class="d">— 8대 리스크</span></a></li>
+        <li><a href="#s11">실행 로드맵 <span class="d">— 코드 기반 단계</span></a></li>
+        <li><a href="#s12">결론 및 권고</a></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <section id="s1">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">01</span> · 현황 진단</p>
+      <h2>현재 코드는 관측은 성숙, 재사용은 부재</h2>
+      <p class="sub">실제 코드 조사 결과. 관측(observability)은 7.5/10로 잘 구축돼 있으나, "재사용 가능한 지식"으로서의 구조는 없다.</p>
+
+      <h3>현재 스택 (pyproject.toml · docker-compose)</h3>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>영역</th><th>현재</th><th>RAG 관점 함의</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">LLM</td><td class="num">anthropic SDK · claude-haiku-4-5</td><td>저렴 → RAG 경제성 검증 필요</td></tr>
+          <tr><td class="dim">관측</td><td class="num">langfuse≥4.0 · sentry-sdk≥2.0</td><td class="now"><b>두 소스 모두 RAG 입력으로 활용 가능</b></td></tr>
+          <tr><td class="dim">저장/상태</td><td class="num">redis≥5 (세션락·캐시)</td><td>ETL 큐·캐시로 재활용 가능</td></tr>
+          <tr><td class="dim">웹</td><td class="num">fastapi · uvicorn · pydantic v2</td><td>서빙/검증 계층 그대로 사용</td></tr>
+          <tr><td class="dim">벡터스토어</td><td class="was">없음</td><td class="was">신규 도입 필요</td></tr>
+          <tr><td class="dim">분류기</td><td class="num">router.classify() 패턴 매칭</td><td class="now"><b>intent 분류에 재활용 → LLM비 0</b></td></tr>
+          <tr><td class="dim">HW 모델</td><td class="num">modi_modules.py (_MODULE_META)</td><td class="now"><b>domain taxonomy 축으로 직결</b></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Langfuse 관측 GAP (보강 대상)</h3>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>#</th><th>누락</th><th>위치</th><th>영향</th></tr></thead>
+        <tbody>
+          <tr><td class="rk">G1</td><td>재시도 횟수 미기록</td><td class="num">orchestrator_stream:1244</td><td>실패-후-성공 분석 불가</td></tr>
+          <tr><td class="rk">G2</td><td>phase 전환 사유 미기록</td><td class="num">_handle_phase_change</td><td>흐름 추적 불가</td></tr>
+          <tr><td class="rk">G3</td><td>tool 결과 원문만 저장</td><td class="num">_run_tool:368</td><td>성공/실패 유형 분류 불가</td></tr>
+          <tr><td class="rk">G4</td><td>guardrail category 미기록</td><td class="num">:649</td><td>요청 성격 집계 불가</td></tr>
+          <tr><td class="rk">G5</td><td class="was">사용자 피드백 점수 없음</td><td class="num">_emit_turn_scores</td><td class="was">RAG 품질 게이트 근거 부재 — 치명적</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">02</span> · 목표와 핵심 원칙</p>
+      <h2>관측 ≠ 검색, 저장소를 분리한다</h2>
+      <div class="thesis"><p><strong>Langfuse는 관측 저장소이지 검색(RAG) 저장소가 아니다.</strong> Langfuse는 변경 불가한 이벤트 로그(원천)로 두고, 재사용 지식은 큐레이션된 별도 벡터 코퍼스로 <strong>역할을 분리</strong>한다. 이 한 가지가 설계 전체의 척추다.</p></div>
+      <p class="kicker">목표 = <b>같은/유사 요청을 매번 LLM으로 생성하지 않고</b>, 검증된 과거·사전제작 콘텐츠를 검색·변형해 서빙 → 비용↓, 품질↑, 지연↓.</p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">03</span> · 목표 아키텍처</p>
+      <h2>5계층 — 기존 코드 위에 얹는다</h2>
+      <p class="sub">L1은 기존 자산 보강, L2~L5 신규. 저장소(빨강)는 물리적으로 분리.</p>
+      <div class="pipe">
+        <div class="layer"><div class="rail"><div class="stem top"></div><div class="node">L1</div><div class="stem bot"></div></div><div class="card"><h4>관측 <span class="tag">Langfuse+Sentry · 보강</span></h4><p>기존 trace/span/generation + Sentry 에러/성능. G1~G4 메타 보강 + G5 피드백 추가.</p></div></div>
+        <div class="layer"><div class="rail"><div class="stem top"></div><div class="node">L2</div><div class="stem bot"></div></div><div class="card"><h4>분류 <span class="tag">Taxonomy · router 재활용</span></h4><p>intent × domain(=modi_modules 축) × actor × outcome를 enum으로 강제. router.classify() 재활용.</p></div></div>
+        <div class="layer"><div class="rail"><div class="stem top"></div><div class="node">L3</div><div class="stem bot"></div></div><div class="card"><h4>재사용 단위 <span class="tag">Interaction Record · 신규</span></h4><p>요청→결과 증류 + 품질 신호 + 임베딩. reusability_score 임계 이상만 다음 계층.</p></div></div>
+        <div class="layer store"><div class="rail"><div class="stem top"></div><div class="node">L4</div><div class="stem bot"></div></div><div class="card"><h4>RAG 코퍼스 <span class="tag">벡터스토어 · 별도</span></h4><p>품질 게이트 통과분만 적재. 관리자 사전제작 콘텐츠도 여기로. Langfuse와 분리.</p></div></div>
+        <div class="layer"><div class="rail"><div class="stem top"></div><div class="node">L5</div><div class="stem bot"></div></div><div class="card"><h4>재사용 결정 <span class="tag">Retrieval+Policy · orchestrator</span></h4><p>유사도·intent·품질 임계 통과 시 Haiku 어댑트 서빙, 아니면 생성. 재사용율을 Langfuse score로 폐루프 측정.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">04</span> · 데이터 소스 통합</p>
+      <h2>Langfuse + Sentry → 백그라운드 자동 축적</h2>
+      <p class="sub">두 관측 소스는 상호 보완적이다. 백그라운드 워커가 주기적으로 수집·정제·적재한다.</p>
+      <div class="split">
+        <div class="col after"><div class="col-head"><span>Langfuse</span><span class="tagpill">무엇을·얼마에</span></div><div class="col-body"><ul>
+          <li><b>요청/응답</b> 트레이스 → 재사용 후보 원천</li>
+          <li><b>비용·토큰·지연</b> → 경제성/포화 모니터링</li>
+          <li><b>품질 score</b>(빌드성공·에러율) → 게이트 신호</li>
+        </ul></div></div>
+        <div class="col before" style="border-color:var(--line)"><div class="col-head" style="background:var(--signal-soft);color:var(--signal)"><span>Sentry</span><span class="tagpill" style="color:var(--signal);border-color:#B9DBDD">무엇이 깨졌나</span></div><div class="col-body"><ul style="--x:1">
+          <li style="--before:''">❌→ 에러/예외 → 해당 답변 <b>코퍼스 제외·감점</b></li>
+          <li>성능/지연 스파이크 → 문제 패턴 식별</li>
+          <li>반복 실패 셀 → <b>사전 제작 우선순위</b> 입력</li>
+        </ul></div></div>
+      </div>
+      <p class="kicker">→ Langfuse(성공·비용) + Sentry(실패) 결합으로 <b>품질 게이트가 정밀해진다</b>. ETL 워커는 기존 Redis를 큐로 활용해 백그라운드 실행(§5).</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="s5">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">05</span> · RAG 스택 결정</p>
+      <h2>무엇을, 어떤 스택으로</h2>
+      <p class="sub">원칙: <b>이미 깔린 것을 최대한 재활용</b>하고, 신규는 최소화한다. 학생 데이터라 프라이버시상 <b>임베딩은 로컬 우선</b>.</p>
+      <div class="lane" style="background:var(--paper-2)"><div style="padding:6px 4px">
+        <div class="stackrow"><div class="comp">벡터스토어<span class="new">+ 신규</span></div><div class="pick"><b>단계적</b> — 검증은 <b>MySQL(임베딩 JSON)+앱 코사인</b>(신규 인프라 0), 운영은 <b>별도 Redis Stack 인스턴스</b>(RediSearch 벡터+메타 필터, 세션락 Redis와 분리). <span style="color:var(--ink-3)">→ MySQL 샵이라 pgvector(=Postgres 신규)는 제외.</span></div></div>
+        <div class="stackrow"><div class="comp">임베딩<span class="new">+ 신규</span></div><div class="pick"><b>로컬 BGE-m3 / multilingual-e5</b> (한국어 지원, <b>호출비 $0</b>, 데이터 사내 유지) 우선. 관리형 대안: <code>voyage-3-lite</code>. <span style="color:var(--ink-3)">→ 프라이버시+비용상 로컬.</span></div></div>
+        <div class="stackrow"><div class="comp">분류<span class="have">✓ 기존</span></div><div class="pick"><code>router.classify()</code> 패턴 매칭 + guardrail category 재활용 → <b>intent 분류 LLM비 0</b>.</div></div>
+        <div class="stackrow"><div class="comp">ETL 워커<span class="have">✓ Redis</span></div><div class="pick">기존 <b>Redis 큐</b> 기반 백그라운드 워커 — Langfuse SDK export + Sentry API 수집 → 정제 → 임베딩 → upsert. 스케줄은 APScheduler 또는 컨테이너 cron.</div></div>
+        <div class="stackrow"><div class="comp">서빙<span class="have">✓ FastAPI</span></div><div class="pick">기존 <code>orchestrator_stream</code>에 <b>retrieval 게이트</b> 삽입 (L5). 검색→hit면 Haiku 어댑트, miss면 기존 생성 경로.</div></div>
+        <div class="stackrow"><div class="comp">저술 파이프<span class="new">+ 신규</span></div><div class="pick">관리자 백그라운드 배치 — <b>Opus 캐논 저술 → Sonnet 변형 → 자동검증 → 사람검수 → 적재</b> (§7,§8).</div></div>
+      </div></div>
+      <p class="kicker">→ 신규는 <b>벡터 인덱스(별도 Redis Stack)·로컬 임베딩·저술 배치</b> 3가지뿐. 원천은 기존 MySQL, 나머지는 기존 코드/인프라 재활용.</p>
+    </div>
+  </section>
+
+  <!-- 5+ 인프라 구성도 -->
+  <section id="s5b">
+    <style>
+      .if-wrap{--ext:#5B636F;--extbg:#EEF0F3;--new:#0F766E;--newbg:#E6F0EE}
+      .if-legend-tag{display:inline-flex;gap:16px;font-family:var(--mono);font-size:12px;margin:2px 0 22px}
+      .if-legend-tag b{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-weight:500}
+      .if-sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+      .if-zone{border:1px solid var(--line);border-radius:6px;background:var(--paper-2);margin:0 0 16px;overflow:hidden}
+      .if-zh{padding:9px 16px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+      .if-zh.rt{background:#13171F;color:#EDEFF3}
+      .if-zh.ob{background:var(--extbg);color:var(--ext)}
+      .if-zh.bg{background:var(--newbg);color:var(--new)}
+      .if-zh .t{font-size:10px;opacity:.8}
+      .if-row{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:18px 16px}
+      .if-chip{flex:none;min-width:135px;max-width:180px;border:1.5px solid var(--line-2);border-radius:5px;padding:12px 13px 11px;background:#fff;position:relative}
+      .if-chip.new{border-color:var(--new);background:var(--newbg)}
+      .if-chip.ext{border-color:var(--line-2);background:#fff}
+      .if-arrow{flex:none;align-self:center;color:var(--line-2);font-family:var(--mono);font-weight:700;padding:0 7px;font-size:15px}
+      .if-badge{position:absolute;top:-9px;left:-9px;width:22px;height:22px;border-radius:50%;font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+      .if-chip.new .if-badge{background:var(--new)}.if-chip.ext .if-badge{background:var(--ext)}
+      .if-chip h5{margin:0 0 3px;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+      .if-chip p{margin:0;font-size:11px;color:var(--ink-3);line-height:1.4;max-width:none}
+      .if-chip .tag{font-family:var(--mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:2px;position:absolute;top:9px;right:9px}
+      .if-chip.new .tag{background:var(--new);color:#fff}.if-chip.ext .tag{background:var(--extbg);color:var(--ext)}
+      .if-feed{font-family:var(--mono);font-size:11px;color:var(--new);padding:2px 16px 14px;font-weight:600}
+      .if-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 20px;margin-top:24px;background:#EFF1F4;border:1px solid var(--line);border-radius:6px;padding:20px 22px}
+      .if-li{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+      .if-li .n{width:22px;height:22px;border-radius:50%;font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+      .if-li.new .n{background:var(--new)}.if-li.ext .n{background:var(--ext)}
+      .if-li b{color:var(--ink)}
+      @media(max-width:760px){.if-legend{grid-template-columns:1fr}}
+    </style>
+    <div class="wrap if-wrap">
+      <p class="eyebrow"><span class="no">05+</span> · 인프라 구성도</p>
+      <h2>현재 스택 → RAG 도입 후 (무엇이 추가되나)</h2>
+      <p class="sub">회색 = 지금 그대로 쓰는 것, 청록 = 새로 추가. 신규는 3가지(⑤코퍼스·⑧ETL·⑨팩토리)뿐이고 나머지는 기존을 재활용한다.</p>
+      <div class="if-legend-tag">
+        <b><i class="if-sw" style="background:#5B636F"></i> 기존 (그대로 재활용)</b>
+        <b><i class="if-sw" style="background:#0F766E"></i> 신규 (추가)</b>
+      </div>
+
+      <div class="if-zone">
+        <div class="if-zh rt"><span>▶ 런타임 · 실시간 요청 경로</span><span class="t">사용자가 질문할 때</span></div>
+        <div class="if-row">
+          <div class="if-chip ext"><span class="if-badge">1</span><span class="tag">기존</span><h5>학생 / 브라우저</h5><p>질문 입력</p></div>
+          <div class="if-arrow">→</div>
+          <div class="if-chip ext"><span class="if-badge">2</span><span class="tag">기존</span><h5>FastAPI 앱 + Redis</h5><p>uvicorn·세션락·가드레일</p></div>
+          <div class="if-arrow">→</div>
+          <div class="if-chip new"><span class="if-badge">3</span><span class="tag">신규</span><h5>분류·검색 게이트</h5><p>router.classify 재활용 + 임베딩 검색</p></div>
+          <div class="if-arrow">→</div>
+          <div class="if-chip new"><span class="if-badge">5</span><span class="tag">신규</span><h5>코퍼스 (Redis Stack)</h5><p>MySQL 원천 + 로컬 임베딩</p></div>
+          <div class="if-arrow">→</div>
+          <div class="if-chip ext"><span class="if-badge">6</span><span class="tag">기존</span><h5>Claude Haiku 4.5</h5><p>hit=어댑트 · miss=생성</p></div>
+        </div>
+      </div>
+
+      <div class="if-zone">
+        <div class="if-zh ob"><span>◆ 관측 · 자동 수집 (기존)</span><span class="t">모든 턴이 자동 기록</span></div>
+        <div class="if-row">
+          <div class="if-chip ext"><span class="if-badge">4</span><span class="tag">기존</span><h5>Langfuse v4</h5><p>요청·응답·비용·품질 score</p></div>
+          <div class="if-arrow">＋</div>
+          <div class="if-chip ext"><span class="if-badge">7</span><span class="tag">기존</span><h5>Sentry (self-host)</h5><p>에러·성능 (sentry.luxrobo.net)</p></div>
+        </div>
+      </div>
+
+      <div class="if-zone">
+        <div class="if-zh bg"><span>■ 백그라운드 · 자동 축적 & 저술 (신규)</span><span class="t">관리자·배치 · 실시간 아님</span></div>
+        <div class="if-row">
+          <div class="if-chip new"><span class="if-badge">8</span><span class="tag">신규</span><h5>ETL 워커 (Redis 큐)</h5><p>Langfuse+Sentry 수집→정제→적재</p></div>
+          <div class="if-arrow">＋</div>
+          <div class="if-chip new"><span class="if-badge">9</span><span class="tag">신규</span><h5>콘텐츠 팩토리</h5><p>Opus 저술→Sonnet 변형→검수</p></div>
+        </div>
+        <div class="if-feed">⑧⑨ → ⑤ 코퍼스에 자동으로 쌓임 (품질 게이트 통과분만)</div>
+      </div>
+
+      <div class="if-legend">
+        <div class="if-li ext"><span class="n">1</span><div>학생 요청 — <b>기존 그대로</b>. 진입점 변화 없음.</div></div>
+        <div class="if-li ext"><span class="n">2</span><div>FastAPI 앱 + Redis — <b>기존</b>. 세션락·캐시, ETL 큐로도 재활용.</div></div>
+        <div class="if-li new"><span class="n">3</span><div>분류·검색 게이트 — <b>신규</b>. orchestrator_stream에 삽입, router.classify 재활용($0).</div></div>
+        <div class="if-li ext"><span class="n">4</span><div>Langfuse — <b>기존</b>. 관측 원천이자 코퍼스 후보 소스.</div></div>
+        <div class="if-li new"><span class="n">5</span><div>코퍼스(별도 Redis Stack)+로컬 임베딩 — <b>신규 핵심</b>. 원천은 MySQL, Redis는 재구성 가능한 인덱스.</div></div>
+        <div class="if-li ext"><span class="n">6</span><div>Claude Haiku — <b>기존 모델</b>. hit이면 어댑트, miss면 기존 생성.</div></div>
+        <div class="if-li ext"><span class="n">7</span><div>Sentry — <b>기존</b>. 에러/성능을 품질 게이트 신호로 결합.</div></div>
+        <div class="if-li new"><span class="n">8</span><div>ETL 워커 — <b>신규</b>. Langfuse+Sentry→코퍼스 자동 축적(백그라운드).</div></div>
+        <div class="if-li new"><span class="n">9</span><div>콘텐츠 팩토리 — <b>신규</b>. Opus 저술→Sonnet 변형→사람 검수(백그라운드).</div></div>
+      </div>
+      <p class="kicker">→ 진입점(①②)과 서빙 모델(⑥)은 그대로. <b>추가되는 건 코퍼스(⑤)·자동 축적(⑧)·자동 저술(⑨) 3덩어리</b>이고, 관측(④⑦)은 이미 있는 걸 입력으로 쓸 뿐이다.</p>
+    </div>
+  </section>
+
+  <!-- 5++ 프로세스 변화 -->
+  <section id="s5c">
+    <style>
+      .pc-lane{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0 0 16px}
+      .pc-h{padding:11px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+      .pc-h.cur{background:var(--rust);color:#fff}
+      .pc-h.new{background:var(--signal);color:#fff}
+      .pc-h .cost{font-family:var(--mono);font-size:11px;opacity:.92;text-transform:none;letter-spacing:0}
+      .pc-flow{display:flex;align-items:center;gap:0;overflow-x:auto;padding:18px 16px;background:var(--paper-2)}
+      .pc-step{flex:none;width:118px;border:1.5px solid var(--line-2);border-radius:5px;padding:10px 11px;background:#fff;text-align:center}
+      .pc-step.gen{border-color:#E6C6B5;background:var(--rust-soft)}
+      .pc-step.cheap{border-color:var(--signal);background:var(--signal-soft)}
+      .pc-step .s{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);letter-spacing:.04em}
+      .pc-step h5{margin:3px 0 2px;font-size:12px;font-weight:700;line-height:1.2;color:var(--ink)}
+      .pc-step p{margin:0;font-size:10px;color:var(--ink-3);line-height:1.3;max-width:none}
+      .pc-arrow{flex:none;color:var(--line-2);font-family:var(--mono);font-weight:700;padding:0 6px;font-size:14px}
+      .pc-branch{flex:none;display:flex;flex-direction:column;gap:8px}
+      .pc-path{display:flex;align-items:center;gap:0}
+      .pc-plabel{flex:none;font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-right:8px}
+      .pc-plabel.hit{background:var(--signal);color:#fff}
+      .pc-plabel.miss{background:var(--rust);color:#fff}
+      .pc-note{font-family:var(--mono);font-size:11px;color:var(--ink-3);padding:0 16px 14px;background:var(--paper-2)}
+      @media(max-width:760px){.pc-step{width:104px}}
+    </style>
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">05++</span> · 프로세스 변화</p>
+      <h2>한 턴이 처리되는 과정: 현재 vs RAG 도입 후</h2>
+      <p class="sub">실제 코드(orchestrator_stream) 흐름 기반. 핵심 변화는 딱 하나 — <b>④ 검색 단계를 추가</b>해서, 맞는 답이 있으면(hit) 비싼 <b>생성·루프·서브에이전트(⑤⑥)를 통째로 건너뛴다</b>.</p>
+
+      <div class="pc-lane">
+        <div class="pc-h cur"><span>현재 (as-is) · 매 턴 전체 생성</span><span class="cost">합계 ≈ $0.029 / 턴 (항상)</span></div>
+        <div class="pc-flow">
+          <div class="pc-step"><div class="s">1</div><h5>사용자 입력</h5><p>질문</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step gen"><div class="s">2</div><h5>가드레일 검사</h5><p>LLM 호출</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step"><div class="s">3</div><h5>분류 (router)</h5><p>phase 판단</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step gen"><div class="s">4</div><h5>에이전트 루프 ×최대 3</h5><p>Haiku 생성</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step gen"><div class="s">5</div><h5>서브에이전트 ×3</h5><p>설계·노트·주석 병렬</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step gen"><div class="s">6</div><h5>빌드 체크</h5><p>검증</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step"><div class="s">7</div><h5>응답 + 기록</h5><p>Langfuse score</p></div>
+        </div>
+        <div class="pc-note">■ 붉은 단계 = 매 턴 실행되는 비싼 생성 경로. 유사한 질문이 와도 항상 처음부터 다시.</div>
+      </div>
+
+      <div class="pc-lane">
+        <div class="pc-h new"><span>RAG 도입 후 (to-be) · 검색 후 분기</span><span class="cost">hit ≈ $0.004 · miss ≈ $0.029 / 턴</span></div>
+        <div class="pc-flow">
+          <div class="pc-step"><div class="s">1</div><h5>사용자 입력</h5><p>질문</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step"><div class="s">2</div><h5>가드레일</h5><p>동일</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step cheap"><div class="s">3</div><h5>분류 + 임베딩</h5><p>router 재활용·$0</p></div>
+          <div class="pc-arrow">→</div>
+          <div class="pc-step cheap"><div class="s">4</div><h5>코퍼스 검색</h5><p>인덱스 검색 ≈$0</p></div>
+          <div class="pc-arrow">◇</div>
+          <div class="pc-branch">
+            <div class="pc-path"><span class="pc-plabel hit">HIT</span>
+              <div class="pc-step cheap"><div class="s">5a</div><h5>Haiku 어댑트 1회</h5><p>루프·서브에이전트 생략</p></div>
+              <div class="pc-arrow">→</div>
+              <div class="pc-step cheap"><div class="s">6</div><h5>응답</h5><p>≈ $0.004</p></div>
+            </div>
+            <div class="pc-path"><span class="pc-plabel miss">MISS</span>
+              <div class="pc-step gen"><div class="s">5b</div><h5>기존 생성 경로</h5><p>루프+서브에이전트</p></div>
+              <div class="pc-arrow">→</div>
+              <div class="pc-step"><div class="s">6</div><h5>응답 + 후보 등록</h5><p>다음엔 hit</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="pc-note">◇ 분기: hit이면 ⑤⑥(생성·루프·서브에이전트)를 건너뛰어 ~7배 싸다. miss는 기존과 동일하되 결과가 코퍼스 후보가 됨.</div>
+      </div>
+
+      <p class="kicker">→ 코드 변경은 <b>orchestrator_stream에 ④ 검색 게이트 한 곳을 삽입</b>하는 수준. 기존 생성 경로(⑤b)는 그대로 남아 miss·폴백을 처리한다. 위험이 낮은 이유.</p>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="s6">
+    <style>
+      .dm-code{background:#13171F;color:#D6DAE2;font-family:var(--mono);font-size:12px;line-height:1.6;border-radius:6px;padding:18px 20px;overflow-x:auto;margin:10px 0;white-space:pre}
+      .dm-code .k{color:#5BC7D0}.dm-code .c{color:#7C8494}.dm-code .h{color:#8FD9D1;font-weight:600}
+      .dm-core{font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--signal);padding:1px 6px;border-radius:2px;margin-left:4px}
+    </style>
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">06</span> · 데이터 모델 (AS-IS → 저장 스키마)</p>
+      <h2>무엇을 저장하나 — 그리고 그 스키마</h2>
+      <p class="sub">지금 무엇이 어디에 저장되는지(AS-IS), RAG를 위해 무엇을·어떤 <b>구체 스키마</b>로 저장할지. 재사용 판단의 <b>핵심 필드는 <span class="dm-core">핵심</span>로 표시</b>.</p>
+
+      <h3>AS-IS · 지금 저장되는 데이터 (검색용이 아님)</h3>
+      <div class="split">
+        <div class="col before" style="border-color:var(--line)">
+          <div class="col-head" style="background:#EFF1F4;color:var(--ink-2)"><span>관측 · Langfuse</span><span class="tagpill" style="color:var(--ink-2);border-color:var(--line-2)">기존</span></div>
+          <div class="col-body"><ul style="list-style:none">
+            <li style="padding-left:0">trace: session_id · user_id · tags[coding_type,mode,model] · metadata{phase…}</li>
+            <li style="padding-left:0">generation: model · input(messages) · output · usage(토큰·캐시) · cost</li>
+            <li style="padding-left:0;border:none">scores: tool_calls · build_success · design_turns · safety_block</li>
+          </ul></div>
+        </div>
+        <div class="col before" style="border-color:var(--line)">
+          <div class="col-head" style="background:#EFF1F4;color:var(--ink-2)"><span>세션 상태 · ProjectState (Redis)</span><span class="tagpill" style="color:var(--ink-2);border-color:var(--line-2)">기존</span></div>
+          <div class="col-body"><ul style="list-style:none">
+            <li style="padding-left:0">phase · project_name · tech_stack · design_doc(features/pages/data_models/flows)</li>
+            <li style="padding-left:0">generated_files(코드) · conversation_history · design_decisions</li>
+            <li style="padding-left:0;border:none">learning_notes · code_annotations · task_plan · diagram</li>
+          </ul></div>
+        </div>
+      </div>
+      <p class="kicker">→ <b>문제:</b> 둘 다 "검색·재사용" 구조가 아니다. <b>임베딩 없음 · 통제 어휘(intent/domain) 없음 · "재사용해도 되는가" 판단 필드 없음</b>. 그래서 별도 스키마가 필요하다.</p>
+
+      <h3>TO-BE · 저장 메타정보 카탈로그</h3>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>그룹</th><th>필드</th><th>타입</th><th>값 / 예시</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">식별·연결</td><td class="num">id · trace_id · session_id · user_id · schema_version</td><td class="num">uuid/text</td><td>Langfuse 연결·버전</td><td>추적·재임베딩</td></tr>
+          <tr class="hirow"><td class="dim">분류(taxonomy)<span class="dm-core">핵심</span></td><td class="num">intent · domain · actor_role · outcome · difficulty</td><td class="num">enum</td><td>create/fix… · hw:motor(modi) · student · success</td><td class="now"><b>카테고리 필터</b></td></tr>
+          <tr><td class="dim">콘텐츠</td><td class="num">request_text · request_norm · response_summary · artifacts · source</td><td class="num">text/jsonb</td><td>정규화 요청 · [{type,ref}] · harvested/authored/ingested</td><td>서빙·어댑트 원본</td></tr>
+          <tr class="hirow"><td class="dim">품질<span class="dm-core">핵심</span></td><td class="num">build_success · tool_error_rate · human_feedback · reusability_score</td><td class="num">bool/real</td><td>true · 0.0 · +1/−1 · 0~1</td><td class="now"><b>재사용 게이트</b></td></tr>
+          <tr class="hirow"><td class="dim">검색<span class="dm-core">핵심</span></td><td class="num">embedding</td><td class="num">vector(1024)</td><td>BGE-m3 (요청+intent 정규화)</td><td class="now"><b>의미 유사도</b></td></tr>
+          <tr><td class="dim">운영</td><td class="num">model · cost_usd · tokens_in/out · created_at</td><td class="num">text/real/ts</td><td>haiku/opus · 0.004</td><td>비용·모델 드리프트</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>벡터스토어 스키마 (MySQL 원천 + Redis Stack 인덱스) — 구체</h3>
+      <p class="kicker" style="margin-top:4px"><b>① 원천(source of truth) = 기존 MySQL.</b> 임베딩은 JSON으로 저장(엔진 추가 없음).</p>
+      <div class="dm-code"><span class="c">-- 재사용 단위 = interaction_record 1행 (요청+결과+메타+임베딩)</span>
+<span class="k">CREATE TABLE</span> interaction_record (
+  id            <span class="k">CHAR(36) PRIMARY KEY</span>,            <span class="c">-- UUID</span>
+  trace_id      <span class="k">VARCHAR(64) NOT NULL</span>,            <span class="c">-- Langfuse 연결</span>
+  session_id    <span class="k">VARCHAR(64)</span>, user_id <span class="k">VARCHAR(64)</span>, schema_version <span class="k">TINYINT DEFAULT</span> 1,
+
+  <span class="c">-- ★ 분류(통제 어휘) — 카테고리 필터</span>
+  intent      <span class="k">VARCHAR(24) NOT NULL</span>,   <span class="c">-- create|fix|explain|refactor|extend</span>
+  domain      <span class="k">VARCHAR(48) NOT NULL</span>,   <span class="c">-- hw:motor+button…(modi_modules 정렬)</span>
+  actor_role  <span class="k">VARCHAR(16) DEFAULT</span> 'student',
+  outcome     <span class="k">VARCHAR(16)</span>,           <span class="c">-- success|partial|failed|blocked</span>
+  difficulty  <span class="k">VARCHAR(8)</span>, coding_type <span class="k">VARCHAR(16)</span>, mode <span class="k">VARCHAR(16)</span>, phase <span class="k">VARCHAR(16)</span>,
+
+  <span class="c">-- 콘텐츠</span>
+  request_text     <span class="k">TEXT NOT NULL</span>,  request_norm <span class="k">TEXT</span>,   <span class="c">-- request_norm = 임베딩 대상</span>
+  response_summary <span class="k">TEXT</span>,  artifacts <span class="k">JSON</span>,  source <span class="k">VARCHAR(16) NOT NULL</span>,
+
+  <span class="c">-- ★ 품질 게이트</span>
+  build_success <span class="k">TINYINT(1)</span>, tool_error_rate <span class="k">FLOAT</span>,
+  human_feedback <span class="k">TINYINT</span>, reusability_score <span class="k">FLOAT</span>,
+
+  <span class="c">-- 운영</span>
+  model <span class="k">VARCHAR(48)</span>, cost_usd <span class="k">FLOAT</span>, tokens_in <span class="k">INT</span>, tokens_out <span class="k">INT</span>,
+
+  <span class="c">-- ★ 검색 (임베딩은 JSON 배열로 보관)</span>
+  embedding  <span class="h">JSON</span>,                              <span class="c">-- BGE-m3 1024차원</span>
+  created_at <span class="k">DATETIME NOT NULL DEFAULT</span> CURRENT_TIMESTAMP,
+  <span class="k">INDEX</span> idx_cat (intent, domain),               <span class="c">-- 카테고리 필터</span>
+  <span class="k">INDEX</span> idx_gate (outcome, reusability_score)    <span class="c">-- 품질 게이트</span>
+);</div>
+
+      <p class="kicker" style="margin-top:16px"><b>② 운영 검색 인덱스 = 별도 Redis Stack 인스턴스</b> (세션락 Redis와 분리 · 원천이 MySQL이라 언제든 재구성 가능):</p>
+      <div class="dm-code"><span class="c"># 벡터 인덱스 정의 (RediSearch)</span>
+FT.CREATE idx:ir ON HASH PREFIX 1 ir: SCHEMA
+  intent <span class="h">TAG</span>  domain <span class="h">TAG</span>  outcome <span class="h">TAG</span>          <span class="c"># ★ 메타 필터</span>
+  reusability_score <span class="h">NUMERIC</span>                     <span class="c"># ★ 품질 게이트</span>
+  embedding <span class="h">VECTOR HNSW</span> 6 TYPE FLOAT32 DIM 1024 DISTANCE_METRIC COSINE
+
+<span class="c"># 품질 게이트 통과분만 upsert</span>
+HSET ir:&lt;id&gt; intent fix domain "hw:motor+button" outcome success \
+     reusability_score 0.82 embedding &lt;1024 floats&gt; response_summary "..."</div>
+
+      <p class="kicker" style="margin-top:16px"><b>③ 서빙 검색</b> — 같은 카테고리 + 품질 통과분 안에서 의미가 가장 가까운 top-5 (필터 + KNN 한 쿼리):</p>
+      <div class="dm-code">FT.SEARCH idx:ir
+  <span class="s">"(@intent:{fix} @domain:{hw\:motor\+button} @outcome:{success}
+    @reusability_score:[0.7 +inf])=&gt;[KNN 5 @embedding $q]"</span>
+  PARAMS 2 q &lt;query_vec&gt;  DIALECT 2</div>
+      <p class="kicker"><b>검증 단계(P4)엔 Redis도 필요 없음:</b> MySQL <code>WHERE intent=? AND domain=? AND reusability_score&gt;=?</code> 로 후보만 추린 뒤, FastAPI 앱에서 NumPy 코사인 top-k. 신규 인프라 0으로 "재사용했다면?" 측정 가능.</p>
+
+      <div class="thesis" style="margin-top:22px"><p><strong>핵심은 이 3가지다 — "재사용해도 되는가"를 결정하는 축.</strong> ① <strong>embedding</strong>(의미가 비슷한가) ② <strong>intent × domain</strong>(같은 종류·대상인가) ③ <strong>품질 게이트</strong>(outcome=success · reusability_score 임계). 나머지 필드는 이 판단을 보조하거나 운영·추적용이다. 저장의 <strong>최소 단위는 interaction_record 1행</strong>이며, 관리자 사전 제작분도 동일 스키마(source='authored')로 들어간다.</p></div>
+    </div>
+  </section>
+
+  <!-- 6+ 구조화 입력 -->
+  <section id="s6b">
+    <style>
+      .sk-flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;overflow-x:auto;padding:4px 0}
+      .sk-raw{flex:none;border:1.5px dashed var(--rust);background:var(--rust-soft);border-radius:5px;padding:11px 14px;font-size:13px;color:var(--ink-2);max-width:230px}
+      .sk-raw .l{font-family:var(--mono);font-size:9.5px;color:var(--rust);letter-spacing:.05em;display:block;margin-bottom:4px}
+      .sk-op{flex:none;font-family:var(--mono);font-size:11px;color:var(--ink-3);padding:0 12px;text-align:center}
+      .sk-key{flex:none;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+      .sk-chip{font-family:var(--mono);font-size:11.5px;font-weight:600;padding:6px 10px;border-radius:5px;background:var(--signal-soft);color:var(--signal);border:1.5px solid var(--signal)}
+      .sk-chip.g{background:#fff;color:var(--ink-2);border-color:var(--line-2);font-weight:500}
+      .sk-plus{color:var(--ink-3);font-family:var(--mono);font-weight:700}
+    </style>
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">06+</span> · 구조화 입력 (Structured Intake)</p>
+      <h2>유사 요청을 잡는 진짜 열쇠 — 입력을 구조화한다</h2>
+      <p class="sub">RAG 성패의 90%가 여기서 갈린다. <b>자유 텍스트 유사도만으론 hit이 흔들린다.</b> 매칭 키를 구조화하면 "fuzzy 의미 추측"이 "안정적 조회"로 바뀐다.</p>
+
+      <div class="split">
+        <div class="col before">
+          <div class="col-head"><span>자유 텍스트 매칭</span><span class="tagpill">불안정</span></div>
+          <div class="col-body"><ul>
+            <li>같은 의도를 표현이 제각각 ("카운터" / "숫자 올라가게" / "버튼 +1")</li>
+            <li><b>학생 개인 코드·모듈이 임베딩을 오염</b> → 유사도 흐려짐</li>
+            <li>짧고 모호한 입력("안돼요")은 의미 신호가 거의 없음</li>
+            <li style="border:none">→ hit이 들쭉날쭉, 절감 곡선 <b>과대평가 위험</b></li>
+          </ul></div>
+        </div>
+        <div class="col after">
+          <div class="col-head"><span>구조화 매칭</span><span class="tagpill">안정적</span></div>
+          <div class="col-body"><ul>
+            <li>매칭 키 = <b>(intent × domain × 모듈구성) + 정규화 목표</b></li>
+            <li>개인 코드 디테일은 매칭에서 <b>제외</b> → 잡음 제거</li>
+            <li>하드웨어는 모듈이 유한 → 요청 공간이 <b>열거 가능</b></li>
+            <li style="border:none">→ fuzzy 추측이 <b>거의 결정론적 조회</b>로</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <h3>매칭 키는 이렇게 만든다</h3>
+      <div class="sk-flow">
+        <div class="sk-raw"><span class="l">RAW 채팅 입력</span>"버튼 누르면 모터가 돌게 하고 싶은데 제 코드가 안 돌아가요 ㅠㅠ"</div>
+        <div class="sk-op">— 구조 추출<br>+ 정규화 →</div>
+        <div class="sk-key">
+          <span class="sk-chip">intent: fix</span><span class="sk-plus">×</span>
+          <span class="sk-chip">domain: hw:motor+button</span><span class="sk-plus">×</span>
+          <span class="sk-chip g">goal: "버튼→모터 회전"</span>
+        </div>
+      </div>
+      <p class="kicker">→ 임베딩은 오염된 원문이 아니라 <b>정규화된 목표 한 줄</b>에 대해, 검색 필터는 <b>intent·domain·모듈</b>에 대해 건다. (§6 스키마의 <code>request_norm</code> · <code>intent</code> · <code>domain</code> 컬럼)</p>
+
+      <div class="band" style="margin-top:26px"><div class="bnum">이미 보유</div><div class="btxt">edu-agent는 <b>구조화 신호를 이미 갖고 있다</b> — <code style="background:rgba(255,255,255,.15);padding:1px 5px;border-radius:2px">modi_modules.py</code>(어떤 물리 모듈), Blockly 블록 상태(어떤 블록), <code style="background:rgba(255,255,255,.15);padding:1px 5px;border-radius:2px">coding_type·phase·mode</code>. <b>채팅 텍스트보다 훨씬 좋은 매칭 신호가 앱에 이미 흐른다.</b></div></div>
+
+      <h3>입력 환경을 "잘" 만드는 3단계 (UX 균형)</h3>
+      <p class="sub" style="margin-bottom:14px">교육이라 무거운 폼은 금물. 구조는 에디터에서 자동으로 뽑고, 질문은 최소로.</p>
+      <div class="mech">
+        <div class="step"><div class="mk"></div><div><h4>수동 수집 (공짜)</h4><p>에디터 상태(모듈·블록·phase)를 자동으로 구조 신호로 사용. 학생은 아무것도 더 안 함.</p></div></div>
+        <div class="step"><div class="mk"></div><div><h4>경량 유도</h4><p>의도가 애매할 때만 칩/버튼으로 살짝 — "만들기 / 고치기 / 설명" · 대상 선택. router.classify 재활용.</p></div></div>
+        <div class="step"><div class="mk"></div><div><h4>정규화</h4><p>자유 텍스트는 짧은 "목표 한 줄"로 요약해 임베딩. 개인 코드 디테일은 매칭에서 제외.</p></div></div>
+      </div>
+
+      <p class="kicker"><b>검증에 미치는 영향:</b> Phase 0의 요청 군집도는 <b>raw 텍스트가 아니라 이 구조화 표현으로</b> 측정해야 진짜 hit 잠재력이 보인다. 이렇게 재면 free-text보다 군집도가 크게 올라갈 가능성이 높고, 그때 비로소 §9의 경제성이 현실이 된다.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="s7">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">07</span> · 콘텐츠 팩토리 프로세스</p>
+      <h2>관리자가 만들고, 사용자는 변형한다</h2>
+      <p class="sub">양면 파이프라인. 관리자 측은 백그라운드 자동 생성(느려도 됨·배치), 사용자 측은 최저가 모델로 실시간 변형.</p>
+
+      <div class="lane admin">
+        <div class="lane-h"><span>▲ 관리자 · 콘텐츠 팩토리 (offline · 배치 · 자동)</span><span class="mdl">Opus → Sonnet → 사람검수</span></div>
+        <div class="lane-flow">
+          <div class="fstep"><div class="fn">F1</div><h5>커버리지 맵</h5><p>intent×domain×HW 셀 정의, 고트래픽·커리큘럼 우선 셀 선정</p><span class="m z">router/Langfuse</span></div>
+          <div class="fstep"><div class="fn">F2</div><h5>기존 콘텐츠 ingest</h5><p>사내 교재·검증 예제·과거 👍 답변 수집 → 빈 셀 식별</p><span class="m z">저술비 $0</span></div>
+          <div class="fstep"><div class="fn">F3</div><h5>캐논 저술</h5><p>빈 셀에 각본 생성: HW셋업+코드+동작+힌트+안전</p><span class="m o">Opus</span></div>
+          <div class="fstep"><div class="fn">F4</div><h5>변형 확장</h5><p>캐논에서 난이도·표현 변형 대량 파생</p><span class="m s">Sonnet</span></div>
+          <div class="fstep"><div class="fn">F5</div><h5>자동 검증</h5><p>코드 빌드·Blockly 규칙·guardrail 통과 확인</p><span class="m z">코드</span></div>
+          <div class="fstep"><div class="fn">F6</div><h5>사람 검수 게이트</h5><p>교육 정확성·물리 안전 승인 (캐논 집중)</p><span class="m z">사람</span></div>
+          <div class="fstep"><div class="fn">F7</div><h5>임베딩·적재</h5><p>버전·커리큘럼 태깅해 코퍼스 upsert</p><span class="m h">로컬 임베딩</span></div>
+        </div>
+      </div>
+
+      <div class="lane user">
+        <div class="lane-h"><span>▼ 사용자 · 어댑테이션 런타임 (online · 실시간 · 최저가)</span><span class="mdl">Haiku 4.5</span></div>
+        <div class="lane-flow">
+          <div class="fstep"><div class="fn">R1</div><h5>분류·임베딩</h5><p>요청 → intent/domain 분류 + 쿼리 임베딩</p><span class="m z">router · $0</span></div>
+          <div class="fstep"><div class="fn">R2</div><h5>검색</h5><p>같은 셀·품질 임계 이상 top-k</p><span class="m z">Redis Stack ≈$0</span></div>
+          <div class="fstep"><div class="fn">R3</div><h5>Hit → 어댑트</h5><p>학생 문맥(보유 모듈·수준)에 맞춰 경량 편집</p><span class="m h">Haiku $0.004</span></div>
+          <div class="fstep"><div class="fn">R4</div><h5>Miss → 폴백</h5><p>기존 생성 경로 → 결과는 새 후보로 등록</p><span class="m h">Haiku 생성</span></div>
+          <div class="fstep"><div class="fn">R5</div><h5>피드백 환류</h5><p>hit·품질·Sentry 신호 → 팩토리 우선순위</p><span class="m z">폐루프</span></div>
+        </div>
+      </div>
+      <p class="kicker">→ <b>하드웨어가 사전 제작에 유리한 이유:</b> 모듈 조합이 유한·카탈로그화(<code>modi_modules</code>)돼 셀 공간이 잘 규정된다 → 예측 리스크(사전제작 최대 약점)가 낮다.</p>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="s8">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">08</span> · 모델 선택 전략</p>
+      <h2>어떤 모델로 만드나 — 비쌀 땐 한 번, 쌀 땐 매번</h2>
+      <div class="band"><div class="bnum">품질 ≠ 서빙단가</div><div class="btxt">품질은 <b>저술 시 비싼 모델이 한 번</b>, 서빙 단가는 <b>싼 모델이 매번</b> 결정. 분리하면 <b>Opus급 품질을 Haiku급 단가</b>로 낸다.</div></div>
+      <p class="kicker" style="margin-top:24px">약한 모델에게 "생성"은 어렵지만 "편집"은 쉽다 — 훌륭한 원본을 주면 결과가 원본 품질에 수렴.</p>
+      <h3>단계별 모델 배정</h3>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>단계</th><th>작업</th><th>모델</th><th>단가</th><th>왜</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">F3 캐논 저술</td><td>고품질 각본 원본</td><td class="num" style="color:#0B3F45;font-weight:700">Opus (배치)</td><td class="num">$0.084/건</td><td>전원에게 서빙되니 품질이 최우선. 1회성.</td></tr>
+          <tr><td class="dim">F4 변형 확장</td><td>캐논→변형(편집)</td><td class="num" style="color:#2F8F93;font-weight:700">Sonnet (배치)</td><td class="num">$0.012/건</td><td>편집 태스크라 중급이면 충분.</td></tr>
+          <tr><td class="dim">R3 서빙 어댑트</td><td>학생 문맥 경량 편집</td><td class="num" style="color:var(--signal);font-weight:700">Haiku 4.5</td><td class="num">$0.004/턴</td><td>매턴 발생 → 최저가. 원본이 좋아 품질 유지.</td></tr>
+          <tr><td class="was">✗ 라이브 Opus</td><td>매턴 생성</td><td class="num was">Opus</td><td class="num was">$0.31/턴</td><td class="was">Haiku의 11배 — 규모에선 불가.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="kicker">→ <b>비싼 모델은 저술에만, 딱 한 번.</b> 가장 싼 시드는 <b>이미 있는 사내 콘텐츠</b>(F2, 저술비 $0). 소스가 무엇이든 서빙은 Haiku가 통일.</p>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="s9">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">09</span> · 비용 분석 (종합)</p>
+      <h2>얼마나, 어떻게 줄어드나</h2>
+      <div class="assump"><b>가정</b> · Haiku 4.5 실단가($1/$5 per M, 예시) · 학생 500명×월40턴=<b>월20,000턴</b> · 풀생성 <b>$0.029/턴</b> · 어댑트 서빙 <b>$0.004/턴</b> · 조회 ≈$0.0005 · 모두 <b>Phase 0 실측으로 대체</b></div>
+
+      <div class="stats">
+        <div class="stat"><div class="big rust">$580</div><div class="lbl">RAG 없이 월 baseline (20k턴)</div></div>
+        <div class="stat"><div class="big">$298</div><div class="lbl">코퍼스 1,500건·hit 58% 월</div></div>
+        <div class="stat"><div class="big">49%</div><div class="lbl">1,500건만으로 절감</div></div>
+        <div class="stat"><div class="big">72%</div><div class="lbl">10,000건·hit 85% 절감(상한 근처)</div></div>
+      </div>
+
+      <h3>코퍼스 규모 → hit rate → 월 비용</h3>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>코퍼스</th><th>커버리지</th><th>hit</th><th>블렌디드/턴</th><th>월@20k</th><th>절감</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">0 (콜드)</td><td>없음</td><td class="num">0%</td><td class="num">$0.0295</td><td class="num">$590</td><td class="num was">−2% *</td></tr>
+          <tr><td class="dim">~500</td><td>상위 5셀 부분</td><td class="num">37%</td><td class="num">$0.0202</td><td class="num">$404</td><td class="save">30%</td></tr>
+          <tr class="hirow"><td class="dim">~1,500</td><td>상위 15셀 포화</td><td class="num">58%</td><td class="num">$0.0149</td><td class="num">$298</td><td class="save">49%</td></tr>
+          <tr><td class="dim">~4,000</td><td>상위완전+중위</td><td class="num">75%</td><td class="num">$0.0108</td><td class="num">$217</td><td class="save">63%</td></tr>
+          <tr><td class="dim">~10,000</td><td>롱테일</td><td class="num">85%</td><td class="num">$0.0082</td><td class="num">$165</td><td class="save">72%</td></tr>
+        </tbody>
+      </table></div>
+      <p class="kicker">* 콜드는 조회 오버헤드만 붙어 소폭 손해 → 코퍼스 &lt; N이면 조회 스킵. <b>1,500 → 10,000 (6.7배 데이터)인데 hit는 +27%p뿐</b> — 강한 체감 수익.</p>
+
+      <h3>1,000 vs 10,000 — 총량이 아니라 카테고리 포화</h3>
+      <div class="curve-wrap">
+        <svg viewBox="0 0 720 240" width="100%" height="auto" role="img" aria-label="카테고리 포화 곡선">
+          <line x1="56" y1="18" x2="56" y2="200" stroke="#C9CDD6"/><line x1="56" y1="200" x2="688" y2="200" stroke="#C9CDD6"/>
+          <text x="8" y="26" font-family="ui-monospace,monospace" font-size="11" fill="#6A7280">hit</text>
+          <text x="556" y="222" font-family="ui-monospace,monospace" font-size="11" fill="#6A7280">셀 내 검증 예시 수 →</text>
+          <line x1="56" y1="66" x2="688" y2="66" stroke="#DEE1E7" stroke-dasharray="4 4"/><text x="60" y="61" font-family="ui-monospace,monospace" font-size="10" fill="#6A7280">0.8 포화</text>
+          <path d="M56,200 C120,116 200,78 296,70 C420,61 560,58 688,56" fill="none" stroke="#0E7C86" stroke-width="2.5"/>
+          <circle cx="184" cy="86" r="4" fill="#B4531F"/><text x="150" y="106" font-family="ui-monospace,monospace" font-size="10.5" fill="#B4531F">n≈60·0.63</text>
+          <circle cx="296" cy="70" r="4.5" fill="#13171F"/><text x="286" y="56" font-family="ui-monospace,monospace" font-size="10.5" fill="#13171F">n≈100·0.81</text>
+          <circle cx="470" cy="60" r="4" fill="#6A7280"/><text x="440" y="50" font-family="ui-monospace,monospace" font-size="10.5" fill="#6A7280">n≈300·0.99</text>
+        </svg>
+        <div class="curve-legend"><span><i class="swatch" style="background:#0E7C86"></i> hit ≈ 1−e<sup>−n/60</sup> · 셀당 100건 넘으면 평평 — 추가 데이터 무의미</span></div>
+      </div>
+      <p class="kicker">교육 요청은 Zipf 분포 → <b>상위 ~15셀이 트래픽 75%</b>. 15×100 = <b>약 1,500건이 절감의 대부분</b>. 목표는 개수가 아니라 <b>커버리지 맵 채우기</b>.</p>
+
+      <h3>콘텐츠 팩토리 비용안</h3>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>항목</th><th>성격</th><th>모델</th><th>비용</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">캐논 저술 150셀</td><td>1회성</td><td class="num">Opus 배치</td><td class="num">$13</td></tr>
+          <tr><td class="dim">변형 4,500건</td><td>1회성</td><td class="num">Sonnet 배치</td><td class="num">$56</td></tr>
+          <tr><td class="dim">초기 구축 합계</td><td>1회성(+검증20%)</td><td class="num">—</td><td class="save">≈ $82</td></tr>
+          <tr><td class="dim">사람 검수</td><td>1회성</td><td class="num">교육팀</td><td class="num" style="color:var(--warn)">~25h (진짜 투자)</td></tr>
+          <tr><td class="dim">유지</td><td>월</td><td class="num">Opus 증분</td><td class="num">~$1 + 2h/월</td></tr>
+          <tr class="hirow"><td class="dim">런타임 서빙</td><td>월·트래픽비례</td><td class="num">Haiku 어댑트</td><td class="save">§ 아래</td></tr>
+        </tbody>
+      </table></div>
+      <p class="kicker"><b>진짜 비용은 토큰이 아니라 사람.</b> 토큰 제작비는 ~$82로 무시 수준 → 투자는 커리큘럼 검수(교육팀이 원래 하는 일)로 이동.</p>
+
+      <h3>규모 민감도 (성숙 코퍼스 hit 65% 가정)</h3>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>규모</th><th>월 턴</th><th>baseline/월</th><th>절감/월</th><th>절감/년</th><th>판단</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">학생 500</td><td class="num">20,000</td><td class="num">$580</td><td class="save">$315</td><td class="save">~$3,780</td><td style="color:var(--warn)">관측/품질 이득으로 정당화</td></tr>
+          <tr><td class="dim">학생 2,000</td><td class="num">80,000</td><td class="num">$2,320</td><td class="save">$1,260</td><td class="save">~$15,120</td><td style="color:var(--good)">명확히 이득</td></tr>
+          <tr><td class="dim">학생 5,000</td><td class="num">200,000</td><td class="num">$5,800</td><td class="save">$3,150</td><td class="save">~$37,800</td><td style="color:var(--good)">강한 이득</td></tr>
+        </tbody>
+      </table></div>
+      <p class="kicker">→ RAG는 <b>트래픽 규모에서 정당화</b>된다. 작은 규모라면 Phase 1~2(관측·피드백)만으로도 충분한 가치.</p>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section id="s10">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">10</span> · 리스크와 완화</p>
+      <h2>8대 리스크</h2>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>#</th><th>리스크</th><th>심각도</th><th>완화책</th></tr></thead>
+        <tbody>
+          <tr><td class="rk">R1</td><td class="rk">경제성 역전 — Haiku가 저렴</td><td><span class="sev high">High</span></td><td>Phase 0 단가 실측 · 로컬 임베딩($0)</td></tr>
+          <tr><td class="rk">R2</td><td class="rk">품질 오염 — 낮은 답 유입</td><td><span class="sev high">High</span></td><td>Langfuse+Sentry 결합 품질 게이트</td></tr>
+          <tr><td class="rk">R3</td><td class="rk">교육 정확성 — 틀린 답 전파</td><td><span class="sev high">High</span></td><td>검증 outcome만 · 사람 검수 게이트</td></tr>
+          <tr><td class="rk">R4</td><td class="rk">정답 신호 부재 (G5)</td><td><span class="sev mid">Med</span></td><td>피드백 score 우선 도입</td></tr>
+          <tr><td class="rk">R5</td><td class="rk">PII — 타 학생 재사용</td><td><span class="sev mid">Med</span></td><td>로컬 임베딩 · 코퍼스 PII 재검증</td></tr>
+          <tr><td class="rk">R6</td><td class="rk">사전제작 예측 빗나감·경직성</td><td><span class="sev mid">Med</span></td><td>HW 유한셀로 위험↓ · 라이브 폴백</td></tr>
+          <tr><td class="rk">R7</td><td class="rk">모델/커리큘럼 드리프트</td><td><span class="sev low">Low</span></td><td>version 저장 · 증분 재저술</td></tr>
+          <tr><td class="rk">R8</td><td class="rk">스키마 진화 재임베딩</td><td><span class="sev low">Low</span></td><td>schema_version · 재임베딩 배치</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section id="s11">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">11</span> · 실행 로드맵 & 정지점 권고</p>
+      <h2>어디까지 가는 게 좋은가</h2>
+      <p class="sub">7단계를 다 갈 필요는 없다. <b>가치는 앞단(관측·품질)에서 일찍 쌓이고</b>, 실제 $ 절감은 P6에서 실현된다. 규모·실측 결과에 따라 <b>3개의 합리적 정지점</b>이 있다.</p>
+
+      <!-- 노력 vs 가치 그래프 -->
+      <div class="curve-wrap">
+        <svg viewBox="0 0 720 280" width="100%" height="auto" role="img" aria-label="단계별 노력과 누적 가치">
+          <!-- 의사결정 게이트 밴드 (P4) -->
+          <rect x="416" y="24" width="88" height="192" fill="#0F766E" opacity="0.06"/>
+          <text x="460" y="18" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#0F766E">권장 정지점 · 의사결정 게이트</text>
+          <!-- axes -->
+          <line x1="52" y1="24" x2="52" y2="216" stroke="#C9CDD6"/><line x1="52" y1="216" x2="690" y2="216" stroke="#C9CDD6"/>
+          <text x="8" y="32" font-family="ui-monospace,monospace" font-size="10" fill="#6A7280">가치</text>
+          <!-- effort bars (per phase) : muted rust -->
+          <!-- x centers for P0..P6 -->
+          <!-- P0 96 P1 184 P2 272 P3 360 P4 460 P5 548 P6 636 -->
+          <g fill="#9A6A50" opacity="0.35">
+            <rect x="82" y="200" width="28" height="16"/>
+            <rect x="170" y="168" width="28" height="48"/>
+            <rect x="258" y="184" width="28" height="32"/>
+            <rect x="346" y="152" width="28" height="64"/>
+            <rect x="446" y="152" width="28" height="64"/>
+            <rect x="534" y="88" width="28" height="128"/>
+            <rect x="622" y="152" width="28" height="64"/>
+          </g>
+          <!-- value line (teal) : cumulative strategic value index -->
+          <polyline points="96,206 184,166 272,140 360,124 460,96 548,72 636,40" fill="none" stroke="#0F766E" stroke-width="2.5"/>
+          <g fill="#0F766E">
+            <circle cx="96" cy="206" r="4"/><circle cx="184" cy="166" r="4"/><circle cx="272" cy="140" r="4"/><circle cx="360" cy="124" r="4"/><circle cx="460" cy="96" r="5.5"/><circle cx="548" cy="72" r="4"/><circle cx="636" cy="40" r="5.5"/>
+          </g>
+          <!-- realized savings marker at P6 -->
+          <text x="636" y="30" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#0F766E">$절감 실현</text>
+          <text x="272" y="132" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9.5" fill="#3F7E5E">관측·품질</text>
+          <!-- x labels -->
+          <g font-family="ui-monospace,monospace" font-size="11" fill="#3C434F" text-anchor="middle">
+            <text x="96" y="234">P0</text><text x="184" y="234">P1</text><text x="272" y="234">P2</text><text x="360" y="234">P3</text><text x="460" y="234">P4</text><text x="548" y="234">P5</text><text x="636" y="234">P6</text>
+          </g>
+          <text x="690" y="250" text-anchor="end" font-family="ui-monospace,monospace" font-size="10" fill="#6A7280">누적 노력 →</text>
+        </svg>
+        <div class="curve-legend">
+          <span><i class="swatch" style="background:#0F766E"></i> 누적 전략 가치(관측+데이터+검증+절감)</span>
+          <span><i class="swatch" style="background:#9A6A50;opacity:.4;height:10px"></i> 단계별 노력</span>
+        </div>
+      </div>
+      <p class="kicker">→ <b>P4까지 오면 전체 가치의 ~65%를 노력 ~55%로</b> 확보하고, shadow 측정으로 실제 절감폭을 <b>위험 없이</b> 확인한다. 이 지점이 P5~P6 진행을 판단하는 게이트다.</p>
+
+      <!-- 3 정지점 권고 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px">
+        <div class="col before" style="border-color:var(--line)">
+          <div class="col-head" style="background:#EFF1F4;color:var(--ink-2)"><span>정지점 A · 최소</span><span class="tagpill" style="color:var(--ink-2);border-color:var(--line-2)">P0–P2</span></div>
+          <div class="col-body"><ul style="list-style:none">
+            <li style="padding-left:0"><b>조건</b> 소규모(&lt;1,000명) or RAG 불확실</li>
+            <li style="padding-left:0"><b>얻는 것</b> 관측 GAP 해소·품질/피드백 신호·운영 통찰</li>
+            <li style="padding-left:0"><b>$ 절감</b> 0 (관측 가치로 정당화)</li>
+            <li style="padding-left:0;border:none"><b>노력</b> ~3주 · 저위험</li>
+          </ul></div>
+        </div>
+        <div class="col after" style="border-color:var(--signal);box-shadow:0 0 0 2px var(--signal-soft)">
+          <div class="col-head"><span>정지점 B · 권장</span><span class="tagpill">P0–P4</span></div>
+          <div class="col-body"><ul style="list-style:none">
+            <li style="padding-left:0"><b>조건</b> 대부분의 경우 — 기본 목표</li>
+            <li style="padding-left:0"><b>얻는 것</b> shadow 모드로 <b>실제 절감폭 측정</b>·무위험 go/no-go 데이터</li>
+            <li style="padding-left:0"><b>$ 절감</b> 아직 미실현이나 <b>확신 확보</b></li>
+            <li style="padding-left:0;border:none"><b>노력</b> ~7주 · 저위험</li>
+          </ul></div>
+        </div>
+        <div class="col after" style="border-color:var(--line)">
+          <div class="col-head" style="background:#EFF1F4;color:var(--ink-2)"><span>정지점 C · 완전</span><span class="tagpill" style="color:var(--good);border-color:#BcD8Ca">P0–P6</span></div>
+          <div class="col-body"><ul style="list-style:none">
+            <li style="padding-left:0"><b>조건</b> 학생 2,000명+ & P4 측정 양호</li>
+            <li style="padding-left:0"><b>얻는 것</b> 실제 절감 실현 + 콘텐츠 팩토리</li>
+            <li style="padding-left:0"><b>$ 절감</b> 연 $15k+ (2,000명 기준)</li>
+            <li style="padding-left:0;border:none"><b>노력</b> ~13주 + 교육팀 검수</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <h3>단계 상세</h3>
+      <div class="road">
+        <div class="phase gate"><div class="pk">P0 · GATE</div><div><h4>경제성 실측</h4><p>Langfuse export로 실제 턴당 단가·카테고리 분포 계산. 이득 없으면 P3~ 보류.<span class="cost">~0.5주 · §9 가정 교체 · 필수</span></p></div></div>
+        <div class="phase"><div class="pk">P1</div><div><h4>관측 GAP + Taxonomy</h4><p>G1~G4 메타 보강, agent/taxonomy.py(modi_modules 정렬), router.classify 재활용.<span class="cost">~1.5주 · 저위험 · RAG 무관하게 이득 · 정지점 A</span></p></div></div>
+        <div class="phase"><div class="pk">P2</div><div><h4>피드백 신호(G5) + Sentry 결합</h4><p>👍/👎·재요청 score, Sentry 에러를 품질 게이트에 연결.<span class="cost">~1주 · 품질 게이트 전제 · ◀ 최소 정지점</span></p></div></div>
+        <div class="phase"><div class="pk">P3</div><div><h4>ETL 워커 + Interaction Record</h4><p>Redis 큐 백그라운드 워커로 Langfuse/Sentry 수집→변환→적재(검색 없이).<span class="cost">~2주 · 데이터 축적 시작</span></p></div></div>
+        <div class="phase"><div class="pk">P4</div><div><h4>벡터 인덱스 + 로컬 임베딩 + shadow</h4><p>검증은 MySQL+앱 코사인(무인프라), BGE-m3 임베딩, shadow 모드로 "재사용했다면?" 시뮬.<span class="cost">~2주 · 무위험 효과 검증 · ◀ 권장 정지점/게이트</span></p></div></div>
+        <div class="phase"><div class="pk">P5</div><div><h4>콘텐츠 팩토리 (Opus/Sonnet 배치)</h4><p>기존 콘텐츠 ingest → 빈 셀 Opus 저술 → Sonnet 변형 → 검수 → 적재.<span class="cost">~4주 + 검수 · 1일차 커버리지</span></p></div></div>
+        <div class="phase"><div class="pk">P6</div><div><h4>서빙 게이트 + 폐루프</h4><p>orchestrator에 retrieval 삽입, Haiku 어댑트, 재사용율 score 측정.<span class="cost">~2주 · 절감 실현 · ◀ 완전 정지점</span></p></div></div>
+      </div>
+      <p class="kicker"><b>권고:</b> 규모와 무관하게 <b>P0~P2는 즉시</b>(저위험·관측 이득) → <b>P4까지를 기본 목표</b>로 삼아 실제 절감폭을 측정 → 그 데이터와 학생 규모로 <b>P5~P6 진행을 결정</b>. 지금(설계 단계)에서 보면 P4가 "최대한 안전하게 확신을 얻는" 지점이다.</p>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section id="s12">
+    <div class="wrap">
+      <p class="eyebrow"><span class="no">12</span> · 결론 및 권고</p>
+      <h2>결론</h2>
+      <div class="thesis"><p>현재 코드는 관측이 성숙해 <strong>P1~P2(GAP 보강·피드백)는 즉시·저위험</strong>으로 착수 가능하며 RAG와 무관하게 가치가 있다. RAG 본체(P3~P6)는 <strong>트래픽 규모에서 정당화</strong>되며, 하드웨어의 유한 셀 공간 덕에 <strong>사전 제작 + 모델 티어링</strong>이 특히 잘 맞는다. 신규 스택은 <strong>벡터 인덱스(별도 Redis Stack) · 로컬 임베딩 · 저술 배치</strong> 3가지뿐이고, 원천은 기존 MySQL, 나머지는 기존 코드/Redis/Langfuse/Sentry를 재활용한다.</p></div>
+      <p class="kicker">권고 순서: <b>P0(실측)</b> 병행 → <b>P1·P2 즉시 착수</b> → 규모/실측 결과 보고 <b>P3~P6 진행 판단</b>. 가장 큰 지렛대는 <b>기존 사내 콘텐츠 재활용(저술비 $0) + Haiku 서빙</b>.</p>
+    </div>
+  </section>
+
+  <div class="foot"><div class="wrap"><b>edu-agent · 비용 절감 설계 리포트 v2</b><br>원본 문서 docs/design/langfuse-rag-architecture.md · 단가는 전부 대표값 추정(Phase 0 실측 대체) · 상태 Draft</div></div>
+
+</div>

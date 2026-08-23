@@ -1,0 +1,12 @@
+# 온톨로지 도출 테스트 데모 — 경량 이미지 (Aurora/Redis 불필요, SQLite 내장)
+FROM python:3.11-slim
+
+WORKDIR /app
+RUN pip install --no-cache-dir "fastapi>=0.115.0" "uvicorn>=0.34.0"
+
+# 코드 + 시드 + 세션 데이터 복사 (빌드 시점 스냅샷)
+COPY scripts/ /app/scripts/
+COPY projects/ /app/projects/
+
+# 컨테이너 기동 시: 온톨로지 빌드 → 서버 실행
+CMD ["sh", "-c", "python scripts/build_ontology.py && uvicorn rag_demo_app:app --app-dir scripts --host 0.0.0.0 --port 8100"]

@@ -1,0 +1,29 @@
+# 비밀값 — .env 는 서버/로컬 전용이며 저장소에 올리지 않는다.
+#   배포는 rsync 에서 .env 를 제외하고(deploy.yml), 없으면 최소본을 생성하므로
+#   저장소에 없어도 문제없다. 로컬 개발용 템플릿은 .env.example 참조.
+#   ⚠ 과거에 .env 가 추적돼 GEMINI_API_KEY·LANGFUSE_SECRET_KEY 가 히스토리에 남아 있다
+#     — 해당 키들은 회전(rotate) 필요. 이 파일은 앞으로의 재발만 막는다.
+.env
+.env.local
+.env.*.local
+
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.claude
+output/
+.build_cache/
+.DS_Store
+scripts/npm.env
+
+# 생성물(임베딩·DB·등록 스토어) — build_ontology/build_embeddings/backfill 로 재생성.
+# 단, 온프렘 배포 재현용 canonical base 자산(gold 8/8 코퍼스)은 버전관리해 워크플로우로 서버에 전송.
+# 등록 스토어(registered.*)=런타임 되먹임 상태는 계속 제외(서버에서 보존).
+data/*
+!data/ontology.db
+!data/chunk_emb.npy
+!data/chunk_meta.json
+# bkit 플러그인 상태
+.bkit/
+.claude/issue-loop/

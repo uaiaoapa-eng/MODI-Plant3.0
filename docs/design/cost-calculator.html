@@ -1,0 +1,299 @@
+<style>
+  :root{
+    --paper:#F4F5F7;--paper-2:#FBFBFC;--ink:#13171F;--ink-2:#3C434F;--ink-3:#6A7280;
+    --line:#DEE1E7;--line-2:#C9CDD6;
+    --signal:#0F766E;--signal-soft:#E6F0EE;--rust:#9A6A50;--rust-soft:#F0E7E1;
+    --good:#3F7E5E;--warn:#94724A;
+    --c-cache:#0B3F45;--c-turn:#186A72;--c-rag:#2F8F93;--c-script:#77B0AF;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box}body{margin:0}
+  .doc{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+  .hd{background:var(--ink);color:#EDEFF3;padding:36px 0 30px;border-bottom:3px solid var(--signal)}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:#5BC7D0;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+  .eyebrow::before{content:"";width:26px;height:1.5px;background:#5BC7D0}
+  .hd h1{font-size:clamp(23px,3.5vw,32px);letter-spacing:-.02em;font-weight:800;margin:0 0 10px;text-wrap:balance}
+  .hd p{margin:0;color:#AEB6C2;font-size:14px;max-width:64ch}
+  section{padding:32px 0}section+section{border-top:1px solid var(--line)}
+  h2{font-size:19px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em}
+  .shd{color:var(--ink-3);font-size:13.5px;margin:0 0 18px}
+  .panel{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 22px}
+  .field label{display:block;font-size:13px;font-weight:650;color:var(--ink-2);margin-bottom:6px}
+  .field .hint{font-family:var(--mono);font-size:11px;color:var(--ink-3);font-weight:400}
+  .field input[type=number]{width:100%;font-family:var(--mono);font-size:15px;padding:9px 11px;border:1px solid var(--line-2);border-radius:3px;background:var(--paper-2);color:var(--ink);font-variant-numeric:tabular-nums}
+  .field input[type=number]:focus{outline:2px solid var(--signal);border-color:var(--signal)}
+  .field input[type=range]{width:100%;margin-top:8px}
+  .field .rngval{font-family:var(--mono);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+  .lever label{border-left:3px solid var(--line-2);padding-left:9px}
+  .lever.cache label{border-color:var(--c-cache)} .lever.cache input[type=range]{accent-color:var(--c-cache)} .lever.cache .rngval{color:var(--c-cache)}
+  .lever.turn label{border-color:var(--c-turn)} .lever.turn input[type=range]{accent-color:var(--c-turn)} .lever.turn .rngval{color:var(--c-turn)}
+  .lever.rag label{border-color:var(--c-rag)} .lever.rag input[type=range]{accent-color:var(--c-rag)} .lever.rag .rngval{color:var(--c-rag)}
+  .lever.script label{border-color:var(--c-script)} .lever.script input[type=range]{accent-color:var(--c-script)} .lever.script .rngval{color:var(--c-script)}
+  .adv{margin-top:20px;padding-top:18px;border-top:1px dashed var(--line)}
+  .adv .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+  .reset{font-family:var(--mono);font-size:12px;color:var(--ink-3);background:none;border:1px solid var(--line-2);border-radius:3px;padding:6px 12px;cursor:pointer}
+  .reset:hover{border-color:var(--signal);color:var(--signal)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .card{border:1px solid var(--line);border-radius:4px;background:var(--paper-2);padding:16px 16px 14px}
+  .card.now{border-color:#E6C6B5;background:var(--rust-soft)} .card.after{border-color:#B9DBDD;background:var(--signal-soft)}
+  .card .k{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+  .card .v{font-family:var(--mono);font-size:26px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;margin-top:8px}
+  .card.now .v{color:var(--rust)} .card.after .v{color:var(--signal)}
+  .card .sm{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:6px;font-variant-numeric:tabular-nums}
+  .card .sm b{color:var(--good)}
+  /* waterfall */
+  .wf{display:flex;flex-direction:column;gap:9px}
+  .wfrow{display:grid;grid-template-columns:130px 1fr 92px;gap:12px;align-items:center}
+  .wfrow .nm{font-size:13px;font-weight:600;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+  .wfrow .dot{width:9px;height:9px;border-radius:2px;flex:none}
+  .barwrap{background:#ECEEF1;border-radius:3px;height:26px;position:relative;overflow:hidden}
+  .bar{height:100%;border-radius:3px;transition:width .25s ease}
+  .wfrow .amt{font-family:var(--mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .wfrow .amt .d{font-size:11px;display:block;margin-top:1px}
+  .chart-wrap{border:1px solid var(--line);border-radius:4px;background:var(--paper-2);padding:20px 22px 16px}
+  .chart-legend{display:flex;gap:20px;font-family:var(--mono);font-size:12px;margin-top:10px;flex-wrap:wrap}
+  .chart-legend span{display:flex;align-items:center;gap:7px;color:var(--ink-2)}
+  .swatch{width:16px;height:3px;display:inline-block;border-radius:2px}
+  .swatch.dash{background:repeating-linear-gradient(90deg,var(--rust) 0 5px,transparent 5px 9px)}
+  .note{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-top:14px;background:#EFF1F4;border:1px solid var(--line);border-radius:3px;padding:12px 15px}
+  .note b{color:var(--ink-2)}
+  /* help tooltip */
+  .help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--signal);color:#fff;font-size:10px;font-weight:700;font-family:var(--sans);cursor:help;margin-left:3px;vertical-align:middle;line-height:1;flex:none}
+  .help:focus{outline:2px solid var(--signal);outline-offset:1px}
+  .help .tip{position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);width:250px;max-width:74vw;background:var(--ink);color:#EDEFF3;font-size:12.5px;font-weight:400;line-height:1.55;padding:11px 13px;border-radius:6px;opacity:0;visibility:hidden;transition:opacity .14s;z-index:30;text-align:left;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  .help .tip b{color:#8FD9D1;font-weight:600}
+  .help .tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--ink)}
+  .help.down .tip{bottom:auto;top:calc(100% + 9px)}
+  .help.down .tip::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--ink)}
+  .help:hover .tip,.help:focus .tip{opacity:1;visibility:visible}
+  .readme{background:var(--signal-soft);border:1px solid #B9DBDD;border-radius:4px;padding:18px 22px}
+  .readme p{margin:0 0 10px;font-size:14.5px;color:var(--ink-2);max-width:82ch}
+  .readme p:last-child{margin-bottom:0}.readme b{color:var(--ink)}
+  @media(max-width:760px){.panel{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr 1fr}.wfrow{grid-template-columns:104px 1fr 78px}}
+</style>
+
+<div class="doc">
+  <div class="hd"><div class="wrap">
+    <p class="eyebrow">edu-agent · 멀티 레버 비용 계산기 v2</p>
+    <h1>절감은 여러 변수의 곱 — 레버를 쌓으면 더 준다</h1>
+    <p>RAG hit은 레버 하나일 뿐입니다. 각본 비율·턴 감소·캐싱을 더하면 미스 경로 비용과 baseline까지 내려가 절감이 누적됩니다. 아래에서 각 레버가 얼마나 기여하는지 분해해 보여줍니다.</p>
+  </div></div>
+
+  <section><div class="wrap">
+    <h2>이 계산기 읽는 법 (보고용 요약)</h2>
+    <div class="readme">
+      <p><b>한 줄 요약:</b> 지금은 학생이 질문할 때마다 AI가 <b>매번 처음부터 새로 생성</b>합니다. 이 설계는 <b>잘 만든 답을 미리 쌓아두고(코퍼스<span class="help down" tabindex="0" role="button" aria-label="코퍼스 설명">?<span class="tip"><b>코퍼스</b> = 미리 만들어 쌓아둔 '질문–좋은 답' 모음. 검색해서 재사용하는 지식 창고예요.</span></span>) 재사용</b>해서, 매번 생성하는 대신 <b>싸게 변형<span class="help down" tabindex="0" role="button" aria-label="변형 설명">?<span class="tip"><b>변형(어댑트)</b> = 쌓아둔 답을 학생 상황에 맞게 '살짝 고치는' 것. 새로 만드는 것보다 훨씬 쌉니다.</span></span>만</b> 하도록 바꿉니다.</p>
+      <p><b>비유:</b> 요리사가 주문마다 요리를 처음부터 만드는 대신(현재), <b>밑반찬을 미리 대량으로 만들어 두고 주문 시 살짝 데워 내는</b> 것(제안)과 같습니다. 밑반찬이 많이 쌓일수록 새로 만드는 비율이 줄어 비용이 내려갑니다.</p>
+      <p><b>4개의 절감 방법(레버<span class="help down" tabindex="0" role="button" aria-label="레버 설명">?<span class="tip"><b>레버</b> = 비용을 줄이는 '방법' 하나하나. 여러 레버를 함께 쓰면 효과가 곱해집니다.</span></span>):</b> 아래 4가지를 <b>동시에</b> 쓰면 효과가 곱해집니다. 슬라이더를 움직이면 아래 "절감 기여도"에서 각 방법이 얼마를 아끼는지 바로 보입니다.</p>
+    </div>
+    <h2 style="margin-top:28px">입력값 & 레버</h2>
+    <p class="shd">위 3개(파랑 없음)는 <b>규모</b>, 아래 색상 4개는 <b>절감 방법</b>. 색이 아래 그래프·막대와 일치합니다.</p>
+    <div class="panel">
+      <div class="field"><label>학생 수 <span class="hint">명</span></label><input type="number" id="students" value="500" min="0" step="50"></div>
+      <div class="field"><label>월 턴 / 학생 <span class="hint">turns</span></label><input type="number" id="tpu" value="40" min="0" step="5"></div>
+      <div class="field"><label>코퍼스 규모 <span class="rngval" id="corpusVal">1,500</span> <span class="hint">건</span></label><input type="range" id="corpus" value="1500" min="0" max="10000" step="100"><div class="hint" style="margin-top:4px">미리 쌓아둔 답의 개수. <b>약 5,000건이면 사실상 포화</b> — 그 이상은 비용이 거의 안 줄어요.</div></div>
+
+      <div class="field lever rag"><label>① 재사용률 (RAG<span class="help down" tabindex="0" role="button" aria-label="RAG 설명">?<span class="tip"><b>RAG · 재사용률</b> = 새로 생성하지 않고, 쌓아둔 답에서 비슷한 걸 찾아 재사용하는 질문의 비율. (RAG=검색해서 답하기)</span></span>) <span class="rngval" id="ragVal">47%</span></label><div class="hint" style="margin-top:8px"><b>코퍼스 규모에서 자동 계산</b>됩니다 (왼쪽 슬라이더). 수동 지정은 고급 설정에서.</div></div>
+      <div class="field lever script"><label>② 각본<span class="help down" tabindex="0" role="button" aria-label="각본 설명">?<span class="tip"><b>각본(scripted)</b> = 미리 짜 둔 수업 진행 시나리오. 학생이 이 흐름을 따르면 AI가 새로 만들 필요가 거의 없어요.</span></span> 비율 <span class="rngval" id="scriptVal">30%</span></label><input type="range" id="script" value="30" min="0" max="80" step="5"><div class="hint" style="margin-top:4px">"미리 만든 수업 각본"을 그대로 따라가 <b>AI 생성이 거의 필요 없는</b> 질문 비율.</div></div>
+      <div class="field lever turn"><label>③ 대화 횟수 감소 <span class="rngval" id="turnVal">20%</span></label><input type="range" id="loop" value="20" min="0" max="50" step="5"><div class="hint" style="margin-top:4px">지금은 한 질문에 AI가 여러 번 왕복. 각본으로 <b>왕복 횟수를 줄인</b> 비율.</div></div>
+      <div class="field lever cache"><label>④ 캐싱<span class="help down" tabindex="0" role="button" aria-label="캐싱 설명">?<span class="tip"><b>캐싱</b> = 매번 똑같이 들어가는 지시문을 재사용(저장)해 입력 비용을 깎는 기술이에요.</span></span> 절감 <span class="rngval" id="cacheVal">10%</span></label><input type="range" id="cache" value="10" min="0" max="40" step="5"><div class="hint" style="margin-top:4px">반복되는 지시문을 재사용(캐시)해 <b>입력 비용을 깎는</b> 비율.</div></div>
+    </div>
+    <div class="adv">
+      <div class="lbl">고급 · 단가 (Phase 0 실측으로 교체)</div>
+      <div class="panel">
+        <div class="field"><label>풀 생성 / 턴 <span class="hint">$</span></label><input type="number" id="gen" value="0.029" min="0" step="0.001"></div>
+        <div class="field"><label>RAG 어댑트 / 턴 <span class="hint">$</span></label><input type="number" id="adapt" value="0.004" min="0" step="0.001"></div>
+        <div class="field"><label>각본 서빙<span class="help" tabindex="0" role="button" aria-label="서빙 설명">?<span class="tip"><b>서빙</b> = 사용자에게 실제로 답을 만들어 내보내는 것. '서빙 단가' = 답 한 번 내보내는 비용이에요.</span></span> / 턴 <span class="hint">$</span></label><input type="number" id="scost" value="0.0015" min="0" step="0.0005"></div>
+        <div class="field"><label>조회 오버헤드 / 턴 <span class="hint">$</span></label><input type="number" id="lookup" value="0.0005" min="0" step="0.0001"></div>
+        <div class="field"><label>카테고리별 커버 상한 <span class="hint">% (신규표현 등 못 잡는 몫)</span></label><input type="number" id="hmax" value="90" min="0" max="100" step="1"></div>
+        <div class="field"><label>재사용률 수동 지정 <span class="hint">% (−1=자동)</span></label><input type="number" id="ragOverride" value="-1" min="-1" max="100" step="1"></div>
+        <div class="field" style="align-self:end"><button class="reset" id="reset">기본값 초기화</button></div>
+      </div>
+    </div>
+  </div></section>
+
+  <section><div class="wrap">
+    <h2>결과</h2>
+    <p class="shd">모든 레버 적용 후. 파생 hit<span class="help down" tabindex="0" role="button" aria-label="hit rate 설명">?<span class="tip"><b>hit rate</b> = 쌓아둔 답으로 해결된 질문의 비율. 높을수록 새로 생성하는 비율이 줄어 비용이 내려가요.</span></span> <b id="hitLabel">47%</b> · <b id="turnsLabel">월 20,000턴</b><span class="help down" tabindex="0" role="button" aria-label="턴 설명">?<span class="tip"><b>턴</b> = 학생이 한 번 질문하고 답을 받는 한 번의 주고받기예요.</span></span></p>
+    <div class="cards">
+      <div class="card now"><div class="k">현재 (RAG·레버 없음)</div><div class="v" id="baseM">$580</div><div class="sm" id="baseY">연 $6,960</div></div>
+      <div class="card after"><div class="k">레버 적용 후</div><div class="v" id="finM">$—</div><div class="sm" id="finY"></div></div>
+      <div class="card"><div class="k">절감 / 월</div><div class="v" style="color:var(--good)" id="saveM">$—</div><div class="sm"><b id="savePct">—</b> 절감</div></div>
+      <div class="card"><div class="k">절감 / 년</div><div class="v" style="color:var(--good)" id="saveY">$—</div><div class="sm">레버 4개 누적</div></div>
+    </div>
+  </div></section>
+
+  <section><div class="wrap">
+    <h2>절감 기여도 분해 (waterfall<span class="help" tabindex="0" role="button" aria-label="waterfall 설명">?<span class="tip"><b>waterfall(폭포 그래프)</b> = 각 절감 방법이 비용을 얼마씩 깎는지 위에서 아래로 단계별로 보여주는 그래프예요.</span></span>)</h2>
+    <p class="shd">baseline<span class="help" tabindex="0" role="button" aria-label="baseline 설명">?<span class="tip"><b>baseline</b> = 아무것도 안 했을 때(현재)의 기준 비용이에요.</span></span>에서 시작해 레버를 하나씩 누적. 각 막대 = 그 레버 적용 후 남은 월 비용, 오른쪽 = 그 레버가 추가로 깎은 금액.</p>
+    <div class="wf" id="waterfall"></div>
+  </div></section>
+
+  <section><div class="wrap">
+    <h2>왜 "포화"하는가 — 더 쌓아도 안 줄어드는 이유</h2>
+    <p class="shd">이 계산의 핵심 전제입니다. 세 가지 이유가 겹쳐서, 어느 지점 이후로는 코퍼스를 아무리 늘려도 비용이 거의 안 줄어듭니다.</p>
+    <div class="readme" style="background:var(--paper-2);border-color:var(--line)">
+      <p><b>① 한 카테고리의 '질문 종류'는 유한하다.</b> 학생들이 "카운터 만들기"를 묻는 방식은 기껏해야 수십~백여 가지입니다. 그 방식들을 덮는 답을 다 쌓으면, 새 질문은 <b>거의 항상 이미 가진 답과 겹칩니다</b>. 101번째 "카운터" 답은 새로 답할 게 없어요(중복).</p>
+      <p><b>② 인기 질문이 트래픽을 독식한다(Zipf).</b> 소수 인기 카테고리가 질문 대부분을 차지하고, 자주 물으니 <b>가장 빨리 채워집니다</b>. 상위 ~15개만 포화돼도 전체 트래픽의 75~80%가 이미 커버됩니다. 그 뒤로는 <b>드물게 나오는 롱테일</b>만 남아 전체 수치를 거의 못 올립니다.</p>
+      <p><b>③ 100%는 불가능하다(상한).</b> 완전히 새롭거나 학생마다 너무 특수한 질문은 어떤 코퍼스로도 못 잡습니다. 그래서 전체 hit은 100%가 아니라 <b>80~85% 근처에서 멈춥니다</b>.</p>
+      <p style="margin-bottom:0"><b>종합:</b> 쌓는 예시 1개당 가치가 <b>점점 줄어듭니다</b>(한계효용 체감). 첫 예시는 수많은 질문을 답하지만, 200번째는 이미 있는 걸 중복하고 그 카테고리도 드물게 물으니 거의 기여가 없습니다.</p>
+    </div>
+    <p class="kicker" style="margin-top:22px">아래는 <b>카테고리 1개</b>가 채워지는 모습. n≈100개에서 곡선이 눕고, 그 뒤는 거의 평평(중복 구간).</p>
+    <div class="chart-wrap" style="margin-top:10px">
+      <svg viewBox="0 0 720 230" width="100%" height="auto" role="img" aria-label="한 카테고리의 포화 곡선">
+        <line x1="54" y1="18" x2="54" y2="188" stroke="#C9CDD6"/><line x1="54" y1="188" x2="690" y2="188" stroke="#C9CDD6"/>
+        <text x="8" y="26" font-family="ui-monospace,monospace" font-size="10" fill="#6A7280">셀 hit</text>
+        <text x="560" y="208" font-family="ui-monospace,monospace" font-size="10.5" fill="#6A7280">이 카테고리에 쌓인 예시 수 →</text>
+        <line x1="54" y1="52" x2="690" y2="52" stroke="#DEE1E7" stroke-dasharray="4 4"/><text x="58" y="47" font-family="ui-monospace,monospace" font-size="10" fill="#6A7280">0.8 (포화)</text>
+        <rect x="296" y="18" width="394" height="170" fill="#0F766E" opacity="0.05"/>
+        <text x="493" y="120" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#0F766E">중복 구간 — 더 쌓아도 이득 거의 0</text>
+        <path d="M54,188 C130,124 210,86 296,64 C440,50 560,44 690,40" fill="none" stroke="#0F766E" stroke-width="2.5"/>
+        <circle cx="150" cy="113" r="4" fill="#9A6A50"/><text x="150" y="107" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#9A6A50">n≈40 · 0.44</text>
+        <circle cx="296" cy="64" r="5" fill="#13171F"/><text x="296" y="52" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#13171F">n≈100 · 0.73</text>
+        <g font-family="ui-monospace,monospace" font-size="10" fill="#6A7280" text-anchor="middle"><text x="54" y="204">0</text><text x="296" y="204">100</text><text x="493" y="204">200</text><text x="690" y="204">300</text></g>
+      </svg>
+    </div>
+    <div class="note" id="satReadout"></div>
+  </div></section>
+
+  <section><div class="wrap">
+    <h2>코퍼스 궤적 (다른 레버 고정)</h2>
+    <p class="shd">가로=코퍼스, 세로=월 비용. 빨강 점선=현재 baseline, 청록=현재 레버 조합 적용. ●=현재 코퍼스.</p>
+    <div class="chart-wrap">
+      <svg id="chart" viewBox="0 0 720 300" width="100%" height="auto" role="img" aria-label="코퍼스 규모별 월 비용"></svg>
+      <div class="chart-legend">
+        <span><i class="swatch dash"></i> 현재 baseline</span>
+        <span><i class="swatch" style="background:#0F766E"></i> 레버 적용 월 비용</span>
+        <span><i class="swatch" style="background:#13171F;height:9px;width:9px;border-radius:50%"></i> 현재 코퍼스</span>
+      </div>
+    </div>
+    <div class="note" id="modelNote"></div>
+  </div></section>
+</div>
+
+<script>
+(function(){
+  var ids=["students","tpu","corpus","ragOverride","script","loop","cache","gen","adapt","scost","lookup","hmax"];
+  var el={}; ids.forEach(function(i){el[i]=document.getElementById(i);});
+  var defaults={students:500,tpu:40,corpus:1500,ragOverride:-1,script:30,loop:20,cache:10,gen:0.029,adapt:0.004,scost:0.0015,lookup:0.0005,hmax:90};
+  // ── 바닥부터(카테고리별) hit 모델 ──
+  // 카테고리 N개, 트래픽은 Zipf 분포(인기 소수가 대부분). 예시는 트래픽 비중에 비례해 쌓임(인기 셀 먼저 참).
+  // 셀 내 hit = 커버상한 × (1 − e^(−예시수/60))  → 셀당 ~100개면 포화. 전체 hit = Σ 트래픽가중 × 셀hit.
+  var N_CAT=40, ZIPF_S=1.0, TAU_CELL=60;
+  var CAT_W=(function(){var r=[],t=0,i;for(i=1;i<=N_CAT;i++){r.push(1/Math.pow(i,ZIPF_S));t+=r[i-1];}return r.map(function(x){return x/t;});})();
+  function val(i){var v=parseFloat(el[i].value);return isNaN(v)?0:v;}
+  function fmt(n){return "$"+Math.round(n).toLocaleString("en-US");}
+  function fmtK(n){return n>=1000?(n/1000).toFixed(n%1000?1:0)+"k":String(n);}
+  function cellHit(n,cellMax){return cellMax*(1-Math.exp(-n/TAU_CELL));}
+  function hitAt(c,cellMaxPct){
+    var cellMax=(cellMaxPct==null?90:cellMaxPct)/100, h=0, i;
+    for(i=0;i<N_CAT;i++){h+=CAT_W[i]*cellHit(c*CAT_W[i],cellMax);}
+    return h;
+  }
+
+  function P(){
+    var ov=val("ragOverride");
+    var h = ov<0 ? hitAt(val("corpus"),val("hmax")) : ov/100;
+    return {gen:val("gen"),adapt:val("adapt"),scost:val("scost"),lookup:val("lookup"),
+            h:h, s:val("script")/100, loop:val("loop")/100, cache:val("cache")/100};
+  }
+  // effective per-turn cost with a chosen subset of levers
+  function eff(p,use){
+    var cache=use.cache?p.cache:0, loop=use.loop?p.loop:0, h=use.rag?p.h:0, s=use.script?p.s:0;
+    var Cmiss=p.gen*(1-cache)*(1-loop);
+    var lk=(use.rag)?p.lookup:0;
+    var nonScript=h*(p.adapt+lk)+(1-h)*(Cmiss+lk);
+    return s*p.scost+(1-s)*nonScript;
+  }
+
+  function update(){
+    var students=val("students"),tpu=val("tpu"),turns=students*tpu,p=P();
+    var baseM=turns*p.gen;
+    // cumulative levers: cache → turn → rag → script
+    var stages=[
+      {nm:"현재 baseline",use:{},color:"var(--rust)"},
+      {nm:"④ 캐싱",use:{cache:1},color:"var(--c-cache)"},
+      {nm:"③ 턴/루프 감소",use:{cache:1,loop:1},color:"var(--c-turn)"},
+      {nm:"① RAG 재사용",use:{cache:1,loop:1,rag:1},color:"var(--c-rag)"},
+      {nm:"② 각본 서빙",use:{cache:1,loop:1,rag:1,script:1},color:"var(--c-script)"}
+    ];
+    var costs=stages.map(function(st){return turns*eff(p,st.use);});
+    costs[0]=baseM; // pure baseline (no lookup)
+    var finM=costs[costs.length-1], saveM=baseM-finM, pct=baseM>0?saveM/baseM*100:0;
+
+    var cvEl=document.getElementById("corpusVal"); if(cvEl) cvEl.textContent=Math.round(val("corpus")).toLocaleString("en-US");
+    // 포화 readout: 총 코퍼스를 인기/중위 카테고리로 환산
+    var sr=document.getElementById("satReadout");
+    if(sr){var C=val("corpus"),cm=val("hmax"); var nTop=C*CAT_W[0], n15=C*CAT_W[14];
+      sr.innerHTML='<b>지금 코퍼스 '+Math.round(C).toLocaleString("en-US")+'개</b>를 트래픽 비중으로 나누면 → '+
+        '인기 1위 카테고리에 ~'+Math.round(nTop)+'개(셀 hit '+Math.round(cellHit(nTop,cm/100)*100)+'%, 이미 포화), '+
+        '15위 카테고리에 ~'+Math.round(n15)+'개(셀 hit '+Math.round(cellHit(n15,cm/100)*100)+'%), 하위는 거의 0개. '+
+        '<b>인기 카테고리는 이미 꽉 찼고, 남은 건 드문 롱테일뿐</b>이라 전체 hit이 잘 안 오릅니다.';}
+    document.getElementById("ragVal").textContent=(p.h*100).toFixed(0)+"%"+(val("ragOverride")<0?" (자동)":" (수동)");
+    document.getElementById("scriptVal").textContent=(p.s*100).toFixed(0)+"%";
+    document.getElementById("turnVal").textContent=(p.loop*100).toFixed(0)+"%";
+    document.getElementById("cacheVal").textContent=(p.cache*100).toFixed(0)+"%";
+    document.getElementById("hitLabel").textContent=(p.h*100).toFixed(0)+"%";
+    document.getElementById("turnsLabel").textContent="월 "+turns.toLocaleString("en-US")+"턴";
+    document.getElementById("baseM").textContent=fmt(baseM);
+    document.getElementById("baseY").textContent="연 "+fmt(baseM*12);
+    document.getElementById("finM").textContent=fmt(finM);
+    document.getElementById("finY").textContent="연 "+fmt(finM*12);
+    document.getElementById("saveM").textContent=fmt(saveM);
+    document.getElementById("saveY").textContent=fmt(saveM*12);
+    var sp=document.getElementById("savePct");sp.textContent=pct.toFixed(0)+"%";sp.style.color=pct>=0?"var(--good)":"var(--rust)";
+
+    // waterfall
+    var wf='';
+    stages.forEach(function(st,i){
+      var cur=costs[i], w=baseM>0?Math.max(1,cur/baseM*100):0;
+      var delta=i===0?0:(costs[i-1]-cur);
+      wf+='<div class="wfrow"><div class="nm"><span class="dot" style="background:'+st.color+'"></span>'+st.nm+'</div>'+
+          '<div class="barwrap"><div class="bar" style="width:'+w+'%;background:'+st.color+'"></div></div>'+
+          '<div class="amt">'+fmt(cur)+(i>0?'<span class="d" style="color:var(--good)">−'+fmt(delta)+'</span>':'<span class="d" style="color:var(--ink-3)">시작</span>')+'</div></div>';
+    });
+    document.getElementById("waterfall").innerHTML=wf;
+
+    drawChart(turns,baseM,p);
+    document.getElementById("modelNote").innerHTML=
+      '<b>hit 모델(바닥부터):</b> 카테고리 40개·Zipf 트래픽, 예시는 트래픽 비중대로 쌓임. 셀 hit=상한×(1−e^(−예시/60)), 전체 hit=Σ(트래픽×셀hit). '+
+      '<b>비용:</b> 미스생성비=생성×(1−캐싱)×(1−턴감소); 턴비용=각본×각본단가+(1−각본)×[hit×(어댑트+조회)+(1−hit)×(미스+조회)]. '+
+      '<b>검증:</b> test_cost_model.py로 정면·역산 22개 통과. <b>단가는 추정 — Phase 0 실측 필요.</b>';
+  }
+
+  function drawChart(turns,baseM,p){
+    var W=720,H=300,L=60,R=690,T=30,B=250;
+    var use={cache:1,loop:1,rag:1,script:1};
+    var yMax=baseM*1.08||1;
+    function X(c){return L+(c/10000)*(R-L);}
+    function Y(v){return B-(v/yMax)*(B-T);}
+    var s='';
+    s+='<line x1="'+L+'" y1="'+T+'" x2="'+L+'" y2="'+B+'" stroke="#C9CDD6"/><line x1="'+L+'" y1="'+B+'" x2="'+R+'" y2="'+B+'" stroke="#C9CDD6"/>';
+    for(var t=0;t<=4;t++){var yv=yMax*t/4,yy=Y(yv);
+      s+='<line x1="'+L+'" y1="'+yy+'" x2="'+R+'" y2="'+yy+'" stroke="#EDEFF1"/><text x="'+(L-6)+'" y="'+(yy+3)+'" text-anchor="end" font-family="ui-monospace,monospace" font-size="10" fill="#6A7280">$'+Math.round(yv).toLocaleString("en-US")+'</text>';}
+    [0,2500,5000,7500,10000].forEach(function(c){s+='<text x="'+X(c)+'" y="'+(B+16)+'" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#6A7280">'+fmtK(c)+'</text>';});
+    s+='<text x="'+R+'" y="'+(B+30)+'" text-anchor="end" font-family="ui-monospace,monospace" font-size="10.5" fill="#6A7280">코퍼스 →</text>';
+    s+='<line x1="'+L+'" y1="'+Y(baseM)+'" x2="'+R+'" y2="'+Y(baseM)+'" stroke="#9A6A50" stroke-width="2" stroke-dasharray="6 5"/>';
+    var hmax=val("hmax"),ovr=val("ragOverride");
+    var d='';
+    for(var c=0;c<=10000;c+=200){
+      var pc=Object.assign({},p); pc.h = ovr<0?hitAt(c,hmax):ovr/100;
+      var v=turns*eff(pc,use); d+=(c===0?'M':'L')+X(c).toFixed(1)+','+Y(v).toFixed(1)+' ';
+    }
+    s+='<path d="'+d+'" fill="none" stroke="#0F766E" stroke-width="2.5"/>';
+    var cc=val("corpus"); var pc=Object.assign({},p); pc.h=ovr<0?hitAt(cc,hmax):ovr/100;
+    var mv=turns*eff(pc,use);
+    var cx=Math.min(R,Math.max(L,X(cc)));           // 마커가 차트를 벗어나지 않도록 클램프
+    var tx=Math.min(R-42,Math.max(L+42,cx));         // 라벨 텍스트 잘림 방지
+    s+='<line x1="'+cx+'" y1="'+Y(mv)+'" x2="'+cx+'" y2="'+B+'" stroke="#13171F" stroke-dasharray="3 3" opacity="0.5"/>';
+    s+='<circle cx="'+cx+'" cy="'+Y(mv)+'" r="5.5" fill="#13171F"/><text x="'+tx+'" y="'+(Y(mv)-11)+'" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#13171F">'+fmt(mv)+'/월</text>';
+    document.getElementById("chart").innerHTML=s;
+  }
+
+  ids.forEach(function(i){el[i].addEventListener("input",update);});
+  document.getElementById("reset").addEventListener("click",function(){ids.forEach(function(i){el[i].value=defaults[i];});update();});
+  update();
+})();
+</script>

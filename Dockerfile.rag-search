@@ -1,0 +1,35 @@
+# 하이브리드 검색(벡터+부분일치) 온프렘 이미지 — BGE-m3 baked.
+#
+# 빌드 시점: torch/의존 설치 + BGE-m3 모델만 캐시(오프라인 임베딩용).
+# 온톨로지·임베딩 데이터는 런타임에 '마운트된' projects/ 에서 생성(self-bootstrap).
+#
+# 이미지 ~4–5GB (torch CPU + bge-m3 2.3GB). 서버 RAM 최소 4GB 권장.
+# 경량(부분일치 단독) 배포가 필요하면 Dockerfile.rag-demo 사용.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# torch CPU 휠(용량↓) + 추론 의존
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch>=2.2" \
+ && pip install --no-cache-dir \
+      "transformers>=4.40" "numpy>=1.26" \
+      "fastapi>=0.115.0" "uvicorn>=0.34.0" \
+      "redis>=5.0" "pymysql>=1.1"   # 온프렘 백엔드(RAG_BACKEND=mysql_redis)용
+
+# BGE-m3 모델을 코드 COPY '전에' 굽는다 → scripts 변경 시 모델 재다운로드 안 함(레이어 캐시).
+ENV HF_HOME=/app/.hf_cache
+RUN python -c "from transformers import AutoModel, AutoTokenizer; \
+AutoTokenizer.from_pretrained('BAAI/bge-m3'); AutoModel.from_pretrained('BAAI/bge-m3')"
+
+# 코드/시드(자주 바뀜)는 마지막에. projects/ 는 .dockerignore 제외라 COPY 불가 →
+# 온톨로지·임베딩은 런타임에 마운트된 projects/ 에서 생성(self-bootstrap).
+COPY scripts/ /app/scripts/
+
+# 유사도 게이팅 임계값 + 하이브리드 가중치 (배포에서 오버라이드 가능)
+ENV TAU_REUSE=0.62 TAU_NEAR=0.48 W_VEC=0.4 W_LEX=0.15 W_CONCEPT=0.45 \
+    TRANSFORMERS_OFFLINE=1 HF_HUB_OFFLINE=1
+
+EXPOSE 8100
+# 런타임: 데이터 없을 때만 마운트된 projects/ 에서 생성 후 서빙(있으면 스킵 →
+# backfill 이 이미 만든 ./data 를 재빌드/경합하지 않음, 재시작에도 영속).
+CMD ["sh", "-c", "[ -f data/ontology.db ] || python scripts/build_ontology.py; [ -f data/chunk_emb.npy ] || PYTHONPATH=scripts python scripts/build_embeddings.py; uvicorn rag_demo_app:app --app-dir scripts --host 0.0.0.0 --port 8100"]
