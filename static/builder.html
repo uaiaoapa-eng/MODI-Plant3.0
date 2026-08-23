@@ -3,206 +3,316 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
-<title>만들기 — MODI Plant 3.0</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔴</text></svg>">
+<title>바이브 코딩 — MODI Planet</title>
 <style>
   :root{
-    --bg:#f6f8f7; --panel:#ffffff; --line:#e3e8e5; --txt:#182420; --dim:#5f6f68;
-    --green:#16a06a; --green-d:#0d7a4f; --blue:#2f6fed; --amber:#c47f0e; --bad:#d64545;
-    --chatme:#e5f6ee; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --red:#F5333F; --red-d:#D9202C; --red-soft:#FFE9EA;
+    --sel:#FF8A00; --sel-bg:#FFF6EA;
+    --bg:#FFFFFF; --soft:#F7F8FA; --line:#E8EAEE; --txt:#17191C; --dim:#7A828C;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);height:100vh;display:flex;flex-direction:column}
-  header{display:flex;align-items:center;gap:14px;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
-  header a.home{text-decoration:none;color:var(--txt);font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
-  header a.home .dot{width:11px;height:11px;border-radius:3px;background:var(--green)}
-  .crumb{color:var(--dim);font-size:13px}
-  .seg{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .seg button{border:0;background:transparent;padding:7px 16px;font-size:13.5px;font-weight:700;color:var(--dim);cursor:pointer;font-family:var(--sans)}
-  .seg button.on{background:var(--green);color:#fff}
-  .newbtn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:700;color:var(--dim);cursor:pointer}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  /* 헤더 */
+  header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);flex:none}
+  .logo{display:flex;align-items:baseline;gap:7px;text-decoration:none}
+  .logo .m{color:var(--red);font-weight:900;font-size:21px;letter-spacing:.06em}
+  .logo .p{color:var(--txt);font-weight:800;font-size:20px;letter-spacing:-.01em}
+  .back{border:0;background:none;font-size:18px;color:var(--dim);cursor:pointer;padding:4px 8px;text-decoration:none}
   main{flex:1;display:flex;min-height:0}
-  /* 채팅 */
-  .chatcol{flex:1.05;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
-  .msgs{flex:1;overflow-y:auto;padding:22px 22px 8px;display:flex;flex-direction:column;gap:14px}
-  .msg{max-width:86%;padding:12px 16px;border-radius:14px;font-size:14.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
-  .msg.me{align-self:flex-end;background:var(--chatme);border:1px solid #cdeadc;border-bottom-right-radius:4px}
-  .msg.ai{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
-  .msg.sys{align-self:center;background:transparent;color:var(--dim);font-size:12.5px;padding:2px}
-  .status{align-self:flex-start;color:var(--green-d);font-size:13px;display:flex;gap:8px;align-items:center;padding-left:6px}
-  .status .sp{width:12px;height:12px;border:2px solid var(--green);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+  /* 아이콘 레일 */
+  .rail{width:54px;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:8px;flex:none}
+  .rail button{width:38px;height:38px;border:0;border-radius:10px;background:transparent;font-size:17px;cursor:pointer;color:var(--dim)}
+  .rail button.on{background:var(--red-soft);color:var(--red)}
+  /* 좌측: 대화 */
+  .left{width:400px;min-width:340px;display:flex;flex-direction:column;border-right:1px solid var(--line);flex:none}
+  .lhead{display:flex;align-items:center;gap:10px;padding:14px 16px;flex:none}
+  .lhead h1{font-size:16.5px;margin:0;font-weight:800}
+  .typechip{display:inline-flex;align-items:center;gap:5px;background:var(--sel-bg);color:#B25E00;border:1px solid #FFDDb0;
+    border-radius:99px;padding:3px 11px;font-size:12px;font-weight:700}
+  .newbtn{margin-left:auto;border:0;background:none;font-size:21px;color:var(--dim);cursor:pointer;line-height:1}
+  .msgs{flex:1;overflow-y:auto;padding:6px 16px 10px;display:flex;flex-direction:column;gap:12px}
+  /* 유형 카드 */
+  .typecards{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
+  .tcard{display:flex;gap:13px;align-items:center;border:1.5px solid var(--line);border-radius:14px;padding:15px 16px;
+    cursor:pointer;background:var(--bg);text-align:left;font-family:var(--sans);transition:border-color .12s, background .12s}
+  .tcard:hover{border-color:#cfd6dd}
+  .tcard.on{border-color:var(--sel);background:var(--sel-bg)}
+  .tcard .ic{width:42px;height:42px;border-radius:11px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+  .tcard.on .ic{background:#fff}
+  .tcard b{display:block;font-size:14.5px;margin-bottom:2px}
+  .tcard span{display:block;color:var(--dim);font-size:12.5px}
+  /* 말풍선 */
+  .msg{max-width:88%;padding:11px 15px;border-radius:14px;font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+  .msg.me{align-self:flex-end;background:var(--red);color:#fff;border-bottom-right-radius:5px}
+  .msg.ai{align-self:flex-start;background:var(--soft);border-bottom-left-radius:5px}
+  .msg.sys{align-self:center;background:none;color:var(--dim);font-size:12px;padding:2px}
+  .status{align-self:flex-start;color:var(--red);font-size:12.5px;display:flex;gap:8px;align-items:center;padding-left:4px}
+  .status .sp{width:11px;height:11px;border:2px solid var(--red);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .welcome{align-self:center;text-align:center;color:var(--dim);margin-top:8vh;font-size:15px;line-height:1.8}
-  .welcome h2{color:var(--txt);font-size:22px;margin:0 0 6px}
-  .exrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
-  .exrow button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:7px 14px;font-size:13px;color:var(--txt);cursor:pointer;font-family:var(--sans)}
-  .exrow button:hover{border-color:var(--green)}
-  .inputbar{display:flex;gap:10px;padding:14px 18px;background:var(--panel);border-top:1px solid var(--line)}
-  .inputbar textarea{flex:1;resize:none;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;
-    font-size:14.5px;font-family:var(--sans);min-height:46px;max-height:130px;outline:none;line-height:1.5}
-  .inputbar textarea:focus{border-color:var(--green)}
-  .inputbar button{border:0;border-radius:12px;padding:0 22px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:var(--sans)}
-  #send{background:var(--green);color:#fff}
-  #send:disabled{opacity:.45;cursor:default}
-  #stop{background:#fdeaea;color:var(--bad);display:none}
-  /* 결과 패널 */
-  .outcol{flex:1;display:flex;flex-direction:column;min-width:0;background:#fbfcfb}
-  .tabs{display:flex;gap:2px;padding:10px 14px 0;border-bottom:1px solid var(--line);background:var(--panel)}
-  .tabs button{border:1px solid transparent;border-bottom:0;background:transparent;padding:8px 16px;font-size:13.5px;
-    font-weight:700;color:var(--dim);cursor:pointer;border-radius:9px 9px 0 0;font-family:var(--sans)}
-  .tabs button.on{background:#fbfcfb;border-color:var(--line);color:var(--txt)}
-  .outbody{flex:1;overflow:auto;padding:16px}
-  .empty{color:var(--dim);font-size:13.5px;text-align:center;margin-top:10vh;line-height:1.8}
+  /* 입력부 */
+  .modebar{display:flex;align-items:center;gap:10px;padding:10px 16px 0;flex:none}
+  .modeseg{display:flex;background:var(--soft);border-radius:99px;padding:3px}
+  .modeseg span{padding:5px 14px;border-radius:99px;font-size:12.5px;font-weight:700;color:#fff;background:var(--txt)}
+  .modehint{color:var(--dim);font-size:12px}
+  .inputbar{display:flex;gap:9px;padding:10px 16px 16px;align-items:flex-end;flex:none}
+  .inputbar textarea{flex:1;resize:none;border:1.5px solid var(--line);border-radius:14px;padding:11px 14px;
+    font-size:13.5px;font-family:var(--sans);min-height:44px;max-height:120px;outline:none;line-height:1.5;background:var(--bg)}
+  .inputbar textarea:focus{border-color:var(--red)}
+  .sendbtn{width:42px;height:42px;border:0;border-radius:50%;background:var(--soft);color:var(--dim);font-size:17px;cursor:pointer;flex:none}
+  .sendbtn.ready{background:var(--red);color:#fff}
+  .stopbtn{width:42px;height:42px;border:0;border-radius:50%;background:var(--red-soft);color:var(--red);font-size:14px;cursor:pointer;flex:none;display:none}
+  /* 우측: 워크스페이스 */
+  .right{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+  .tabs{display:flex;align-items:center;gap:4px;padding:12px 18px;flex:none}
+  .tabs button{border:0;background:none;padding:8px 15px;border-radius:99px;font-size:13.5px;font-weight:700;
+    color:var(--dim);cursor:pointer;font-family:var(--sans);position:relative}
+  .tabs button.on{background:var(--red);color:#fff}
+  .tabs .badge{position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:10.5px;font-weight:800;
+    border-radius:99px;min-width:17px;height:17px;display:none;align-items:center;justify-content:center;padding:0 4px}
+  .tabs button.on .badge{background:#fff;color:var(--red)}
+  .outbody{flex:1;overflow:auto;padding:6px 22px 22px;min-height:0}
+  /* 미리보기 창 */
+  .pvwin{max-width:960px;margin:0 auto;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:0 10px 30px rgba(20,24,30,.08);display:flex;flex-direction:column;height:calc(100% - 8px)}
+  .pvbar{display:flex;align-items:center;gap:7px;background:#ECEEF1;padding:9px 13px;flex:none}
+  .pvbar i{width:11px;height:11px;border-radius:50%}
+  .pvbar i:nth-child(1){background:#FF5F57}.pvbar i:nth-child(2){background:#FEBC2E}.pvbar i:nth-child(3){background:#28C840}
+  .pvbar span{flex:1;text-align:center;color:#6a737d;font-size:12px;font-weight:600;margin-right:33px}
+  .pvbody{flex:1;position:relative;background:#fff;min-height:0}
+  .pvbody iframe{width:100%;height:100%;border:0;display:block}
+  .pvempty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;color:var(--dim);font-size:13.5px;text-align:center;line-height:1.7;padding:20px}
+  .pvempty .big{font-size:34px}
+  /* 코드/문서 */
   .filetab{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-  .filetab button{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 12px;font-size:12.5px;font-family:var(--mono);cursor:pointer;color:var(--dim)}
-  .filetab button.on{border-color:var(--green);color:var(--green-d);font-weight:700}
-  pre{background:#101714;color:#d7e4dc;border-radius:10px;padding:14px;font-family:var(--mono);
+  .filetab button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 12px;font-size:12px;font-family:var(--mono);cursor:pointer;color:var(--dim)}
+  .filetab button.on{border-color:var(--red);color:var(--red);font-weight:700}
+  pre.codepre{background:#15181D;color:#DCE3EA;border-radius:12px;padding:15px;font-family:var(--mono);
     font-size:12.5px;line-height:1.55;overflow:auto;white-space:pre-wrap;word-break:break-word;margin:0}
-  .copy{float:right;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:4px 12px;font-size:12px;cursor:pointer;margin-bottom:8px}
-  .steps{display:flex;flex-direction:column;gap:8px}
-  .step{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13.5px}
-  .step .ic{font-size:15px}
-  .step.error{border-color:#f3c8c8}
-  .modichips span{display:inline-block;background:#f0ebff;color:#5a3fd6;border:1px solid #ddd2ff;
-    border-radius:7px;padding:3px 10px;margin:0 6px 8px 0;font-size:12.5px;font-weight:700}
-  @media (max-width:900px){ main{flex-direction:column} .chatcol{border-right:0;border-bottom:1px solid var(--line)} }
+  .copy{float:right;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer;margin-bottom:8px;font-family:var(--sans)}
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;margin-top:12vh;line-height:1.9}
+  .empty .big{font-size:34px;margin-bottom:6px}
+  .modichips{margin-bottom:12px}
+  .modichips span{display:inline-block;background:var(--red-soft);color:var(--red-d);border:1px solid #ffc9cd;
+    border-radius:8px;padding:4px 12px;margin:0 6px 8px 0;font-size:12.5px;font-weight:700}
+  .doccard{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+  .doccard h4{margin:0 0 8px;font-size:13.5px;color:var(--red-d)}
+  .doccard p, .doccard li{font-size:13.5px;line-height:1.7;margin:0}
+  .doccard ul{margin:0;padding-left:18px}
+  .notecard{border:1px solid var(--line);border-left:4px solid var(--sel);border-radius:10px;padding:13px 16px;margin-bottom:10px;background:var(--bg)}
+  .notecard b{display:block;font-size:13.5px;margin-bottom:4px}
+  .notecard p{margin:0;font-size:13px;line-height:1.65;color:#3c434a}
+  @media (max-width:900px){ .left{width:100%;border-right:0} main{flex-direction:column;overflow:auto} .rail{display:none} .right{min-height:70vh} }
 </style>
 </head>
 <body>
 <header>
-  <a class="home" href="/"><span class="dot"></span>MODI Plant</a>
-  <span class="crumb">› 만들기 <b style="color:var(--txt)">· AI와 같이 만들기</b></span>
-  <div class="seg" id="typeSeg">
-    <button data-t="react" class="on">🌐 Web 만들기</button>
-    <button data-t="blockly">🤖 MODI 하드웨어</button>
-  </div>
-  <button class="newbtn" id="newSession">＋ 새로 시작</button>
+  <a class="back" href="/">←</a>
+  <a class="logo" href="/"><span class="m">MODI</span><span class="p">Planet</span></a>
 </header>
 
 <main>
-  <div class="chatcol">
-    <div class="msgs" id="msgs">
-      <div class="welcome" id="welcome">
-        <h2>무엇을 만들고 싶나요?</h2>
-        만들고 싶은 것을 한국어로 편하게 말해 주세요.<br>
-        AI가 되묻고 정리하며 <b>설계 → 구현 → 검증</b> 순서로 같이 만들어 갑니다.
-        <div class="exrow">
-          <button>우리 반 알림판 웹 만들고 싶어</button>
-          <button>클릭하면 점수 올라가는 게임</button>
-          <button>버튼 누르면 LED 켜지게 하고 싶어</button>
-          <button>벽 앞에서 스스로 멈추는 자동차 만들고 싶어</button>
-        </div>
-      </div>
-    </div>
-    <div class="inputbar">
-      <textarea id="input" placeholder="예: 배달 앱 만들고 싶어 / 버튼으로 모터 돌리고 싶어" rows="1"></textarea>
-      <button id="stop">■ 중지</button>
-      <button id="send">보내기</button>
-    </div>
+  <div class="rail">
+    <button class="on" title="대화">💬</button>
+    <button title="기록">🕘</button>
   </div>
 
-  <div class="outcol">
-    <div class="tabs">
-      <button data-tab="code" class="on">📄 결과물</button>
-      <button data-tab="steps">⚙️ 진행 과정</button>
+  <section class="left">
+    <div class="lhead">
+      <h1>바이브 코딩</h1>
+      <span class="typechip" id="typechip">🖥️ 소프트웨어</span>
+      <button class="newbtn" id="newSession" title="새로 시작">＋</button>
     </div>
-    <div class="outbody" id="outbody">
-      <div class="empty">아직 만들어진 결과물이 없어요.<br>대화가 무르익으면 AI가 코드(또는 MODI 블록)를 만들어 여기에 보여줍니다.</div>
+    <div class="msgs" id="msgs">
+      <div class="typecards" id="typecards">
+        <button class="tcard on" data-t="sw">
+          <span class="ic">🖥️</span>
+          <span><b>소프트웨어</b><span>나만의 웹 서비스 만들기</span></span>
+        </button>
+        <button class="tcard" data-t="hw">
+          <span class="ic">🧩</span>
+          <span><b>하드웨어</b><span>MODI로 하드웨어 제어</span></span>
+        </button>
+        <button class="tcard" data-t="hybrid">
+          <span class="ic">🖥️</span>
+          <span><b>소프트웨어 + 하드웨어</b><span>웹 화면이 MODI와 실시간으로 상호작용</span></span>
+        </button>
+      </div>
     </div>
-  </div>
+    <div class="modebar">
+      <div class="modeseg"><span>같이 만들기 · 설계부터</span></div>
+      <span class="modehint">대화하며 함께 설계하고 만들어요</span>
+    </div>
+    <div class="inputbar">
+      <textarea id="input" placeholder="만들고 싶은 걸 설명해주세요" rows="1"></textarea>
+      <button class="stopbtn" id="stop">■</button>
+      <button class="sendbtn" id="send">↑</button>
+    </div>
+  </section>
+
+  <section class="right">
+    <div class="tabs" id="tabs">
+      <button data-tab="pv" class="on">미리보기</button>
+      <button data-tab="code">코드 보기</button>
+      <button data-tab="modi">모디</button>
+      <button data-tab="design">설계 문서</button>
+      <button data-tab="notes">학습 노트<span class="badge" id="noteBadge"></span></button>
+    </div>
+    <div class="outbody" id="outbody"></div>
+  </section>
 </main>
 
 <script>
 const $ = s => document.querySelector(s);
-const msgs = $('#msgs'), input = $('#input'), sendBtn = $('#send'), stopBtn = $('#stop');
-let codingType = 'react';
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TYPES = {
+  sw:     {chip:'🖥️ 소프트웨어', coding:'react'},
+  hw:     {chip:'🧩 하드웨어', coding:'blockly'},
+  hybrid: {chip:'🖥️ 소프트웨어+하드웨어', coding:'react'}
+};
+let typeKey = 'sw';
 let sessionId = 'maker-' + Math.random().toString(36).slice(2, 10);
 let userId = localStorage.getItem('mp_uid') || ('u-' + Math.random().toString(36).slice(2, 12));
 localStorage.setItem('mp_uid', userId);
-let files = {}, blocklyXml = '', modiModules = null, steps = [], curTab = 'code', curFile = '';
-let streaming = false;
+let streaming = false, curTab = 'pv', curFile = '';
+const ws = { files:{}, blocklyXml:'', modiModules:null, blocklyDetail:'', designDoc:null, diagram:'', notes:[], annotations:[] };
 
-// ── 상단 컨트롤 ──
-$('#typeSeg').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || streaming) return;
-  codingType = b.dataset.t;
-  document.querySelectorAll('#typeSeg button').forEach(x => x.classList.toggle('on', x === b));
-  addSys(codingType === 'react' ? '🌐 Web 만들기 모드로 전환했어요.' : '🤖 MODI 하드웨어 모드로 전환했어요.');
+// ── 유형 선택 ──
+$('#typecards').addEventListener('click', e => {
+  const b = e.target.closest('.tcard'); if (!b || streaming) return;
+  typeKey = b.dataset.t;
+  document.querySelectorAll('.tcard').forEach(x => x.classList.toggle('on', x === b));
+  $('#typechip').textContent = TYPES[typeKey].chip;
 });
 $('#newSession').onclick = () => location.reload();
 
-document.querySelector('.tabs').addEventListener('click', e => {
+// ── 탭 ──
+$('#tabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   curTab = b.dataset.tab;
-  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
   renderOut();
 });
-document.querySelector('.exrow').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  input.value = b.textContent; send();
-});
 
-// ── 채팅 렌더 ──
-function el(cls, text){ const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; msgs.appendChild(d); scroll_(); return d; }
-function addSys(t){ el('sys', t); }
-function scroll_(){ msgs.scrollTop = msgs.scrollHeight; }
-let statusEl = null;
-function setStatus(t){
-  if (!t){ if (statusEl){ statusEl.remove(); statusEl = null; } return; }
-  if (!statusEl){ statusEl = document.createElement('div'); statusEl.className = 'status';
-    statusEl.innerHTML = '<span class="sp"></span><span class="tx"></span>'; msgs.appendChild(statusEl); }
-  statusEl.querySelector('.tx').textContent = t; msgs.appendChild(statusEl); scroll_();
+function winFrame(inner){
+  return `<div class="pvwin"><div class="pvbar"><i></i><i></i><i></i><span>미리보기</span></div>
+    <div class="pvbody">${inner}</div></div>`;
 }
-
-// ── 결과 패널 렌더 ──
 function renderOut(){
   const out = $('#outbody');
-  if (curTab === 'steps'){
-    out.innerHTML = steps.length ? '<div class="steps">' + steps.map(s =>
-      `<div class="step ${s.status==='error'?'error':''}"><span class="ic">${s.status==='error'?'⚠️':'✅'}</span><span>${esc(s.description||'')}</span></div>`).join('') + '</div>'
-      : '<div class="empty">진행 과정이 여기에 기록됩니다.</div>';
+  if (curTab === 'pv'){
+    const htmlFile = Object.keys(ws.files).find(n => n.endsWith('.html'));
+    if (htmlFile){
+      out.innerHTML = winFrame('<iframe sandbox="allow-scripts"></iframe>');
+      out.querySelector('iframe').srcdoc = ws.files[htmlFile];
+    } else if (Object.keys(ws.files).length){
+      out.innerHTML = winFrame(`<div class="pvempty"><span class="big">⚙️</span>
+        React 코드가 완성됐어요.<br>실제 서비스에서는 빌드 후 이 창에서 바로 실행됩니다.<br>
+        <b>코드 보기</b> 탭에서 결과물을 확인하세요.</div>`);
+    } else if (ws.blocklyXml){
+      out.innerHTML = winFrame(`<div class="pvempty"><span class="big">🧩</span>
+        MODI 블록이 완성됐어요.<br><b>모디</b> 탭에서 블록 구성과 사용 모듈을 확인하고<br>MODI에 넣어 실행해 보세요.</div>`);
+    } else {
+      out.innerHTML = winFrame(`<div class="pvempty"><span class="big">✨</span>
+        만들고 싶은 것을 왼쪽에서 이야기해 주세요.<br>코드가 완성되면 이 창에 실행 화면이 나타나요.</div>`);
+    }
     return;
   }
-  const names = Object.keys(files);
-  if (!names.length && !blocklyXml){
-    out.innerHTML = '<div class="empty">아직 만들어진 결과물이 없어요.<br>대화가 무르익으면 AI가 코드(또는 MODI 블록)를 만들어 여기에 보여줍니다.</div>';
-    return;
-  }
-  let html = '';
-  if (names.length){
+  if (curTab === 'code'){
+    const names = Object.keys(ws.files);
+    if (!names.length){ out.innerHTML = '<div class="empty"><div class="big">📄</div>아직 생성된 코드가 없어요.<br>대화가 무르익으면 AI가 코드를 만들어 여기에 보여줘요.</div>'; return; }
     if (!names.includes(curFile)) curFile = names[0];
-    html += '<div class="filetab">' + names.map(n =>
-      `<button class="${n===curFile?'on':''}" data-f="${esc(n)}">${esc(n)}</button>`).join('') + '</div>';
-    html += `<button class="copy" data-copy="file">복사</button><pre>${esc(files[curFile])}</pre>`;
+    out.innerHTML = '<div class="filetab">' + names.map(n =>
+      `<button class="${n===curFile?'on':''}" data-f="${esc(n)}">${esc(n)}</button>`).join('') + '</div>' +
+      `<button class="copy" data-copy="file">복사</button><pre class="codepre">${esc(ws.files[curFile])}</pre>`;
+    return;
   }
-  if (blocklyXml){
-    html += '<h3 style="font-size:14px;margin:18px 0 8px">🤖 MODI 블록 (Blockly XML)</h3>';
-    if (modiModules && modiModules.length)
-      html += '<div class="modichips">' + modiModules.map(m => `<span>${esc(typeof m==='string'?m:(m.type||JSON.stringify(m)))}</span>`).join('') + '</div>';
-    html += `<button class="copy" data-copy="xml">복사</button><pre>${esc(blocklyXml)}</pre>`;
+  if (curTab === 'modi'){
+    if (!ws.blocklyXml && !(ws.modiModules||[]).length){
+      out.innerHTML = '<div class="empty"><div class="big">🧩</div>하드웨어(또는 소프트웨어+하드웨어) 작품을 만들면<br>사용 모듈과 MODI 블록이 여기에 나타나요.</div>'; return;
+    }
+    let h = '';
+    if (ws.modiModules && ws.modiModules.length)
+      h += '<div class="doccard"><h4>사용 모듈</h4><div class="modichips">' + ws.modiModules.map(m =>
+        `<span>${esc(typeof m==='string'?m:(m.type||JSON.stringify(m)))}</span>`).join('') + '</div></div>';
+    if (ws.blocklyDetail) h += `<div class="doccard"><h4>동작 설명</h4><p>${esc(ws.blocklyDetail)}</p></div>`;
+    if (ws.blocklyXml) h += `<button class="copy" data-copy="xml">복사</button><pre class="codepre">${esc(ws.blocklyXml)}</pre>`;
+    out.innerHTML = h;
+    return;
   }
-  out.innerHTML = html;
+  if (curTab === 'design'){
+    if (!ws.designDoc && !ws.diagram){
+      out.innerHTML = '<div class="empty"><div class="big">📐</div>AI와 설계 대화를 나누면<br>정리된 설계 문서와 다이어그램이 여기에 쌓여요.</div>'; return;
+    }
+    let h = '';
+    if (ws.designDoc){
+      if (typeof ws.designDoc === 'string') h += `<div class="doccard"><p>${esc(ws.designDoc)}</p></div>`;
+      else for (const [k, v] of Object.entries(ws.designDoc)){
+        if (!v) continue;
+        h += `<div class="doccard"><h4>${esc(k)}</h4>` +
+          (Array.isArray(v) ? '<ul>' + v.map(x => `<li>${esc(typeof x==='string'?x:JSON.stringify(x))}</li>`).join('') + '</ul>'
+                            : `<p>${esc(typeof v==='string'?v:JSON.stringify(v, null, 1))}</p>`) + '</div>';
+      }
+    }
+    if (ws.diagram) h += `<div class="doccard"><h4>다이어그램 (mermaid)</h4></div><pre class="codepre">${esc(ws.diagram)}</pre>`;
+    out.innerHTML = h;
+    return;
+  }
+  if (curTab === 'notes'){
+    if (!ws.notes.length){
+      out.innerHTML = '<div class="empty"><div class="big">📒</div>코드가 만들어지면 AI가 학습 노트를 붙여 줘요.<br>무엇을 배웠는지 여기서 확인하세요.</div>'; return;
+    }
+    out.innerHTML = ws.notes.map(n => {
+      const t = typeof n === 'string' ? {title:'학습 노트', content:n} : n;
+      return `<div class="notecard"><b>${esc(t.title || t.concept || '학습 노트')}</b><p>${esc(t.content || t.description || t.note || JSON.stringify(t))}</p></div>`;
+    }).join('');
+  }
 }
 $('#outbody').addEventListener('click', e => {
   const f = e.target.closest('[data-f]'); if (f){ curFile = f.dataset.f; renderOut(); return; }
   const c = e.target.closest('[data-copy]');
-  if (c){ navigator.clipboard.writeText(c.dataset.copy==='xml' ? blocklyXml : (files[curFile]||'')); c.textContent = '복사됨!'; setTimeout(()=>c.textContent='복사',1200); }
+  if (c){ navigator.clipboard.writeText(c.dataset.copy==='xml' ? ws.blocklyXml : (ws.files[curFile]||'')); c.textContent = '복사됨!'; setTimeout(()=>c.textContent='복사',1200); }
 });
-function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function setBadge(){
+  const b = $('#noteBadge'); const n = ws.notes.length;
+  b.textContent = n; b.style.display = n ? 'inline-flex' : 'none';
+}
+renderOut();
 
-// ── /chat SSE ──
+// ── 채팅 ──
+const msgs = $('#msgs'), input = $('#input'), sendBtn = $('#send'), stopBtn = $('#stop');
+function el(cls, text){ const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; msgs.appendChild(d); msgs.scrollTop = 1e9; return d; }
+let statusEl = null;
+function setStatus(t){
+  if (!t){ if (statusEl){ statusEl.remove(); statusEl = null; } return; }
+  if (!statusEl){ statusEl = document.createElement('div'); statusEl.className = 'status';
+    statusEl.innerHTML = '<span class="sp"></span><span class="tx"></span>'; }
+  statusEl.querySelector('.tx').textContent = t; msgs.appendChild(statusEl); msgs.scrollTop = 1e9;
+}
+input.addEventListener('input', () => {
+  input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  sendBtn.classList.toggle('ready', !!input.value.trim());
+});
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+sendBtn.onclick = send;
+stopBtn.onclick = async () => {
+  try { await fetch('/chat/stop', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id: sessionId})}); } catch {}
+};
+
 async function send(){
   const text = input.value.trim();
   if (!text || streaming) return;
-  const w = $('#welcome'); if (w) w.remove();
-  input.value = ''; el('me', text);
-  streaming = true; sendBtn.disabled = true; stopBtn.style.display = 'block';
+  input.value = ''; input.style.height = 'auto'; sendBtn.classList.remove('ready');
+  el('me', text);
+  streaming = true; stopBtn.style.display = 'block';
   let aiEl = null;
   try {
     const res = await fetch('/chat?user_id=' + encodeURIComponent(userId), {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: sessionId, message: text, mode: 'design', coding_type: codingType})
+      body: JSON.stringify({session_id: sessionId, message: text, mode: 'design', coding_type: TYPES[typeKey].coding})
     });
     if (!res.ok || !res.body) throw new Error('서버 응답 오류 (' + res.status + ')');
     const reader = res.body.getReader(), dec = new TextDecoder();
@@ -216,42 +326,40 @@ async function send(){
         const line = buf.slice(0, idx).trim(); buf = buf.slice(idx + 1);
         if (!line.startsWith('data:')) continue;
         let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
-        handleEvent(ev, t => {
-          if (!aiEl) aiEl = el('ai', '');
-          aiEl.textContent += t; scroll_();
-        });
-        if (ev.type === 'done' || ev.type === 'cancelled') setStatus(null);
+        handleEvent(ev, t => { if (!aiEl) aiEl = el('ai', ''); aiEl.textContent += t; msgs.scrollTop = 1e9; });
       }
     }
   } catch (err){
     setStatus(null);
-    addSys('⚠️ 연결에 실패했어요: ' + err.message + ' — 서버(uvicorn)가 켜져 있는지 확인해 주세요.');
+    el('sys', '⚠️ 연결에 실패했어요: ' + err.message + ' — 서버(uvicorn)가 켜져 있는지 확인해 주세요.');
   } finally {
-    streaming = false; sendBtn.disabled = false; stopBtn.style.display = 'none'; setStatus(null);
+    streaming = false; stopBtn.style.display = 'none'; setStatus(null);
   }
 }
 function handleEvent(ev, appendText){
   switch (ev.type){
     case 'token': setStatus(null); appendText(ev.text || ''); break;
     case 'status': setStatus(ev.message || ''); break;
-    case 'agent_step': case 'agent_step_update':
-      if (ev.description){ steps.push(ev); if (curTab === 'steps') renderOut(); }
-      break;
     case 'code_validated':
-      if (ev.generated_code){ files = ev.generated_code; renderOut(); }
+      if (ev.generated_code){ ws.files = ev.generated_code; if (curTab==='pv'||curTab==='code') renderOut(); }
       break;
     case 'blockly_ready':
-      blocklyXml = ev.blockly_xml || ''; modiModules = ev.modi_modules; renderOut(); break;
+      ws.blocklyXml = ev.blockly_xml || ''; ws.modiModules = ev.modi_modules;
+      if (curTab==='pv'||curTab==='modi') renderOut(); break;
+    case 'done':
+      if (ev.generated_code) ws.files = ev.generated_code;
+      if (ev.blockly_xml) ws.blocklyXml = ev.blockly_xml;
+      if (ev.modi_modules) ws.modiModules = ev.modi_modules;
+      if (ev.blockly_detail) ws.blocklyDetail = typeof ev.blockly_detail==='string' ? ev.blockly_detail : '';
+      if (ev.design_doc) ws.designDoc = ev.design_doc;
+      if (ev.diagram) ws.diagram = ev.diagram;
+      if (ev.learning_notes) ws.notes = ws.notes.concat(ev.learning_notes);
+      setBadge(); renderOut(); setStatus(null); break;
+    case 'cancelled': setStatus(null); break;
     case 'error':
-      setStatus(null); addSys('⚠️ ' + (ev.user_message || ev.message || '오류가 발생했어요.')); break;
+      setStatus(null); el('sys', '⚠️ ' + (ev.user_message || ev.message || '오류가 발생했어요.')); break;
   }
 }
-stopBtn.onclick = async () => {
-  try { await fetch('/chat/stop', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id: sessionId})}); } catch {}
-};
-sendBtn.onclick = send;
-input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
-input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 130) + 'px'; });
 </script>
 </body>
 </html>
