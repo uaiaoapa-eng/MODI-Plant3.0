@@ -25,6 +25,12 @@
     webhw: { label: "Web + 하드웨어", long: "Web + H/W", range: "7~9차시" }
   };
 
+  const WORLD_PROFILES = {
+    elementary: { id: "elementary", name: "MOMO PLANET", zone: "별빛 행성학교" },
+    middle: { id: "middle", name: "NOVA CITY", zone: "루나 메이커 페스티벌" },
+    high: { id: "high", name: "ORBIT-9", zone: "심우주 시스템 미션" }
+  };
+
   const PROGRESS_KEY = "modi-planet-curriculum-progress-v1";
   const USER_KEY = "modi-planet-lms-user-v1";
   const state = {
@@ -64,27 +70,27 @@
     "elementary-04": { product: "MODI 교통 신호등", eyebrow: "입력 → 프로그램 → 출력", primaryLabel: "현재 신호", primaryValue: "초록", status: "샘플 시뮬레이션", message: "보행자 버튼을 누르면 빨강·노랑·초록 순서로 LED가 바뀝니다.", metrics: [["입력", "버튼"], ["처리", "순서"], ["출력", "LED"]], meter: 74, action: "신호 바꾸기", activeStatus: "버튼 입력 감지", activePrimary: "노랑", input: "버튼 ON", logic: "색상 +1", output: "LED 초록" },
     "elementary-05": { product: "보물 지킴이", eyebrow: "거리 센서 경보기", primaryLabel: "안전 기준", primaryValue: "20 cm", status: "SAFE · 샘플", message: "손이 기준보다 가까워지면 빨간 LED와 경보음이 함께 켜집니다.", metrics: [["현재 거리", "42 cm"], ["조건", "20 cm 미만"], ["경보", "대기"]], meter: 68, action: "가까이 다가가기", activeStatus: "ALERT · 경보 작동", activePrimary: "14 cm", input: "거리 42cm", logic: "20cm 비교", output: "초록 LED" },
     "elementary-06": { product: "바람 3단 선풍기", eyebrow: "다이얼 속도 제어", primaryLabel: "다이얼 위치", primaryValue: "62%", status: "중풍 · 샘플", message: "다이얼을 오른쪽으로 돌릴수록 종이 날개가 더 빠르게 회전합니다.", metrics: [["바람", "중풍"], ["모터", "128 rpm"], ["안전", "확인"]], meter: 62, action: "강풍으로 돌리기", activeStatus: "강풍 · 출력 변경", activePrimary: "92%", input: "다이얼 62%", logic: "3단계 매핑", output: "모터 128rpm" },
-    "elementary-07": { product: "ROVER 01", eyebrow: "자율 정지 로봇카", primaryLabel: "장애물 거리", primaryValue: "18 cm", status: "AUTO STOP · 샘플", message: "출발 버튼으로 움직이고 책 벽에 닿기 전에 스스로 멈춥니다.", metrics: [["주행 상태", "정지"], ["속도", "0%"], ["안전 시험", "3/3"]], meter: 46, action: "안전 주행 재생", activeStatus: "주행 → 자동 정지", activePrimary: "STOP", input: "거리 센서", logic: "18cm 정지", output: "모터 OFF" },
-    "elementary-08": { product: "ROVER 리모컨", eyebrow: "웹 ↔ 로봇카", primaryLabel: "차량 연결", primaryValue: "연결됨", status: "양방향 샘플", message: "화면의 명령은 차로, 센서의 거리 값은 화면으로 이동합니다.", metrics: [["거리", "64 cm"], ["속도", "42%"], ["명령", "앞으로"]], meter: 72, action: "정지 명령 보내기", activeStatus: "정지 명령 전달 완료", activePrimary: "STOP", input: "웹 버튼", logic: "명령 전송", output: "모터 제어" },
-    "elementary-09": { product: "별빛카 레이싱", eyebrow: "최종 시연 무대", primaryLabel: "안전 주행 기록", primaryValue: "12.84초", status: "발표 준비 완료", message: "2분 설명과 1분 주행으로 기능·구조·수정 과정을 보여 줍니다.", metrics: [["안전 점검", "100%"], ["발표", "2분"], ["시연", "1분"]], meter: 96, action: "데모 시작하기", activeStatus: "LIVE DEMO · 샘플", activePrimary: "1위", input: "리모컨", logic: "안전 조건", output: "주행 시연" },
+    "elementary-07": { product: "STAR SCOUT 01", eyebrow: "별빛 행성 탐사차", primaryLabel: "크레이터 거리", primaryValue: "18 cm", status: "AUTO SAFE · 샘플", message: "탐사차가 빛나는 정원 길을 달리다가 크레이터 앞에서 스스로 멈춥니다.", metrics: [["탐사 상태", "안전 정지"], ["추진력", "0%"], ["임무 시험", "3/3"]], meter: 46, action: "탐사 장면 재생", activeStatus: "탐사 → 자동 정지", activePrimary: "SAFE", input: "거리 센서", logic: "18cm 안전 정지", output: "모터 OFF" },
+    "elementary-08": { product: "MOMO BASE CONTROL", eyebrow: "기지 ↔ 탐사차", primaryLabel: "탐사차 연결", primaryValue: "연결됨", status: "양방향 샘플", message: "기지의 명령은 탐사차로, 센서의 거리 값은 기지 계기판으로 이동합니다.", metrics: [["거리", "64 cm"], ["추진력", "42%"], ["명령", "탐사 시작"]], meter: 72, action: "귀환 명령 보내기", activeStatus: "귀환 명령 전달 완료", activePrimary: "RETURN", input: "기지 버튼", logic: "명령 전송", output: "탐사차 제어" },
+    "elementary-09": { product: "별빛 탐험 쇼케이스", eyebrow: "최종 탐사 브리핑", primaryLabel: "안전 미션 기록", primaryValue: "3/3", status: "발표 준비 완료", message: "2분 브리핑과 1분 탐사 시연으로 기능·구조·수정 과정을 보여 줍니다.", metrics: [["안전 점검", "100%"], ["브리핑", "2분"], ["탐사 시연", "1분"]], meter: 96, action: "미션 데모 시작", activeStatus: "LIVE MISSION · 샘플", activePrimary: "SUCCESS", input: "기지 리모컨", logic: "안전 조건", output: "탐사 시연" },
     "middle-01": { product: "우리 반 D-day", eyebrow: "요구사항 기반 알림 앱", primaryLabel: "과학 수행평가", primaryValue: "D-5", status: "수용 기준 통과", message: "마감일과 오늘 날짜를 계산해 남은 날짜를 카드로 표시합니다.", metrics: [["등록 일정", "4개"], ["임박 일정", "1개"], ["검증", "5/5"]], meter: 66, action: "임박 일정 확인", activeStatus: "D-3 강조 규칙 확인", activePrimary: "D-3" },
     "middle-02": { product: "Sprint 기록판", eyebrow: "변수와 상태", primaryLabel: "최고 기록", primaryValue: "5.00초", status: "기록 저장 완료", message: "5.20 · 5.00 · 5.40초를 저장하고 가장 짧은 기록을 비교합니다.", metrics: [["현재 기록", "3개"], ["평균", "5.20초"], ["상태", "STOP"]], meter: 84, action: "새 기록 측정", activeStatus: "RUNNING · 상태 변경", activePrimary: "00:03.24" },
     "middle-03": { product: "밸런스 투표 LAB", eyebrow: "디버깅 전후 비교", primaryLabel: "빠른 두 번 클릭", primaryValue: "1표", status: "버그 수정 완료", message: "첫 클릭 뒤 버튼을 잠가 중복 투표가 집계되지 않게 고쳤습니다.", metrics: [["수정 전", "2표"], ["수정 후", "1표"], ["회귀 시험", "통과"]], meter: 100, action: "중복 클릭 시험", activeStatus: "두 번째 클릭 차단", activePrimary: "PASS" },
     "middle-04": { product: "MOOD LIGHT", eyebrow: "밝기 기반 자동 조명", primaryLabel: "현재 밝기", primaryValue: "20 lx", status: "LED ON · 샘플", message: "세 장소의 측정값으로 임계값을 정해 어두운 곳에서만 켜집니다.", metrics: [["임계값", "35 lx"], ["LED", "파란색"], ["표본", "9개"]], meter: 35, action: "밝은 곳으로 이동", activeStatus: "LED OFF · 조건 변경", activePrimary: "48 lx", input: "밝기 20lx", logic: "35lx 비교", output: "LED ON" },
     "middle-05": { product: "SAFE DOOR", eyebrow: "거리·시간 제어", primaryLabel: "문 상태", primaryValue: "OPEN", status: "샘플 시뮬레이션", message: "22cm 이상이 3초 동안 유지된 뒤에만 문을 닫습니다.", metrics: [["현재 거리", "14 cm"], ["대기 시간", "3.0초"], ["모터", "열림"]], meter: 58, action: "통과 장면 재생", activeStatus: "3초 확인 후 닫힘", activePrimary: "CLOSED", input: "거리 14cm", logic: "거리+시간", output: "모터 OPEN" },
     "middle-06": { product: "MODI BEAT", eyebrow: "전자 드럼 키트", primaryLabel: "볼륨 다이얼", primaryValue: "25%", status: "4패드 준비", message: "버튼마다 다른 소리와 LED 색을 연결해 연속 입력까지 시험합니다.", metrics: [["Button 1", "북 · 파랑"], ["Button 2", "심벌 · 노랑"], ["BPM", "112"]], meter: 52, action: "샘플 비트 연주", activeStatus: "입력 2개 정상 처리", activePrimary: "BEAT!", input: "버튼 1·2", logic: "소리 매핑", output: "스피커+LED" },
-    "middle-07": { product: "ROVER CONTROL", eyebrow: "자율주행 텔레메트리", primaryLabel: "차량 상태", primaryValue: "BLOCKED", status: "샘플 데이터", message: "18cm 장애물을 감지해 모터를 멈추고 관제용 상태를 생성합니다.", metrics: [["distanceCm", "18"], ["speed", "0"], ["stopCount", "+1"]], meter: 34, action: "감지 장면 재생", activeStatus: "정지 이벤트 전송 완료", activePrimary: "STOP", input: "센서 18cm", logic: "상태 전이", output: "모터 정지" },
-    "middle-08": { product: "ROVER LIVE OPS", eyebrow: "실시간 관제 대시보드", primaryLabel: "전방 거리", primaryValue: "12 cm", status: "BLOCKED · LIVE 샘플", message: "센서→화면 텔레메트리와 화면→차 비상 정지를 함께 보여 줍니다.", metrics: [["속도", "0%"], ["정지 횟수", "3회"], ["갱신", "0.2초 전"]], meter: 22, action: "E-STOP 시험", activeStatus: "E-STOP 명령 확인", activePrimary: "SAFE", input: "차량 데이터", logic: "관제 서비스", output: "원격 정지" },
-    "middle-09": { product: "ROVER DEMO KIT", eyebrow: "시연과 발표", primaryLabel: "검증 시나리오", primaryValue: "12/12", status: "발표 준비 완료", message: "정지 시연·LIVE 화면·시험표가 같은 결과를 뒷받침합니다.", metrics: [["구조 설명", "완료"], ["라이브 시연", "준비"], ["질의응답", "1분"]], meter: 94, action: "발표 모드 시작", activeStatus: "LIVE PITCH · 샘플", activePrimary: "3:00", input: "발표 대본", logic: "근거 연결", output: "라이브 데모" },
+    "middle-07": { product: "NOVA SENSOR STAGE", eyebrow: "관객 반응형 무대", primaryLabel: "공연 상태", primaryValue: "READY", status: "센서 리허설 · 샘플", message: "관객 거리에 따라 조명과 비트가 바뀌고 공연 상태 데이터가 생성됩니다.", metrics: [["audienceCm", "18"], ["lightLevel", "72"], ["sceneCount", "3"]], meter: 68, action: "리허설 장면 재생", activeStatus: "LIVE 장면 전환 완료", activePrimary: "LIVE", input: "거리·밝기 센서", logic: "상태 전이", output: "조명+비트" },
+    "middle-08": { product: "NOVA LIVE CONSOLE", eyebrow: "실시간 공연 콘솔", primaryLabel: "관객 거리", primaryValue: "42 cm", status: "LIVE SYNC · 샘플", message: "무대 센서 데이터와 콘솔의 안전 정지 명령이 양방향으로 흐릅니다.", metrics: [["조명", "78%"], ["BPM", "112"], ["갱신", "0.2초 전"]], meter: 78, action: "장면 전환 시험", activeStatus: "FINALE 명령 확인", activePrimary: "FINALE", input: "무대 텔레메트리", logic: "라이브 콘솔", output: "장면 제어" },
+    "middle-09": { product: "NOVA FESTIVAL SHOW", eyebrow: "인터랙티브 쇼케이스", primaryLabel: "검증 시나리오", primaryValue: "12/12", status: "공연 준비 완료", message: "센서 반응·LIVE 콘솔·테스트 기록이 하나의 기술 공연을 뒷받침합니다.", metrics: [["무대 구조", "완료"], ["라이브 공연", "준비"], ["질의응답", "1분"]], meter: 94, action: "쇼케이스 시작", activeStatus: "LIVE SHOW · 샘플", activePrimary: "ON AIR", input: "공연 큐", logic: "근거 연결", output: "라이브 무대" },
     "high-01": { product: "SPACE BOOKING", eyebrow: "예약 충돌 정책", primaryLabel: "16:30 요청 결과", primaryValue: "예약 거부", status: "정책 검증 완료", message: "기존 16:00~17:00 예약과 겹쳐 목록은 바꾸지 않고 수정 안내를 표시합니다.", metrics: [["기존 예약", "4개"], ["충돌", "1건"], ["데이터 변경", "0건"]], meter: 100, action: "경계 예약 시험", activeStatus: "17:00 시작은 예약 가능", activePrimary: "예약 승인" },
     "high-02": { product: "MEAL SIGNAL", eyebrow: "급식 리뷰 데이터", primaryLabel: "카레라이스 평균", primaryValue: "4.0", status: "모델 일치", message: "리뷰 2개를 평균 내고 별점순 화면과 원본 저장 순서를 분리합니다.", metrics: [["리뷰", "2개"], ["최고 별점", "5.0"], ["유효성", "통과"]], meter: 80, action: "정렬 방식 바꾸기", activeStatus: "별점순 보기", activePrimary: "5점 먼저" },
     "high-03": { product: "FOCUS 25", eyebrow: "사용성 개선 리포트", primaryLabel: "시작 버튼 탐색", primaryValue: "5초", status: "개선안 검증", message: "작은 아이콘을 큰 ‘집중 시작’ 버튼으로 바꾸고 같은 과제로 다시 측정했습니다.", metrics: [["수정 전", "12초"], ["수정 후", "5초"], ["오조작", "0회"]], meter: 72, action: "수정 전후 비교", activeStatus: "완료 시간 58% 단축", activePrimary: "-7초" },
     "high-04": { product: "ENTRY COUNTER", eyebrow: "센서 데이터 전처리", primaryLabel: "정제된 통과", primaryValue: "1명", status: "샘플 시뮬레이션", message: "110→18→17→20→112cm 연속 값은 한 번의 통과로만 집계됩니다.", metrics: [["정확도", "98.6%"], ["중복 제거", "3건"], ["누적", "184명"]], meter: 86, action: "통과 데이터 재생", activeStatus: "쿨다운 적용 완료", activePrimary: "+1", input: "거리 시계열", logic: "진입·이탈", output: "카운트 +1" },
     "high-05": { product: "THERMO CONTROL", eyebrow: "히스테리시스 제어", primaryLabel: "현재 온도", primaryValue: "29.1°C", status: "FAN ON · 샘플", message: "켜짐·꺼짐 경계를 나눠 임계값 주변에서 팬이 떨리는 현상을 줄입니다.", metrics: [["ON 경계", "29.0°C"], ["OFF 경계", "27.0°C"], ["전환", "2회"]], meter: 71, action: "온도 흐름 재생", activeStatus: "27.0°C에서 FAN OFF", activePrimary: "OFF", input: "온도 29.1°C", logic: "이전 상태 유지", output: "팬 ON" },
     "high-06": { product: "REFLEX TEST", eyebrow: "경계·예외 테스트", primaryLabel: "최고 반응속도", primaryValue: "0.211초", status: "8/8 TEST PASS", message: "신호 전에 누르면 반칙 안내를 띄우고 기존 기록은 바꾸지 않습니다.", metrics: [["이번 기록", "0.238초"], ["조기 입력", "차단"], ["회귀", "통과"]], meter: 93, action: "조기 입력 시험", activeStatus: "반칙 감지 · 기록 유지", activePrimary: "INVALID", input: "버튼 입력", logic: "상태 검증", output: "기록 보존" },
-    "high-07": { product: "ROVER ARCH", eyebrow: "3계층 관제 아키텍처", primaryLabel: "주행 상태", primaryValue: "SLOW", status: "샘플 텔레메트리", message: "디바이스→네트워크→서비스로 데이터가 흐르고 명령은 반대 방향으로 돌아옵니다.", metrics: [["거리", "28 cm"], ["계층", "3/3"], ["정지 횟수", "1회"]], meter: 52, action: "상태 전이 재생", activeStatus: "RUN→SLOW→STOP 검증", activePrimary: "STOP", input: "distanceCm", logic: "상태 머신", output: "모터 제어" },
-    "high-08": { product: "ROVER E2E OPS", eyebrow: "텔레메트리 관제", primaryLabel: "왕복 반응 시간", primaryValue: "74 ms", status: "LIVE · E2E 샘플", message: "차량 상태·이벤트 로그·E-Stop 명령을 한 화면에서 종단 간 검증합니다.", metrics: [["패킷", "1,284"], ["누락", "0"], ["계층 진단", "정상"]], meter: 78, action: "E-STOP 왕복 시험", activeStatus: "명령 확인 · 차량 정지", activePrimary: "SAFE", input: "텔레메트리", logic: "E2E 검증", output: "E-Stop" },
-    "high-09": { product: "ROVER PORTFOLIO", eyebrow: "데모데이 증거 묶음", primaryLabel: "요구사항 추적", primaryValue: "12/12", status: "DEMO READY", message: "실패 화면·수신 로그·원인 가설·재검증 결과를 하나의 사례로 연결합니다.", metrics: [["테스트 커버", "94%"], ["증거", "18개"], ["발표", "5분"]], meter: 94, action: "장애 대응 사례 보기", activeStatus: "원인 계층 식별 완료", activePrimary: "RECOVERED", input: "실패 증거", logic: "계층 진단", output: "후속 결과" }
+    "high-07": { product: "ORBIT-9 DOCKING ARCH", eyebrow: "3계층 도킹 아키텍처", primaryLabel: "도킹 상태", primaryValue: "APPROACH", status: "궤도 텔레메트리 · 샘플", message: "우주선→네트워크→관제실로 데이터가 흐르고 명령은 반대 방향으로 돌아옵니다.", metrics: [["도킹 거리", "28 cm"], ["계층", "3/3"], ["중단 횟수", "1회"]], meter: 52, action: "도킹 상태 전이 재생", activeStatus: "CRUISE→APPROACH→HOLD", activePrimary: "HOLD", input: "distanceCm", logic: "도킹 상태 머신", output: "추력 제어" },
+    "high-08": { product: "ORBIT-9 MISSION OPS", eyebrow: "심우주 텔레메트리 관제", primaryLabel: "왕복 반응 시간", primaryValue: "74 ms", status: "LIVE · E2E 샘플", message: "우주선 상태·이벤트 로그·E-Stop 명령을 한 화면에서 종단 간 검증합니다.", metrics: [["패킷", "1,284"], ["누락", "0"], ["계층 진단", "정상"]], meter: 78, action: "E-Stop 왕복 시험", activeStatus: "명령 확인 · 도킹 중단", activePrimary: "E-STOP ACTIVE", input: "텔레메트리", logic: "E2E 검증", output: "E-STOP" },
+    "high-09": { product: "ORBIT-9 INCIDENT LAB", eyebrow: "장애 대응 데모데이", primaryLabel: "요구사항 추적", primaryValue: "12/12", status: "MISSION READY", message: "실패 화면·수신 로그·원인 가설·복구 검증을 하나의 미션 사례로 연결합니다.", metrics: [["테스트 커버리지", "94%"], ["증거", "18개"], ["브리핑", "5분"]], meter: 94, action: "비상 대응 사례 보기", activeStatus: "원인 계층 식별 완료", activePrimary: "RECOVERED", input: "장애 증거", logic: "계층 진단", output: "복구 결과" }
   };
 
   function escapeHtml(value) {
@@ -215,6 +221,9 @@
   }
 
   function route() {
+    if (state.activeLesson) {
+      dismissLessonPlayer();
+    }
     const raw = window.location.hash.replace(/^#/, "");
     const requested = LEVELS.some((level) => level.id === raw) ? raw : null;
     if (requested) {
@@ -562,6 +571,20 @@
     state.streaming = false;
   }
 
+  function dismissLessonPlayer() {
+    stopChat();
+    window.clearInterval(state.timerId);
+    state.timerId = null;
+    lessonPlayer.classList.remove("open");
+    lessonPlayer.setAttribute("aria-hidden", "true");
+    closeStudio({ restoreFocus: false });
+    if (lessonPlayer.open) {
+      lessonPlayer.close();
+    }
+    document.body.classList.remove("player-open");
+    state.activeLesson = null;
+  }
+
   function exitLesson(completed) {
     if (!state.activeLesson) {
       return;
@@ -575,17 +598,7 @@
       };
       saveProgress();
     }
-    stopChat();
-    window.clearInterval(state.timerId);
-    state.timerId = null;
-    lessonPlayer.classList.remove("open");
-    lessonPlayer.setAttribute("aria-hidden", "true");
-    closeStudio({ restoreFocus: false });
-    if (lessonPlayer.open) {
-      lessonPlayer.close();
-    }
-    document.body.classList.remove("player-open");
-    state.activeLesson = null;
+    dismissLessonPlayer();
     renderCourse();
     window.requestAnimationFrame(() => {
       const startButton = document.querySelector('[data-start-lesson="' + String(lessonNumber) + '"]');
@@ -955,11 +968,23 @@
     ].join("")).join("") + "</div>";
   }
 
-  function renderWebPreset(preset, active) {
+  function renderWorldPortal(world, lesson, preset) {
+    return [
+      '<div class="seed-world-portal" aria-hidden="true">',
+      '<div class="seed-world-depth"><i></i><i></i><i></i></div>',
+      '<div class="seed-world-vignette"></div><div class="seed-world-orbit"><i></i><i></i><i></i></div>',
+      '<div class="seed-world-meta"><span>', escapeHtml(world.name), '</span><strong>MISSION ', String(lesson.no).padStart(2, "0"), '</strong><small>', escapeHtml(world.zone), ' · ', escapeHtml(preset.eyebrow), '</small></div>',
+      '<div class="seed-world-beacon"><i></i><i></i><i></i><i></i></div>',
+      '</div>'
+    ].join("");
+  }
+
+  function renderWebPreset(preset, active, world, lesson) {
     const primary = active ? preset.activePrimary : preset.primaryValue;
     const status = active ? preset.activeStatus : preset.status;
     return [
-      '<div class="seed-web-app', active ? " is-running" : "", '">',
+      '<div class="seed-web-app world-', escapeHtml(world.id), active ? " is-running" : "", '">',
+      renderWorldPortal(world, lesson, preset),
       '<div class="seed-web-spark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>',
       '<div class="seed-scene-camera seed-scene-camera-web">',
       '<div class="seed-app-nav"><span class="seed-app-logo" aria-hidden="true">M</span><b>', escapeHtml(preset.product), '</b><span class="seed-status">', escapeHtml(status), "</span></div>",
@@ -972,11 +997,12 @@
     ].join("");
   }
 
-  function renderHardwarePreset(preset, active) {
+  function renderHardwarePreset(preset, active, world, lesson) {
     const primary = active ? preset.activePrimary : preset.primaryValue;
     const status = active ? preset.activeStatus : preset.status;
     return [
-      '<div class="seed-hardware', active ? " is-running" : "", '">',
+      '<div class="seed-hardware world-', escapeHtml(world.id), active ? " is-running" : "", '">',
+      renderWorldPortal(world, lesson, preset),
       '<div class="seed-hw-banner"><span><i></i> DIGITAL TWIN</span><b>MODI LAB</b><div aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>',
       '<div class="seed-scene-camera seed-scene-camera-hardware">',
       '<div class="seed-device-flow" aria-label="입력 처리 출력 흐름">',
@@ -992,30 +1018,33 @@
     ].join("");
   }
 
-  function renderConnectedPreset(preset, active) {
+  function renderConnectedPreset(preset, active, world, lesson) {
     const primary = active ? preset.activePrimary : preset.primaryValue;
     const status = active ? preset.activeStatus : preset.status;
+    const missionMark = world.id === "high" ? "◈" : world.id === "middle" ? "✦" : "M";
     return [
-      '<div class="seed-ops', active ? " is-running" : "", '">',
+      '<div class="seed-ops world-', escapeHtml(world.id), active ? " is-running" : "", '">',
+      renderWorldPortal(world, lesson, preset),
       '<div class="seed-ops-glow" aria-hidden="true"><i></i><i></i><i></i></div>',
       '<div class="seed-scene-camera seed-scene-camera-ops">',
       '<div class="seed-ops-head"><div><span class="seed-live-dot" aria-hidden="true"></span><b>MODI CONTROL</b><small>SIMULATION</small></div><button type="button" data-preview-action="demo">', escapeHtml(active ? "RESET" : preset.action), "</button></div>",
-      '<div class="seed-ops-grid"><div class="seed-rover-panel"><div class="seed-rover-scene" aria-hidden="true"><span class="seed-road-line"></span><div class="seed-rover"><i></i><b>M</b><i></i></div><span class="seed-obstacle"></span></div>',
-      '<div class="seed-flow-caption"><span>', escapeHtml(preset.input || "차량 데이터"), '</span><i aria-hidden="true">↔</i><span>', escapeHtml(preset.output || "관제 명령"), "</span></div></div>",
+      '<div class="seed-ops-grid"><div class="seed-rover-panel"><div class="seed-rover-scene" aria-hidden="true"><span class="seed-road-line"></span><div class="seed-rover"><i></i><b>', missionMark, '</b><i></i></div><span class="seed-obstacle"></span></div>',
+      '<div class="seed-flow-caption"><span>', escapeHtml(preset.input || "장치 데이터"), '</span><i aria-hidden="true">↔</i><span>', escapeHtml(preset.output || "관제 명령"), "</span></div></div>",
       '<div class="seed-telemetry"><span class="seed-eyebrow">', escapeHtml(preset.eyebrow), '</span><p>', escapeHtml(preset.primaryLabel), '</p><strong class="seed-primary-value" role="status" aria-live="polite">', escapeHtml(primary), '</strong><span class="seed-status">', escapeHtml(status), "</span>", renderPreviewMetrics(preset), "</div></div>",
       '<div class="seed-event-log"><span><i></i> TELEMETRY</span><b>', escapeHtml(preset.logic || "양방향 데이터 흐름"), "</b><small>", escapeHtml(preset.message), '</small><div class="seed-console-chart" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>',
       "</div></div>"
     ].join("");
   }
 
-  function renderPresetScene(lesson, preset) {
+  function renderPresetScene(lesson, preset, catalog) {
+    const world = WORLD_PROFILES[catalog.level] || WORLD_PROFILES.elementary;
     if (lesson.projectType === "hw") {
-      return renderHardwarePreset(preset, state.previewDemoActive);
+      return renderHardwarePreset(preset, state.previewDemoActive, world, lesson);
     }
     if (lesson.projectType === "webhw") {
-      return renderConnectedPreset(preset, state.previewDemoActive);
+      return renderConnectedPreset(preset, state.previewDemoActive, world, lesson);
     }
-    return renderWebPreset(preset, state.previewDemoActive);
+    return renderWebPreset(preset, state.previewDemoActive, world, lesson);
   }
 
   function renderPresetPreview(lesson, catalog, hasGenerated) {
@@ -1025,11 +1054,11 @@
     const artifacts = asList(lesson.studentArtifacts).slice(-2);
     const modeLabel = lesson.projectType === "hw" ? "H/W 디지털 트윈" : lesson.projectType === "webhw" ? "Web + H/W 관제" : "Web 앱";
     return [
-      '<section class="preview-showcase" data-preview-key="', escapeHtml(lessonKey(catalog.level, lesson.no)), '" data-preview-mode="', escapeHtml(lesson.projectType), '">',
+      '<section class="preview-showcase" data-preview-key="', escapeHtml(lessonKey(catalog.level, lesson.no)), '" data-preview-mode="', escapeHtml(lesson.projectType), '" data-world="', escapeHtml(catalog.level), '">',
       renderPreviewSourceSwitch("preset", hasGenerated),
       '<div class="preview-heading"><div class="preview-badge-row"><span class="preview-demo-badge">완성 예시</span><span class="preview-mode-badge ', escapeHtml(lesson.projectType), '">', escapeHtml(modeLabel), '</span><span class="preview-preloaded-label">수업 시작 전</span></div><h3 id="presetPreviewTitle">', escapeHtml(preset.product), "</h3><p>", escapeHtml(example.scenario || lesson.summary), "</p></div>",
       '<div class="preview-window preview-window-preset"><div class="preview-bar"><span class="preview-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="preview-address">preview.modiplanet.com · ', String(lesson.no).padStart(2, "0"), '</span><span class="preview-sample-label">샘플 데이터</span></div>',
-      '<div class="preview-result-stage" id="previewResultPanel" role="tabpanel"', hasGenerated ? ' aria-labelledby="presetPreviewTab"' : ' aria-labelledby="presetPreviewTitle"', ">", renderPresetScene(lesson, preset), "</div></div>",
+      '<div class="preview-result-stage" id="previewResultPanel" role="tabpanel"', hasGenerated ? ' aria-labelledby="presetPreviewTab"' : ' aria-labelledby="presetPreviewTitle"', ">", renderPresetScene(lesson, preset, catalog), "</div></div>",
       '<div class="preview-proof"><div class="preview-proof-head"><strong>결과에서 확인할 것</strong><span>완성 기준 ', String(evidence.length), '개</span></div><ul>', evidence.map((item) => '<li><span aria-hidden="true">✓</span><p>' + escapeHtml(item) + "</p></li>").join(""), "</ul></div>",
       '<div class="preview-artifacts"><div><span>STUDENT OUTPUT</span><strong>이 차시에서 남기는 결과물</strong></div><ul>', artifacts.map((item, index) => '<li><i aria-hidden="true">0' + String(index + 1) + '</i><span>' + escapeHtml(item) + "</span></li>").join(""), "</ul></div>",
       '<div class="preview-note"><span aria-hidden="true">✦</span><p><strong>미리 준비된 수업 예시입니다.</strong> 실제 장치 연결이나 학생 결과가 아니며, AI로 제작하면 <b>내 결과</b> 화면으로 자동 전환됩니다.</p></div>',
@@ -1407,10 +1436,12 @@
       }
       const x = Math.max(0, Math.min(1, (update.clientX - rect.left) / rect.width));
       const y = Math.max(0, Math.min(1, (update.clientY - rect.top) / rect.height));
-      update.stage.style.setProperty("--depth-rotate-x", ((0.5 - y) * 7).toFixed(2) + "deg");
-      update.stage.style.setProperty("--depth-rotate-y", ((x - 0.5) * 9).toFixed(2) + "deg");
-      update.stage.style.setProperty("--depth-shine-x", (x * 100).toFixed(1) + "%");
-      update.stage.style.setProperty("--depth-shine-y", (y * 100).toFixed(1) + "%");
+      update.stage.style.setProperty("--world-pan-x", ((0.5 - x) * 14).toFixed(2) + "px");
+      update.stage.style.setProperty("--world-pan-y", ((0.5 - y) * 9).toFixed(2) + "px");
+      update.stage.style.setProperty("--world-near-x", ((x - 0.5) * 18).toFixed(2) + "px");
+      update.stage.style.setProperty("--world-near-y", ((y - 0.5) * 12).toFixed(2) + "px");
+      update.stage.style.setProperty("--object-rotate-x", ((0.5 - y) * 7).toFixed(2) + "deg");
+      update.stage.style.setProperty("--object-rotate-y", ((x - 0.5) * 10).toFixed(2) + "deg");
     });
   });
 
@@ -1422,7 +1453,7 @@
     if (pendingDepthUpdate && pendingDepthUpdate.stage === stage) {
       pendingDepthUpdate = null;
     }
-    ["--depth-rotate-x", "--depth-rotate-y", "--depth-shine-x", "--depth-shine-y"].forEach((property) => stage.style.removeProperty(property));
+    ["--world-pan-x", "--world-pan-y", "--world-near-x", "--world-near-y", "--object-rotate-x", "--object-rotate-y"].forEach((property) => stage.style.removeProperty(property));
   });
 
   learningStudio.addEventListener("keydown", (event) => {

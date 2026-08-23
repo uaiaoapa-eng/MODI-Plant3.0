@@ -1,4 +1,5 @@
 """Focused v3 product, published curriculum, and Create adapter tests."""
+import json
 from pathlib import Path
 
 import pytest
@@ -294,10 +295,17 @@ def test_lms_preview_seeds_polished_results_before_generation(client):
     assert 'data-preview-source="preset"' in script
     assert 'data-preview-action="demo"' in script
     assert 'data-preview-mode="' in script
+    assert 'data-world="' in script
     assert "seed-scene-camera" in script
+    assert "WORLD_PROFILES" in script
+    assert "seed-world-portal" in script
+    assert "seed-world-depth" in script
+    assert "function dismissLessonPlayer()" in script
+    assert "if (state.activeLesson) {\n      dismissLessonPlayer();\n    }" in script
     assert "샘플 시뮬레이션" in script
     assert 'learningStudio.addEventListener("pointermove"' in script
-    assert '"--depth-rotate-x"' in script
+    assert '"--world-pan-x"' in script
+    assert '"--object-rotate-y"' in script
 
     assert ".preview-showcase" in styles
     assert ".preview-demo-badge" in styles
@@ -308,7 +316,29 @@ def test_lms_preview_seeds_polished_results_before_generation(client):
     assert "transform-style: preserve-3d" in styles
     assert ".seed-modi-core::before" in styles
     assert ".seed-rover::before" in styles
+    assert "/static/assets/worlds/elementary-world.png" in styles
+    assert "/static/assets/worlds/middle-world.png" in styles
+    assert "/static/assets/worlds/high-world.png" in styles
+    assert ".world-high .seed-rover" in styles
+    assert "Fixed preview chrome" in styles
+    assert "transform: none !important" in styles
+    assert "seed-world-content-awaken" in styles
     assert "prefers-reduced-motion: reduce" in styles
+
+    for asset in ("elementary-world.png", "middle-world.png", "high-world.png"):
+        response = client.get(f"/static/assets/worlds/{asset}")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "image/png"
+
+
+def test_grade_bands_end_with_three_distinct_world_projects():
+    bands = {band["id"]: band for band in list_grade_bands()}
+
+    assert bands["elementary"]["lessons"][6]["title"].startswith("별빛 탐사대")
+    assert bands["middle"]["lessons"][6]["title"].startswith("NOVA 페스티벌")
+    assert bands["high"]["lessons"][6]["title"].startswith("ORBIT-9 미션")
+    assert len({band["finalGoal"] for band in bands.values()}) == 3
+    assert all("로봇카" not in json.dumps(band, ensure_ascii=False) for band in bands.values())
 
 
 def test_create_page_bundles_the_official_example_catalog(client):
