@@ -331,6 +331,47 @@ def test_lms_preview_seeds_polished_results_before_generation(client):
         assert response.headers["content-type"] == "image/png"
 
 
+def test_lesson_decks_render_content_bearing_visuals_and_modi_assets(client):
+    script = client.get("/static/lms.js").text
+    styles = client.get("/static/lms.css").text
+    html = client.get("/lms").text
+
+    assert "function renderLessonSlideVisual" in script
+    assert "function renderSlideVisualMedia" in script
+    assert "LESSON_VISUAL_MOTIFS" in script
+    assert "SLIDE_VISUAL_META" in script
+    assert "MODULE_VISUAL_MATCHES" in script
+    assert 'slideHeading.insertAdjacentHTML("afterend"' in script
+    assert "차시 시각화" in script
+    assert "COMMAND →" in script
+    assert "← TELEMETRY" in script
+
+    assert ".lesson-slide-visual" in styles
+    assert ".lesson-mini-browser" in styles
+    assert ".lesson-visual-media--module" in styles
+    assert ".lesson-visual-diagram--diagnostic" in styles
+    assert "Lesson deck visual system" in styles
+    assert "20260823-lesson-visuals" in html
+
+    expected_assets = {
+        "modi-kit-flatlay.jpg": "image/jpeg",
+        "modi-ecosystem.jpg": "image/jpeg",
+        "modi-car-robot.jpg": "image/jpeg",
+        "modi-control-workspace.jpg": "image/jpeg",
+        "modi-hardware-kit.png": "image/png",
+        "web-modi-hybrid.png": "image/png",
+        "modi-network.png": "image/png",
+        "modi-display.png": "image/png",
+        "modi-dial.png": "image/png",
+        "modi-speaker.png": "image/png",
+        "modi-led.png": "image/png",
+    }
+    for asset, content_type in expected_assets.items():
+        response = client.get(f"/static/assets/lesson-visuals/{asset}")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == content_type
+
+
 def test_grade_bands_end_with_three_distinct_world_projects():
     bands = {band["id"]: band for band in list_grade_bands()}
 

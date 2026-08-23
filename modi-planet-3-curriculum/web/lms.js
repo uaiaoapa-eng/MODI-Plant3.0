@@ -93,6 +93,69 @@
     "high-09": { product: "ORBIT-9 INCIDENT LAB", eyebrow: "장애 대응 데모데이", primaryLabel: "요구사항 추적", primaryValue: "12/12", status: "MISSION READY", message: "실패 화면·수신 로그·원인 가설·복구 검증을 하나의 미션 사례로 연결합니다.", metrics: [["테스트 커버리지", "94%"], ["증거", "18개"], ["브리핑", "5분"]], meter: 94, action: "비상 대응 사례 보기", activeStatus: "원인 계층 식별 완료", activePrimary: "RECOVERED", input: "장애 증거", logic: "계층 진단", output: "복구 결과" }
   };
 
+  const LESSON_VISUAL_MOTIFS = {
+    elementary: [
+      "소개 카드와 개인정보 방패",
+      "순서가 보이는 우리 반 페이지",
+      "무작위 운세와 10회 실험",
+      "버튼 → Network → LED 신호",
+      "거리 센서와 경보 기준값",
+      "다이얼 값과 모터 바람 세기",
+      "센서가 보는 탐사차 안전 구역",
+      "웹 명령과 탐사차 텔레메트리",
+      "탐험 결과를 설명하는 쇼케이스"
+    ],
+    middle: [
+      "요구사항에서 D-day 화면까지",
+      "이벤트에 따라 바뀌는 스톱워치 상태",
+      "버그 재현 → 수정 → 회귀 시험",
+      "밝기 측정과 무드등 임계값",
+      "CLOSED · OPEN · WAIT 자동문 상태",
+      "버튼·소리·빛을 잇는 전자 드럼",
+      "NOVA 무대 센서와 LIVE 상태",
+      "텔레메트리 위젯과 역방향 E-Stop",
+      "근거로 완성하는 NOVA 쇼케이스"
+    ],
+    high: [
+      "예약 충돌 정책과 수용 기준",
+      "메뉴·리뷰 데이터와 집계 파이프라인",
+      "사용자 여정과 개선 우선순위",
+      "거리 시계열에서 한 번의 통과 찾기",
+      "두 경계로 안정시키는 히스테리시스",
+      "WAIT · READY · RESULT 상태와 예외",
+      "ORBIT-9 우주선·통신·관제 아키텍처",
+      "양방향 텔레메트리와 E2E 진단",
+      "요구사항부터 증거까지 잇는 데모데이"
+    ]
+  };
+
+  const SLIDE_VISUAL_META = {
+    title: { label: "MISSION BRIEF", archetype: "cover" },
+    goals: { label: "GOAL MAP", archetype: "sequence" },
+    hook: { label: "WHY SCENE", archetype: "flow" },
+    vocabulary: { label: "CONCEPT ATLAS", archetype: "terms" },
+    concept: { label: "HOW IT WORKS", archetype: "flow" },
+    example: { label: "WORKED EXAMPLE", archetype: "flow" },
+    check: { label: "CONCEPT CHECK", archetype: "sequence" },
+    setup: { label: "BUILD BENCH", archetype: "sequence" },
+    plan: { label: "PROJECT ROUTE", archetype: "sequence" },
+    build: { label: "MAKER STEP", archetype: "sequence" },
+    checkpoint: { label: "EVIDENCE CHECK", archetype: "sequence" },
+    troubleshoot: { label: "DIAGNOSTIC TREE", archetype: "diagnostic" },
+    differentiate: { label: "LEVEL ROUTES", archetype: "diagnostic" },
+    rubric: { label: "EVIDENCE MATRIX", archetype: "sequence" },
+    exit: { label: "MISSION COMPLETE", archetype: "sequence" }
+  };
+
+  const MODULE_VISUAL_MATCHES = [
+    { words: ["다이얼"], file: "modi-dial.png", label: "Dial" },
+    { words: ["스피커", "소리", "경보음"], file: "modi-speaker.png", label: "Speaker" },
+    { words: ["LED", "조명", "신호등", "빛"], file: "modi-led.png", label: "LED" },
+    { words: ["Display", "디스플레이", "화면"], file: "modi-display.png", label: "Display" },
+    { words: ["Network", "네트워크", "통신", "전송"], file: "modi-network.png", label: "Network" },
+    { words: ["배터리", "전원"], file: "modi-battery.png", label: "Battery" }
+  ];
+
   function escapeHtml(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, (character) => ({
       "&": "&amp;",
@@ -177,6 +240,205 @@
 
   function getActiveCatalog() {
     return state.levelId ? getCatalog(state.levelId) : null;
+  }
+
+  function shortenVisualText(value, limit) {
+    const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    const max = Number(limit) || 54;
+    return text.length > max ? text.slice(0, Math.max(1, max - 1)).trim() + "…" : text;
+  }
+
+  function visualValue(value) {
+    if (typeof value === "string" || typeof value === "number") {
+      return String(value);
+    }
+    if (!value || typeof value !== "object") {
+      return "";
+    }
+    return String(value.term || value.criterion || value.symptom || value.fix || value.title || value.label || "");
+  }
+
+  function visualItems(values, labels, limit) {
+    return asList(values).slice(0, Number(limit) || 3).map((value, index) => ({
+      label: asList(labels)[index] || String(index + 1).padStart(2, "0"),
+      text: shortenVisualText(visualValue(value), 62)
+    })).filter((item) => item.text);
+  }
+
+  function getSlideVisualItems(slide, lesson) {
+    if (slide.type === "goals") {
+      return visualItems(slide.objectives, ["목표 1", "목표 2", "목표 3"]);
+    }
+    if (slide.type === "vocabulary") {
+      return visualItems(asList(slide.terms).map((term) => term.term), ["KEY 01", "KEY 02", "KEY 03"]);
+    }
+    if (slide.type === "example") {
+      return [
+        { label: "INPUT", text: shortenVisualText(asList(slide.input)[0] || slide.scenario || "입력 확인", 56) },
+        { label: "LOGIC", text: shortenVisualText(asList(slide.process)[0] || "규칙 적용", 56) },
+        { label: "OUTPUT", text: shortenVisualText(asList(slide.output)[0] || "결과 확인", 56) }
+      ];
+    }
+    if (slide.type === "setup") {
+      return visualItems(slide.checklist, ["준비", "연결", "안전"]);
+    }
+    if (slide.type === "plan") {
+      return visualItems(slide.steps, ["설계", "제작", "검증"]);
+    }
+    if (slide.type === "build") {
+      return visualItems(slide.instructions, ["지금", "다음", "확인"]);
+    }
+    if (slide.type === "checkpoint") {
+      return visualItems(slide.criteria, ["동작", "일치", "증거"]);
+    }
+    if (slide.type === "troubleshoot") {
+      const issue = asList(slide.issues)[0] || {};
+      return [
+        { label: "증상", text: shortenVisualText(issue.symptom || asList(slide.body)[0] || "문제 재현", 54) },
+        { label: "원인", text: shortenVisualText(issue.cause || "입력·연결·상태를 확인", 54) },
+        { label: "수정", text: shortenVisualText(issue.fix || "한 항목씩 고친 뒤 다시 시험", 54) }
+      ];
+    }
+    if (slide.type === "differentiate") {
+      return [
+        { label: "SUPPORT", text: shortenVisualText(asList(slide.support)[0] || "핵심 기능부터 완성", 56) },
+        { label: "CORE", text: shortenVisualText(lesson.successCriteria && lesson.successCriteria[0] || lesson.summary, 56) },
+        { label: "CHALLENGE", text: shortenVisualText(asList(slide.challenge)[0] || "새 조건으로 확장", 56) }
+      ];
+    }
+    if (slide.type === "rubric") {
+      return visualItems(asList(slide.rows).map((row) => row.criterion), ["기능", "과정", "근거"]);
+    }
+    if (["check", "exit"].includes(slide.type)) {
+      const answer = asList(slide.choices)[Number(slide.answer)];
+      return [
+        { label: "QUESTION", text: shortenVisualText(slide.question || slide.title, 58) },
+        { label: "EVIDENCE", text: shortenVisualText(answer || slide.explanation || "근거를 찾아 선택", 58) },
+        { label: slide.type === "exit" ? "NEXT" : "RECHECK", text: shortenVisualText(asList(slide.takeaways)[0] || slide.explanation || "설명으로 다시 확인", 58) }
+      ];
+    }
+    if (slide.type === "title") {
+      return [
+        { label: "MISSION", text: shortenVisualText(lesson.summary, 62) },
+        { label: "MODE", text: MODES[lesson.projectType].long },
+        { label: "RESULT", text: shortenVisualText(asList(lesson.studentArtifacts)[0] || "완성 결과와 제작 근거", 62) }
+      ];
+    }
+    return visualItems(slide.body, ["관찰", "관계", "적용"]);
+  }
+
+  function resolveSlideModule(slide, lesson) {
+    const slideSource = [slide.title, slide.question, asList(slide.body).join(" "), asList(slide.instructions).join(" ")].join(" ").toLowerCase();
+    const directMatch = MODULE_VISUAL_MATCHES.find((candidate) => candidate.words.some((word) => slideSource.includes(word.toLowerCase())));
+    if (directMatch) {
+      return directMatch;
+    }
+    const materialSource = asList(lesson.materials).join(" ").toLowerCase();
+    return MODULE_VISUAL_MATCHES.find((candidate) => candidate.words.some((word) => materialSource.includes(word.toLowerCase()))) || null;
+  }
+
+  function resolveLessonVisualAsset(levelId, lesson, slide) {
+    const module = resolveSlideModule(slide, lesson);
+    if (lesson.projectType === "web") {
+      return {
+        file: "/static/assets/brand/" + getLevelMeta(levelId).thumbnail,
+        alt: getLevelMeta(levelId).difficulty + " Web 프로젝트 미리보기",
+        kind: "web"
+      };
+    }
+    if (module && ["build", "concept", "example"].includes(slide.type)) {
+      return {
+        file: "/static/assets/lesson-visuals/" + module.file,
+        alt: "MODI " + module.label + " 모듈",
+        kind: "module",
+        moduleLabel: module.label
+      };
+    }
+    if (lesson.projectType === "hw") {
+      let file = "modi-kit-flatlay.jpg";
+      if ((levelId === "middle" && lesson.no === 4) || (levelId === "high" && lesson.no === 5)) {
+        file = "modi-smart-farm.jpg";
+      } else if ((levelId === "middle" && lesson.no === 5) || (levelId === "high" && lesson.no === 4)) {
+        file = "modi-car-robot.jpg";
+      } else if (slide.type === "title" || slide.type === "hook") {
+        file = "modi-ecosystem.jpg";
+      }
+      return { file: "/static/assets/lesson-visuals/" + file, alt: "MODI 프로젝트 제품 구성", kind: "photo" };
+    }
+    if (levelId === "elementary") {
+      return { file: "/static/assets/lesson-visuals/modi-car-robot.jpg", alt: "MODI 탐사차 프로젝트 장면", kind: "photo" };
+    }
+    if (levelId === "middle") {
+      return { file: "/static/assets/lesson-visuals/modi-control-workspace.jpg", alt: "웹 화면과 MODI 장치를 함께 제어하는 장면", kind: "photo" };
+    }
+    return { file: "/static/assets/lesson-visuals/web-modi-hybrid.png", alt: "웹 관제 화면과 장치 사이의 양방향 데이터 흐름", kind: "cutout" };
+  }
+
+  function renderSlideVisualMedia(levelId, lesson, slide, asset) {
+    const preset = PREVIEW_PRESETS[lessonKey(levelId, lesson.no)] || {};
+    if (lesson.projectType === "web") {
+      return [
+        '<div class="lesson-visual-media lesson-visual-media--web">',
+        '<img class="lesson-visual-grade-art" src="', escapeHtml(asset.file), '" alt="" aria-hidden="true">',
+        '<div class="lesson-mini-browser" role="img" aria-label="', escapeHtml(asset.alt), '">',
+        '<div class="lesson-mini-toolbar"><i></i><i></i><i></i><span>preview.modiplanet.com</span></div>',
+        '<div class="lesson-mini-app"><small>', escapeHtml(preset.eyebrow || "WEB PROJECT"), '</small><strong>', escapeHtml(shortenVisualText(preset.product || lesson.title, 30)), '</strong>',
+        '<b>', escapeHtml(shortenVisualText(preset.primaryValue || "READY", 22)), '</b><div class="lesson-mini-metrics">',
+        asList(preset.metrics).slice(0, 3).map((metric) => '<span><small>' + escapeHtml(metric[0]) + '</small><b>' + escapeHtml(metric[1]) + '</b></span>').join(""),
+        '</div></div></div></div>'
+      ].join("");
+    }
+
+    if (lesson.projectType === "webhw" && levelId === "high") {
+      return [
+        '<div class="lesson-visual-media lesson-visual-media--hybrid">',
+        '<img class="lesson-visual-world" src="/static/assets/worlds/', escapeHtml(levelId), '-world.png" alt="" aria-hidden="true">',
+        '<img class="lesson-visual-cutout" src="', escapeHtml(asset.file), '" alt="', escapeHtml(asset.alt), '">',
+        '<span class="lesson-data-path command">COMMAND →</span><span class="lesson-data-path telemetry">← TELEMETRY</span>',
+        '</div>'
+      ].join("");
+    }
+
+    return [
+      '<div class="lesson-visual-media lesson-visual-media--', escapeHtml(asset.kind), '">',
+      '<img src="', escapeHtml(asset.file), '" alt="', escapeHtml(asset.alt), '">',
+      asset.kind === "module" ? '<span class="lesson-module-name">MODI · ' + escapeHtml(asset.moduleLabel) + '</span>' : '',
+      lesson.projectType === "webhw" ? '<span class="lesson-data-path command">COMMAND →</span><span class="lesson-data-path telemetry">← TELEMETRY</span>' : '',
+      '</div>'
+    ].join("");
+  }
+
+  function renderSlideVisualDiagram(meta, items) {
+    const safeItems = asList(items).slice(0, 3);
+    if (meta.archetype === "terms") {
+      return '<div class="lesson-visual-diagram lesson-visual-diagram--terms">' + safeItems.map((item, index) => [
+        '<article><span>', String(index + 1).padStart(2, "0"), '</span><b>', escapeHtml(item.text), '</b><i aria-hidden="true"></i></article>'
+      ].join("")).join("") + "</div>";
+    }
+    if (meta.archetype === "diagnostic") {
+      return '<div class="lesson-visual-diagram lesson-visual-diagram--diagnostic">' + safeItems.map((item, index) => [
+        '<article><small>', escapeHtml(item.label), '</small><b>', escapeHtml(item.text), '</b></article>',
+        index < safeItems.length - 1 ? '<span class="lesson-visual-arrow" aria-hidden="true">→</span>' : ''
+      ].join("")).join("") + "</div>";
+    }
+    return '<div class="lesson-visual-diagram lesson-visual-diagram--' + escapeHtml(meta.archetype) + '">' + safeItems.map((item, index) => [
+      '<article><span>', String(index + 1).padStart(2, "0"), '</span><small>', escapeHtml(item.label), '</small><b>', escapeHtml(item.text), '</b></article>',
+      index < safeItems.length - 1 ? '<span class="lesson-visual-arrow" aria-hidden="true">→</span>' : ''
+    ].join("")).join("") + "</div>";
+  }
+
+  function renderLessonSlideVisual(levelId, lesson, slide, slideIndex) {
+    const meta = SLIDE_VISUAL_META[slide.type] || { label: "VISUAL NOTE", archetype: "sequence" };
+    const motif = asList(LESSON_VISUAL_MOTIFS[levelId])[Number(lesson.no) - 1] || lesson.title;
+    const asset = resolveLessonVisualAsset(levelId, lesson, slide);
+    const items = getSlideVisualItems(slide, lesson);
+    return [
+      '<figure class="lesson-slide-visual lesson-slide-visual--', escapeHtml(meta.archetype), ' mode-', escapeHtml(lesson.projectType), ' level-', escapeHtml(levelId), '" data-visual-level="', escapeHtml(levelId), '" data-visual-lesson="', String(lesson.no), '" data-visual-slide="', String(Number(slideIndex) + 1), '">',
+      '<div class="lesson-visual-topline"><span>', escapeHtml(meta.label), '</span><b>', escapeHtml(shortenVisualText(motif, 54)), '</b></div>',
+      '<div class="lesson-visual-canvas">', renderSlideVisualMedia(levelId, lesson, slide, asset), renderSlideVisualDiagram(meta, items), '</div>',
+      '<figcaption><span>차시 시각화</span><b>', escapeHtml(shortenVisualText(slide.title, 68)), '</b><small>', escapeHtml(MODES[lesson.projectType].long), ' · ', escapeHtml(WORLD_PROFILES[levelId].name), '</small></figcaption>',
+      '</figure>'
+    ].join("");
   }
 
   function totalMinutes(lesson) {
@@ -785,6 +1047,10 @@
       content += renderRichSlideContent(slide);
     }
     slideCard.innerHTML = content;
+    const slideHeading = slideCard.querySelector("h2");
+    if (slideHeading) {
+      slideHeading.insertAdjacentHTML("afterend", renderLessonSlideVisual(getActiveCatalog().level, lesson, slide, state.slideIndex));
+    }
     slideCard.scrollTop = 0;
 
     const note = document.getElementById("teacherNote");
