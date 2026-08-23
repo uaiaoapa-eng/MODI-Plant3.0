@@ -1,0 +1,406 @@
+{
+  "session_id": "reference_modi_science_lab",
+  "title": "모디 과학 탐구 실험실",
+  "description": "모디(MODI) 센서로 자연 현상을 실시간 측정하고 그래프로 관찰하는 과학 학습 웹 서비스",
+  "phase": "implement",
+  "diagram": "(아직 다이어그램이 없습니다)",
+  "generated_code": {
+    "App.tsx": "const { useState, useEffect, useRef } = React;\n\n// 실험 정의 (App 밖에서 정의해 리렌더 시 remount 방지). 센서 타입/필드는 HYBRID_SDK_GUIDE 기준.\nconst EXPERIMENTS = [\n  {\n    key: 'light', title: '빛의 밝기', emoji: '💡',\n    sensorType: 'environment', field: 'intensity', unit: '%', min: 0, max: 100, color: '#f59e0b',\n    concept: '빛 센서는 주변이 밝을수록 큰 값을 나타내요. 광원에 가까울수록 밝기 값이 커진답니다.',\n    observe: '손전등을 가까이/멀리 해보고, 손으로 살짝 가려도 보세요. 값이 어떻게 출렁이나요?',\n    realWorld: '스마트폰은 이 센서로 주변이 어두우면 화면을 자동으로 어둡게 해 눈을 보호해요.',\n    ledReactive: true,\n    prediction: { q: '센서를 손으로 완전히 가리면 밝기 값은?', options: ['값이 커진다', '값이 작아진다', '변하지 않는다'], answer: 1, explain: '빛이 가려지면 센서에 닿는 빛이 줄어 값이 작아져요.' },\n    mission: { label: '밝기 70% 이상 만들기 (불빛을 가까이!)', test: (v) => v >= 70 },\n    quiz: { q: '우리 눈이 빛을 느끼는 기관은?', options: ['망막', '고막', '미뢰'], answer: 0, explain: '눈의 망막이 빛을 받아 뇌로 신호를 보내요. 고막은 소리, 미뢰는 맛이에요.' },\n  },\n  {\n    key: 'sound', title: '소리의 크기', emoji: '🔊',\n    sensorType: 'environment', field: 'volume', unit: '', min: 0, max: 100, color: '#8b5cf6',\n    concept: '소리는 공기의 진동이에요. 소리가 클수록 진동이 세서 센서 값이 높아져요.',\n    observe: '박수를 치거나 \"아~\" 하고 소리를 내보세요. 조용히 하면 그래프가 어떻게 되나요?',\n    realWorld: '도서관·공장의 소음 측정기, 박수로 켜지는 전등도 이렇게 소리 크기를 재요.',\n    ledReactive: false,\n    prediction: { q: '큰 소리를 내면 그래프는?', options: ['위로 높이 뛴다', '아래로 내려간다', '평평해진다'], answer: 0, explain: '소리가 클수록 진동이 세서 값이 커지고 그래프가 위로 솟아요.' },\n    mission: { label: '큰 소리로 60 이상 만들기 (박수 짝짝!)', test: (v) => v >= 60 },\n    quiz: { q: '소리는 무엇을 통해 귀까지 전달될까요?', options: ['진공(아무것도 없음)', '공기의 진동', '빛'], answer: 1, explain: '소리는 공기의 진동으로 전달돼요. 그래서 진공에서는 소리가 안 들려요.' },\n  },\n  {\n    key: 'temp', title: '온도 변화', emoji: '🌡️',\n    sensorType: 'environment', field: 'temperature', unit: '°C', min: 0, max: 50, color: '#ef4444',\n    concept: '온도는 물질이 얼마나 뜨거운지를 나타내요. 열은 천천히 전달돼서 온도는 서서히 변해요.',\n    observe: '센서를 손으로 감싸 보세요. 온도가 갑자기 오르나요, 천천히 오르나요?',\n    realWorld: '에어컨·냉장고·체온계가 모두 온도 센서로 지금 온도를 재서 알맞게 조절해요.',\n    ledReactive: false,\n    prediction: { q: '센서를 손으로 감싸면 온도 그래프는?', options: ['순간적으로 뚝 오른다', '천천히 부드럽게 오른다', '계속 떨어진다'], answer: 1, explain: '열은 천천히 전달돼 온도는 완만하게 올라가는 곡선을 그려요.' },\n    mission: { label: '손으로 감싸 28°C 이상 올리기', test: (v) => v >= 28 },\n    quiz: { q: '1기압에서 물이 끓는 온도는?', options: ['50°C', '100°C', '37°C'], answer: 1, explain: '1기압에서 물은 100°C에 끓어요. 37°C는 사람 체온에 가까워요.' },\n  },\n  {\n    key: 'distance', title: '거리와 운동', emoji: '📏',\n    sensorType: 'tof', field: 'distance', unit: 'cm', min: 0, max: 60, color: '#06b6d4',\n    concept: '거리 센서는 물체까지의 거리를 재요. 빠르게 움직이면 그래프 기울기가 가팔라져요(=속력).',\n    observe: '손을 천천히, 그다음 빠르게 가까이/멀리 움직여 보세요. 그래프 기울기를 비교해 봐요.',\n    realWorld: '자동차의 후방 주차 센서, 자동문이 이렇게 거리를 재서 사람·벽을 감지해요.',\n    ledReactive: false,\n    prediction: { q: '손을 빠르게 흔들 때와 천천히 움직일 때, 그래프 기울기는?', options: ['빠를수록 완만하다', '빠를수록 가파르다', '항상 똑같다'], answer: 1, explain: '같은 시간에 더 많이 움직이면(빠름) 그래프가 더 가파르게 변해요. 이것이 \\'속력\\'이에요.' },\n    mission: { label: '손을 멀리 떼서 50cm 이상 만들기', test: (v) => v >= 50 },\n    quiz: { q: '\\'속력\\'은 무엇을 무엇으로 나눈 값일까요?', options: ['거리 ÷ 시간', '시간 ÷ 거리', '거리 × 시간'], answer: 0, explain: '속력 = 이동 거리 ÷ 걸린 시간. 같은 시간에 많이 움직일수록 빨라요.' },\n  },\n  {\n    key: 'tilt', title: '기울기와 중력', emoji: '⚖️',\n    sensorType: 'imu', field: 'roll', unit: '°', min: -90, max: 90, color: '#10b981', // 실기기: 앞뒤 기울기는 'roll' 필드\n    concept: '자이로 센서는 모듈이 얼마나 기울었는지 각도로 알려줘요. 중력 덕분에 기울기를 늘 알 수 있어요.',\n    observe: '모듈을 평평하게 두고, 앞뒤로 천천히 기울여 보세요. 각도가 0°에서 어떻게 변하나요?',\n    realWorld: '게임 컨트롤러·자동차 에어백·드론이 이 센서로 기울기를 알아 균형을 잡아요.',\n    ledReactive: false,\n    prediction: { q: '모듈을 책상에 평평하게 두면 기울기 각도는?', options: ['약 90°', '약 0°', '약 45°'], answer: 1, explain: '수평이면 기울지 않았으니 0°에 가까워요. 세우면 90°에 가까워지죠.' },\n    mission: { label: '모듈을 앞으로 45° 이상 기울이기', test: (v) => v >= 45 },\n    quiz: { q: '물체를 항상 아래로 끌어당기는 힘은?', options: ['마찰력', '중력', '자기력'], answer: 1, explain: '지구가 물체를 끌어당기는 힘이 중력이에요. 자이로도 중력 방향으로 기울기를 알아요.' },\n  },\n];\n\nconst WINDOW = 120;\nconst STEPS = [\n  { label: '예상하기', icon: '🤔' },\n  { label: '측정하기', icon: '📡' },\n  { label: '정리하기', icon: '🎓' },\n];\n\n// 단계 히어로 — 실험 테마색 + 큰 이모지로 시각적 무게를 줌 (예상/정리 단계의 허전함 해소)\nfunction StepHero({ exp, label, line }) {\n  return (\n    <div className=\"rounded-2xl p-7 border border-white/10 flex flex-col justify-center items-center text-center gap-3\"\n      style={{ background: `radial-gradient(circle at 50% 25%, ${exp.color}1f, transparent 72%)` }}>\n      <div className=\"w-24 h-24 rounded-3xl flex items-center justify-center text-5xl\"\n        style={{ background: exp.color + '22', boxShadow: `0 0 44px ${exp.color}55`, border: `1px solid ${exp.color}66` }}>\n        {exp.emoji}\n      </div>\n      <p className=\"text-[11px] font-bold tracking-[0.2em]\" style={{ color: exp.color }}>{label}</p>\n      <h3 className=\"text-xl font-bold text-white\">{exp.title}</h3>\n      <p className=\"text-sm text-slate-400 leading-relaxed max-w-xs\">{line}</p>\n    </div>\n  );\n}\n\n// 선택형 문제 카드 (App 밖 정의)\nfunction ChoiceCard({ data, choice, onChoose, accent }) {\n  const answered = choice !== null;\n  return (\n    <div>\n      <p className=\"text-base font-semibold text-white mb-3\">{data.q}</p>\n      <div className=\"flex flex-col gap-2\">\n        {data.options.map((opt, idx) => {\n          const isCorrect = idx === data.answer;\n          const isChosen = idx === choice;\n          let cls = 'bg-white/5 text-slate-200 hover:bg-white/10 border-white/10';\n          if (answered) {\n            if (isCorrect) cls = 'bg-emerald-500/20 text-emerald-200 border-emerald-400/60';\n            else if (isChosen) cls = 'bg-rose-500/20 text-rose-200 border-rose-400/60';\n            else cls = 'bg-white/[0.02] text-slate-500 border-white/5';\n          }\n          return (\n            <button key={idx} disabled={answered} onClick={() => onChoose(idx)}\n              className={`text-left px-4 py-3 rounded-xl border transition-all flex items-center gap-3 ${cls} ${!answered ? 'hover:translate-x-0.5' : ''}`}>\n              <span className=\"w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-sm font-bold flex-shrink-0\">{String.fromCharCode(65 + idx)}</span>\n              <span className=\"flex-1\">{opt}</span>\n              {answered && isCorrect && <span>✅</span>}\n              {answered && isChosen && !isCorrect && <span>❌</span>}\n            </button>\n          );\n        })}\n      </div>\n      {answered && (\n        <div className={`mt-3 p-3 rounded-xl text-sm leading-relaxed ${choice === data.answer ? 'bg-emerald-500/10 text-emerald-200' : 'bg-amber-500/10 text-amber-200'}`}>\n          {choice === data.answer ? '정답이에요! ' : '아쉬워요! '}{data.explain}\n        </div>\n      )}\n    </div>\n  );\n}\n\n// 원형 게이지 — 현재값을 채워지는 도넛으로 보여줌 (값이 추상 숫자가 아니라 '양'으로 와닿게)\nfunction Gauge({ value, min, max, color, unit }) {\n  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));\n  const deg = pct * 360;\n  return (\n    <div className=\"relative mx-auto\" style={{ width: 172, height: 172 }}>\n      <div className=\"absolute inset-0 rounded-full\" style={{ background: `conic-gradient(${color} ${deg}deg, rgba(255,255,255,0.06) ${deg}deg)`, transition: 'background 0.18s linear', boxShadow: `0 0 28px ${color}55` }} />\n      <div className=\"absolute rounded-full flex flex-col items-center justify-center\" style={{ inset: 13, background: 'radial-gradient(circle at 50% 35%, #1e293b, #0f172a)', boxShadow: `inset 0 0 26px ${color}22` }}>\n        <span className=\"text-[40px] font-extrabold leading-none tabular-nums\" style={{ color }}>{value}</span>\n        <span className=\"text-sm text-slate-500 mt-1\">{unit || '단위 없음'}</span>\n      </div>\n    </div>\n  );\n}\n\n// 실시간 차트 + 측정 분석 (App 밖 정의)\nfunction MeasurePanel({ exp }) {\n  const canvasRef = useRef(null);\n  const chartRef = useRef(null);\n  const lastUiRef = useRef(0);\n  const tickRef = useRef(0);\n  const sumRef = useRef(0);\n  const countRef = useRef(0);\n  const missionRef = useRef(false);\n  const [current, setCurrent] = useState(0);\n  const [avg, setAvg] = useState(null);\n  const [minSeen, setMinSeen] = useState(null);\n  const [maxSeen, setMaxSeen] = useState(null);\n  const [missionDone, setMissionDone] = useState(false);\n  const [ledOn, setLedOn] = useState(false);\n\n  useEffect(() => {\n    const ctx = canvasRef.current.getContext('2d');\n    const grad = ctx.createLinearGradient(0, 0, 0, 280);\n    grad.addColorStop(0, exp.color + '66');\n    grad.addColorStop(1, exp.color + '05');\n\n    const chart = new Chart(canvasRef.current, {\n      type: 'line',\n      data: { labels: [], datasets: [{ label: exp.title, data: [], borderColor: exp.color, backgroundColor: grad, borderWidth: 2.5, pointRadius: 0, fill: true, tension: 0.3 }] },\n      options: {\n        animation: false, responsive: false,\n        plugins: { legend: { display: false } },\n        scales: {\n          x: { display: false },\n          y: { min: exp.min, max: exp.max, ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },\n        },\n      },\n    });\n    chartRef.current = chart;\n\n    const off = MODI.onValue(exp.sensorType, 1, exp.field, (raw) => {\n      const value = Math.round((raw || 0) * 10) / 10;\n      const ds = chart.data.datasets[0].data;\n      chart.data.labels.push(tickRef.current++);\n      ds.push(value);\n      if (ds.length > WINDOW) { chart.data.labels.shift(); ds.shift(); }\n      chart.update('none');\n\n      sumRef.current += value;\n      countRef.current += 1;\n      if (!missionRef.current && exp.mission.test(value)) { missionRef.current = true; setMissionDone(true); }\n\n      const now = performance.now();\n      if (now - lastUiRef.current > 140) {\n        lastUiRef.current = now;\n        setCurrent(value);\n        setAvg(Math.round((sumRef.current / countRef.current) * 10) / 10);\n        setMinSeen((p) => (p === null ? value : Math.min(p, value)));\n        setMaxSeen((p) => (p === null ? value : Math.max(p, value)));\n      }\n    }, { pollMs: 50 });\n\n    return () => { off(); chart.destroy(); };\n  }, [exp.key]);\n\n  const resetData = () => {\n    const chart = chartRef.current;\n    if (chart) { chart.data.labels = []; chart.data.datasets[0].data = []; chart.update('none'); }\n    tickRef.current = 0; sumRef.current = 0; countRef.current = 0; missionRef.current = false;\n    setCurrent(0); setAvg(null); setMinSeen(null); setMaxSeen(null); setMissionDone(false);\n  };\n\n  const toggleLed = () => {\n    if (ledOn) { MODI.led(1).off(); setLedOn(false); }\n    else { MODI.led(1).setColor(255, 200, 60); setLedOn(true); }\n  };\n\n  return (\n    <div className=\"grid grid-cols-3 gap-5\">\n      <div className=\"col-span-2 rounded-2xl p-5 border border-white/10 bg-white/[0.03]\">\n        <div className=\"flex items-center justify-between mb-3\">\n          <h2 className=\"text-lg font-semibold text-white flex items-center gap-2\">\n            <span className=\"w-2 h-2 rounded-full animate-pulse\" style={{ background: exp.color }} />실시간 측정 그래프\n          </h2>\n          <button onClick={resetData} className=\"px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition border border-white/10\">↺ 기록 초기화</button>\n        </div>\n        <canvas ref={canvasRef} width={620} height={280} />\n        <div className={`mt-4 p-3.5 rounded-xl border flex items-center gap-3 transition-all ${missionDone ? 'bg-emerald-500/15 border-emerald-400/60' : 'bg-white/[0.02] border-white/10'}`}>\n          <span className=\"text-2xl\">{missionDone ? '🏆' : '🎯'}</span>\n          <div>\n            <p className=\"text-xs text-slate-500\">도전 미션</p>\n            <p className={`text-sm font-semibold ${missionDone ? 'text-emerald-300' : 'text-slate-200'}`}>{exp.mission.label}{missionDone && ' — 성공! 🎉'}</p>\n          </div>\n        </div>\n        <div className=\"mt-3 p-3.5 rounded-xl bg-white/[0.02] border border-white/10 flex items-start gap-2.5\">\n          <span className=\"text-lg\">👀</span>\n          <div>\n            <p className=\"text-xs text-slate-500\">관찰 포인트</p>\n            <p className=\"text-sm text-slate-300 leading-relaxed\">{exp.observe}</p>\n          </div>\n        </div>\n      </div>\n\n      <div className=\"flex flex-col gap-4\">\n        <div className=\"rounded-2xl p-5 border border-white/10 bg-white/[0.03] text-center\">\n          <p className=\"text-sm text-slate-400 mb-3\">현재 측정값</p>\n          <Gauge value={current} min={exp.min} max={exp.max} color={exp.color} unit={exp.unit} />\n          <div className=\"grid grid-cols-3 gap-2 mt-4 text-sm\">\n            <div className=\"rounded-lg bg-white/[0.03] py-2\"><p className=\"text-slate-500 text-xs\">최저</p><p className=\"text-cyan-300 font-bold\">{minSeen === null ? '-' : minSeen}</p></div>\n            <div className=\"rounded-lg bg-white/[0.03] py-2\"><p className=\"text-slate-500 text-xs\">평균</p><p className=\"text-white font-bold\">{avg === null ? '-' : avg}</p></div>\n            <div className=\"rounded-lg bg-white/[0.03] py-2\"><p className=\"text-slate-500 text-xs\">최고</p><p className=\"text-rose-300 font-bold\">{maxSeen === null ? '-' : maxSeen}</p></div>\n          </div>\n        </div>\n\n        <div className=\"rounded-2xl p-5 border border-white/10 bg-white/[0.03] flex-1\">\n          <p className=\"text-sm font-semibold text-slate-300 mb-2\">🔬 탐구 개념</p>\n          <p className=\"text-sm text-slate-400 leading-relaxed\">{exp.concept}</p>\n        </div>\n\n        {exp.ledReactive && (\n          <button onClick={toggleLed} className={`px-4 py-3 rounded-2xl font-semibold transition-all ${ledOn ? 'bg-amber-400 text-slate-900 shadow-lg shadow-amber-400/30' : 'bg-white/5 text-slate-200 hover:bg-white/10 border border-white/10'}`}>\n            {ledOn ? '💡 LED 켜짐 (끄기)' : '🔆 LED로 빛 만들기'}\n          </button>\n        )}\n      </div>\n    </div>\n  );\n}\n\n// 실험 한 개의 탐구 흐름 (예상 → 측정 → 정리)\nfunction ExperimentFlow({ exp }) {\n  const [step, setStep] = useState(0);\n  const [predChoice, setPredChoice] = useState(null);\n  const [quizChoice, setQuizChoice] = useState(null);\n\n  return (\n    <div className=\"h-full flex flex-col min-h-0\">\n      {/* 단계 진행 표시 (상단 고정) */}\n      <div className=\"flex items-center gap-2 mb-5 flex-shrink-0\">\n        {STEPS.map((s, idx) => {\n          const isActive = step === idx;\n          const isDone = step > idx;\n          return (\n            <React.Fragment key={idx}>\n              <button onClick={() => setStep(idx)}\n                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all border ${\n                  isActive ? 'text-slate-900 border-transparent' : isDone ? 'bg-white/5 text-slate-300 border-white/10' : 'bg-white/[0.02] text-slate-500 border-white/5'}`}\n                style={isActive ? { background: exp.color, boxShadow: `0 4px 16px ${exp.color}55` } : undefined}>\n                <span>{isDone ? '✓' : s.icon}</span>\n                <span className=\"text-sm\">{idx + 1}. {s.label}</span>\n              </button>\n              {idx < STEPS.length - 1 && <div className=\"flex-1 h-px bg-white/10 min-w-3\" />}\n            </React.Fragment>\n          );\n        })}\n      </div>\n\n      {/* 콘텐츠 영역: 남은 높이를 채우고, 짧으면 세로 중앙 정렬·길면 스크롤 (화면 높이에 동적 대응) */}\n      <div className=\"flex-1 min-h-0 overflow-y-auto\">\n       <div className=\"min-h-full flex flex-col py-1\">\n      {step === 0 && (\n        <div className=\"grid md:grid-cols-2 gap-5 items-stretch flex-1\">\n          <StepHero exp={exp} label=\"STEP 1 · 예상하기\"\n            line=\"직접 재보기 전에, 결과가 어떻게 될지 먼저 맞혀볼까요? 과학자처럼 가설을 세워보는 거예요.\" />\n          <div className=\"rounded-2xl p-6 border border-white/10 bg-white/[0.03] flex flex-col justify-center\">\n            <ChoiceCard data={exp.prediction} choice={predChoice} onChoose={setPredChoice} accent={exp.color} />\n            {predChoice !== null && (\n              <button onClick={() => setStep(1)} className=\"mt-5 w-full px-5 py-3 rounded-xl text-white font-semibold transition-all hover:scale-[1.02]\" style={{ background: exp.color, boxShadow: `0 4px 16px ${exp.color}55` }}>\n                측정하러 가기 →\n              </button>\n            )}\n          </div>\n        </div>\n      )}\n\n      {step === 1 && (\n        <div>\n          <MeasurePanel exp={exp} />\n          <button onClick={() => setStep(2)} className=\"mt-5 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition-all hover:scale-[1.02]\">\n            정리하러 가기 →\n          </button>\n        </div>\n      )}\n\n      {step === 2 && (\n        <div className=\"grid md:grid-cols-2 gap-5 items-stretch flex-1\">\n          <StepHero exp={exp} label=\"STEP 3 · 정리하기\"\n            line=\"측정하며 관찰한 내용을 떠올려 보세요. 마지막 퀴즈로 개념을 확인하고 실생활 연결까지!\" />\n          <div className=\"rounded-2xl p-6 border border-white/10 bg-white/[0.03]\">\n            <ChoiceCard data={exp.quiz} choice={quizChoice} onChoose={setQuizChoice} accent={exp.color} />\n            {quizChoice !== null && (\n              <div className=\"mt-5 flex flex-col gap-3\">\n              <div className=\"p-4 rounded-xl border\" style={{ background: exp.color + '12', borderColor: exp.color + '55' }}>\n                <p className=\"text-sm font-semibold text-white mb-1\">🌍 실생활에서는?</p>\n                <p className=\"text-sm text-slate-300 leading-relaxed\">{exp.realWorld}</p>\n              </div>\n              <div className=\"p-4 rounded-xl bg-emerald-500/10 border border-emerald-400/40\">\n                <p className=\"text-sm font-semibold text-emerald-200\">🎓 {exp.title} 탐구 완료!</p>\n                <p className=\"text-sm text-slate-300 mt-1\">예상하고 → 측정하고 → 정리하며 <b className=\"text-white\">{exp.title}</b>의 원리를 직접 확인했어요.</p>\n              </div>\n            </div>\n          )}\n          </div>\n        </div>\n      )}\n       </div>\n      </div>\n    </div>\n  );\n}\n\nfunction App() {\n  const [activeKey, setActiveKey] = useState(EXPERIMENTS[0].key);\n  const active = EXPERIMENTS.find((e) => e.key === activeKey);\n\n  return (\n    // 화면 높이를 꽉 채우는 세로 flex — 상단(헤더·탭)은 고정, 아래 콘텐츠가 남은 높이를 차지\n    <div className=\"h-screen flex flex-col text-slate-100\" style={{ background: 'radial-gradient(circle at 50% -20%, #1e293b 0%, #0f172a 55%, #020617 100%)' }}>\n      <div className=\"w-full max-w-5xl mx-auto px-6 pt-6 flex-shrink-0\">\n        <header className=\"mb-5\">\n          <div className=\"inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-semibold tracking-widest text-cyan-300/80 mb-3\">\n            MODI SCIENCE LAB · 센서로 배우는 과학\n          </div>\n          <h1 className=\"text-3xl font-extrabold flex items-center gap-2.5\">\n            <span>🧪</span>\n            <span className=\"bg-gradient-to-r from-cyan-300 via-emerald-300 to-amber-300 bg-clip-text text-transparent\">모디 과학 탐구 실험실</span>\n          </h1>\n          <p className=\"text-slate-400 text-sm mt-2\">🤔 예상하고 → 📡 직접 측정하고 → 🎓 정리하며 과학 개념을 몸으로 익혀 보세요.</p>\n        </header>\n\n        <div className=\"flex flex-wrap gap-2.5\">\n          {EXPERIMENTS.map((exp) => {\n            const on = activeKey === exp.key;\n            return (\n              <button key={exp.key} onClick={() => setActiveKey(exp.key)}\n                className={`px-4 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 border ${on ? 'text-white' : 'bg-white/[0.03] text-slate-300 border-white/10 hover:bg-white/[0.07]'}`}\n                style={on ? { background: exp.color + '22', borderColor: exp.color, boxShadow: `0 4px 16px ${exp.color}33` } : undefined}>\n                <span className=\"text-lg\">{exp.emoji}</span>{exp.title}\n              </button>\n            );\n          })}\n        </div>\n      </div>\n\n      <div className=\"flex-1 min-h-0 w-full max-w-5xl mx-auto px-6 py-5\">\n        <ExperimentFlow key={active.key} exp={active} />\n      </div>\n    </div>\n  );\n}\n\nexport default App;\n"
+  },
+  "coding_type": "hybrid",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": {
+    "modules": [
+      {
+        "key": "network",
+        "role": "필수",
+        "reason": "PC와 통신하고 전원을 공급해요",
+        "count": 1
+      },
+      {
+        "key": "led",
+        "role": "출력",
+        "reason": "색깔 빛을 표시해요",
+        "count": 1
+      },
+      {
+        "key": "env",
+        "role": "입력",
+        "reason": "온도·습도·조도·소리를 감지해요",
+        "count": 1
+      },
+      {
+        "key": "tof",
+        "role": "입력",
+        "reason": "거리를 감지해요",
+        "count": 1
+      },
+      {
+        "key": "imu",
+        "role": "입력",
+        "reason": "기울기·움직임을 감지해요",
+        "count": 1
+      }
+    ],
+    "layout": [
+      {
+        "key": "network",
+        "pos": [0.0, 0.0],
+        "usbFace": "left"
+      },
+      {
+        "key": "env",
+        "pos": [1.0, 0.0]
+      },
+      {
+        "key": "tof",
+        "pos": [2.0, 0.0]
+      },
+      {
+        "key": "led",
+        "pos": [0.0, 1.0]
+      },
+      {
+        "key": "imu",
+        "pos": [1.0, 1.0]
+      }
+    ],
+    "assembly": [
+      "네트워크 모듈을 놓고 USB 케이블을 PC에 연결하세요.",
+      "환경 센서 모듈을 자석 면에 맞대어 연결하세요.",
+      "거리 센서(ToF) 모듈을 자석 면에 맞대어 연결하세요.",
+      "LED 모듈을 자석 면에 맞대어 연결하세요.",
+      "자이로(IMU) 모듈을 자석 면에 맞대어 연결하세요."
+    ],
+    "title": "모디 과학 탐구 실험실",
+    "description": "MODI 센서(빛·소리·온도·거리·기울기)로 측정하며 과학 개념을 배우는 탐구 실험실"
+  },
+  "files": "- App.tsx (typescript): 모디 센서로 빛·소리·온도·거리·기울기를 예상→측정→정리 탐구 단계와 미션·퀴즈로 학습하는 과학 실험실",
+  "design_doc": {
+    "project_name": "모디 과학 실험실",
+    "description": "모디(MODI) 센서로 자연 현상을 실시간 측정하고 그래프로 관찰하는 과학 학습 웹 서비스",
+    "users": ["학생(학습자)", "교사"],
+    "features": [
+      {
+        "name": "실험 주제 선택",
+        "description": "빛, 소리, 온도, 거리와 운동, 기울기와 중력 5가지 실험을 탭 버튼으로 전환",
+        "priority": "mvp"
+      },
+      {
+        "name": "실시간 측정 그래프",
+        "description": "Chart.js 라인 차트로 센서값을 120개 윈도우로 실시간 스트리밍 표시(50ms 폴링)",
+        "priority": "mvp"
+      },
+      {
+        "name": "현재값/최저/최고 표시",
+        "description": "현재 측정값과 측정 중 관찰된 최저·최고값을 단위와 함께 표시",
+        "priority": "mvp"
+      },
+      {
+        "name": "기록 초기화",
+        "description": "그래프 데이터와 최저/최고/현재값을 초기화하는 버튼",
+        "priority": "mvp"
+      },
+      {
+        "name": "탐구 개념·생각해보기 안내",
+        "description": "각 실험별 개념 설명과 탐구 질문을 카드로 제공",
+        "priority": "mvp"
+      },
+      {
+        "name": "LED 빛 만들기",
+        "description": "빛 실험에서 모디 LED를 켜고(255,200,60) 끌 수 있는 토글",
+        "priority": "nice_to_have"
+      }
+    ],
+    "pages": [
+      {
+        "name": "실험실 메인",
+        "description": "헤더, 실험 선택 탭, 실험 패널로 구성된 단일 대시보드 화면",
+        "components": [
+          "헤더(제목/설명)",
+          "실험 탭 버튼 그룹",
+          "실시간 측정 그래프 카드",
+          "현재값/최저/최고 카드",
+          "탐구 개념 카드",
+          "LED 토글 버튼"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Experiment",
+        "fields": [
+          "key",
+          "title",
+          "emoji",
+          "sensorType(environment/tof/imu)",
+          "field",
+          "unit",
+          "min",
+          "max",
+          "color",
+          "accent",
+          "concept",
+          "question",
+          "ledReactive"
+        ],
+        "description": "각 과학 실험의 정의 메타데이터"
+      },
+      {
+        "name": "SensorReading",
+        "fields": [
+          "value(소수1자리 반올림)",
+          "tick(라벨)",
+          "current",
+          "minSeen",
+          "maxSeen"
+        ],
+        "description": "MODI.onValue 콜백으로 수신되는 센서 측정값 및 차트 상태"
+      }
+    ],
+    "user_flows": [
+      "실험 선택 → 센서 데이터 실시간 그래프 관찰 → 현재값/최저/최고 확인 → 개념·질문 읽기 → 기록 초기화",
+      "빛 실험 선택 → LED 켜기 → 밝기 값 변화 관찰 → LED 끄기"
+    ],
+    "strengths": [
+      "5가지 실험 데이터를 배열로 구조화해 확장이 쉬움",
+      "실시간 차트와 UI 갱신을 분리(150ms throttle)해 성능 고려",
+      "각 실험에 개념·탐구질문을 제공해 교육적 흐름이 명확"
+    ],
+    "weaknesses": [
+      "모디 모듈 미연결/센서 오류 상태 처리 UI 없음",
+      "측정 데이터 저장·내보내기 기능 없음",
+      "여러 실험 데이터 비교 기능 부재",
+      "실험별 LED 반응이 빛 실험에만 한정됨"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "화면은 어떻게 '지금 값'을 계속 기억할까?",
+      "what": "프로그램에게는 칠판 같은 메모 공간이 있어요. 센서가 새 숫자를 보내면 그 칠판의 글자를 지우고 새 숫자로 바꿔 적어요. 그러면 화면도 칠판을 보고 똑같이 따라 바뀝니다. 그래서 우리가 손을 움직이면 '현재 측정값'이 실시간으로 바뀌는 거예요.",
+      "why": "이 기억 칠판이 없다면 화면은 처음 켰을 때 모습 그대로 멈춰 있어요. 센서 값이 아무리 변해도 숫자가 안 바뀌어서 실험이 되질 않죠. 값을 기억하고 또 그 변화를 화면에 보여주는 일이 같이 있어야 '살아있는 화면'이 됩니다.",
+      "where": "인스타에서 하트를 누르면 좋아요 숫자가 바로 늘어나죠. 카톡에서 안 읽은 메시지 숫자가 실시간으로 줄어드는 것도 같은 원리예요. 화면 뒤에서 숫자를 기억했다가 바뀔 때마다 새로 보여주는 거랍니다."
+    },
+    {
+      "title": "센서에게 0.05초마다 '지금 몇이야?' 물어보기",
+      "what": "센서는 알아서 말해주지 않아서, 프로그램이 아주 짧은 간격으로 계속 '지금 값이 뭐야?'라고 물어봐요. 여기서는 0.05초마다 물어보죠. 1초에 스무 번씩 물어보니 거의 끊김 없이 변화를 잡아낼 수 있어요.",
+      "why": "물어보는 간격이 너무 길면 손을 흔들어도 그래프가 뚝뚝 끊겨 보여요. 빠른 변화를 놓쳐서 실험이 부정확해지죠. 짧은 간격으로 자주 물어봐야 부드럽고 정확한 그래프가 나옵니다.",
+      "where": "스마트워치가 심장 박동을 끊임없이 재서 그래프로 보여주는 것과 같아요. 자동차 내비가 1초마다 위치를 확인해 내 점을 움직이는 것도 같은 방식이에요."
+    },
+    {
+      "title": "그래프 숫자는 빠르게, 화면 글자는 천천히 바꾸는 요령",
+      "what": "그래프 선은 센서 값이 올 때마다 바로바로 그려요. 하지만 큰 숫자(현재값)는 0.15초에 한 번만 바꿔요. 숫자가 1초에 스무 번씩 깜빡이면 눈이 어지러워서, 일부러 천천히 갱신하는 거예요.",
+      "why": "이걸 안 하면 큰 숫자가 너무 빨리 바뀌어서 읽을 수가 없어요. 또 화면을 너무 자주 새로 그리면 기계가 버벅거리며 느려지죠. 중요한 그래프는 자주, 읽어야 하는 숫자는 적당히 나눠서 둘 다 부드럽게 만든 거예요.",
+      "where": "게임에서 점수는 부드럽게 바뀌지만 화면은 끊김 없이 돌아가죠. 헬스 앱에서 걸음 그래프는 촘촘해도 '오늘 걸음 수' 숫자는 가끔씩 톡톡 바뀌는 것과 같아요."
+    },
+    {
+      "title": "오래된 데이터는 버리고 최신만 보여주는 흐르는 그래프",
+      "what": "그래프에는 최근 120개의 값만 담아요. 새 값이 들어오면 가장 오래된 값을 하나 버려요. 마치 길이가 정해진 컨베이어 벨트처럼, 한쪽에서 새 데이터가 들어오면 반대쪽 옛 데이터가 떨어져 나가죠.",
+      "why": "버리지 않고 계속 쌓으면 데이터가 수천 개가 되어 기계가 무거워지고 느려져요. 화면도 너무 빽빽해서 알아보기 힘들죠. 최신 것만 남기면 그래프가 흐르듯 깔끔하게 움직여요.",
+      "where": "주식 앱의 실시간 차트가 오른쪽으로 흐르며 옛날 부분이 사라지는 것과 같아요. 음악 앱에서 노래 파형이 흘러가는 모습도 같은 방식이에요."
+    },
+    {
+      "title": "한 번 만들어 여러 번 재활용하는 만능 카드",
+      "what": "예상 문제와 마지막 퀴즈는 생김새가 똑같아요. 질문이 있고, 보기 버튼들이 있고, 답을 고르면 맞았는지 알려주죠. 그래서 똑같은 모양의 '문제 카드' 하나를 만들어두고, 내용만 바꿔 끼워서 두 곳에서 재활용해요. 도장 하나로 여러 장을 찍어내는 것과 같아요.",
+      "why": "만약 비슷한 화면을 매번 처음부터 따로 만들면 시간도 오래 걸리고 실수도 많아져요. 또 디자인을 바꾸고 싶을 때 모든 곳을 일일이 고쳐야 하죠. 한 번 잘 만들어 재활용하면 한 곳만 고쳐도 모든 문제 카드가 똑같이 바뀌어요. 일을 훨씬 쉽고 깔끔하게 만들어줘요.",
+      "where": "인스타 피드에서 사진마다 똑같은 모양의 카드가 반복되고, 쿠팡 상품 목록에서 상품마다 같은 틀에 사진과 가격만 바뀌어 들어가요. 카톡 채팅방 목록도 같은 모양 줄이 반복되죠. 틀은 하나, 내용만 갈아 끼우는 거예요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 4,
+      "title": "여러 데이터를 묶어서 보관하는 배열",
+      "explanation": "EXPERIMENTS는 실험 정보들을 차례대로 담아둔 배열(목록)이에요. 각 실험은 중괄호 {}로 묶인 객체로, 제목·이모지·색상 같은 정보를 한 덩어리로 가지고 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 81,
+      "title": "변하는 값을 기억하는 상태(state)",
+      "explanation": "useState는 화면에서 바뀌는 값을 저장하는 도구예요. current 값이 바뀌면 React가 자동으로 화면을 다시 그려서 최신 값을 보여줘요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 87,
+      "title": "화면이 나타날 때 한 번 실행하기",
+      "explanation": "useEffect는 컴포넌트가 처음 보일 때 안의 코드를 실행해요. 여기서는 차트를 만들고 센서 값을 받아오는 준비 작업을 합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 116,
+      "title": "센서 값이 들어올 때마다 처리하기",
+      "explanation": "MODI.onValue는 센서에서 새 값이 올 때마다 괄호 안 함수를 실행해요. 들어온 값을 그래프 데이터에 차곡차곡 추가합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 120,
+      "title": "배열 끝에 새 데이터 추가하기",
+      "explanation": "push는 배열의 맨 뒤에 값을 하나 더 넣는 명령이에요. 새로 측정된 값을 그래프 데이터 목록에 이어 붙입니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 121,
+      "title": "조건이 맞을 때만 실행하기",
+      "explanation": "if는 조건이 참일 때만 안의 코드를 실행해요. 데이터가 120개를 넘으면 오래된 값을 지워서 그래프가 너무 길어지지 않게 합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 122,
+      "title": "배열 맨 앞 데이터 제거하기",
+      "explanation": "shift는 배열의 맨 앞 값을 하나 빼내는 명령이에요. 가장 오래된 측정값을 지워서 최신 데이터만 남깁니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 134,
+      "title": "이전 값을 활용해 새 값 정하기",
+      "explanation": "setMinSeen에 함수를 넣으면 이전 값(prev)을 받아 비교할 수 있어요. 지금 값과 비교해 더 작은 값을 최저 기록으로 저장합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 139,
+      "title": "정리(청소) 작업 예약하기",
+      "explanation": "useEffect에서 return으로 돌려준 함수는 화면이 사라질 때 실행돼요. 센서 연결을 끊고 차트를 없애서 메모리 낭비를 막습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 142,
+      "title": "버튼을 누르면 실행되는 함수",
+      "explanation": "resetData는 '기록 초기화' 버튼을 눌렀을 때 실행돼요. 그래프 데이터와 최저·최고 기록을 모두 처음 상태로 되돌립니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 154,
+      "title": "두 상태를 번갈아 바꾸기(토글)",
+      "explanation": "ledOn 값이 켜져 있으면 끄고, 꺼져 있으면 켜요. 이렇게 on/off를 번갈아 바꾸는 것을 토글이라고 해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 200,
+      "title": "조건이 참일 때만 화면에 보여주기",
+      "explanation": "exp.ledReactive && (...)는 앞 조건이 참일 때만 뒤의 버튼을 화면에 그려요. 빛 실험처럼 LED가 필요한 경우에만 버튼이 나타납니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 211,
+      "title": "조건에 맞는 항목 하나 찾기",
+      "explanation": "find는 배열에서 조건에 맞는 첫 번째 항목을 찾아줘요. 지금 선택된 키(activeKey)와 같은 실험 정보를 골라냅니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 226,
+      "title": "목록을 반복해서 버튼 만들기",
+      "explanation": "map은 배열의 각 항목을 하나씩 꺼내 화면 요소로 바꿔줘요. 실험 개수만큼 탭 버튼을 자동으로 만들어 줍니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 222,
+      "title": "자식에게 데이터 전달하기(props)",
+      "explanation": "exp={active}처럼 부모가 자식 컴포넌트에 값을 넘겨주는 것을 props라고 해요. 선택된 실험 정보를 ExperimentPanel에 전달합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 4,
+      "title": "여러 데이터를 목록(배열)으로 모아두기",
+      "explanation": "EXPERIMENTS는 실험 5개의 정보를 담은 배열이에요. 비슷한 데이터를 하나의 목록으로 묶으면 반복해서 꺼내 쓰기 편해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 6,
+      "title": "관련 정보를 한 묶음으로 만드는 객체",
+      "explanation": "중괄호 {}로 묶인 부분은 객체예요. 제목, 이모지, 색깔처럼 하나의 실험과 관련된 정보를 key:value 짝으로 모아 둡니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 27,
+      "title": "함수를 값처럼 저장하기",
+      "explanation": "test는 숫자를 받아 조건을 만족하는지 true/false로 돌려주는 함수예요. 함수도 데이터처럼 객체 안에 담아둘 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 60,
+      "title": "반복되는 화면을 함수로 만들기 (컴포넌트)",
+      "explanation": "ChoiceCard는 문제 카드 하나를 그리는 부품이에요. 똑같은 모양을 여러 번 만들 때 함수로 정의해두면 재사용할 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 61,
+      "title": "부모가 건네준 데이터 받기 (props)",
+      "explanation": "data, choice, onChoose는 바깥에서 전달해주는 값이에요. 이렇게 데이터를 넘겨주면 같은 부품을 다른 내용으로 보여줄 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 67,
+      "title": "목록을 하나씩 돌며 화면 만들기",
+      "explanation": "map은 보기 항목들을 하나씩 꺼내 버튼으로 바꿔줘요. 항목이 몇 개든 자동으로 그만큼 버튼이 만들어집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 70,
+      "title": "조건에 따라 다른 스타일 정하기",
+      "explanation": "답을 골랐는지(answered)에 따라 정답·오답·기본 색을 다르게 정해요. if로 상황을 나눠 처리하는 흐름 제어의 예시예요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 100,
+      "title": "변하는 값을 기억하는 상태(state)",
+      "explanation": "useState로 만든 current 값은 화면이 기억하는 데이터예요. 값이 바뀌면 화면이 자동으로 다시 그려집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 108,
+      "title": "화면이 처음 뜰 때 한 번 실행하기",
+      "explanation": "useEffect는 컴포넌트가 나타날 때 차트를 준비하는 등의 작업을 해줘요. 시작할 때 자동으로 실행되는 코드 영역이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 137,
+      "title": "새 데이터가 너무 많으면 오래된 것 버리기",
+      "explanation": "데이터가 120개를 넘으면 가장 앞(오래된) 값을 빼냅니다. 그래프가 최근 측정만 보여주도록 길이를 일정하게 유지해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 145,
+      "title": "조건이 맞으면 미션 성공 처리",
+      "explanation": "측정값이 미션 기준을 통과하면 성공 상태로 바꿔요. if 문으로 특정 조건일 때만 동작을 실행하는 모습이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 245,
+      "title": "지금 단계를 숫자로 기억하기",
+      "explanation": "step 값은 현재 어느 단계(예상·측정·정리)인지 나타내요. 이 숫자를 바꿔가며 보여줄 화면을 전환합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 268,
+      "title": "조건에 따라 다른 화면 보여주기",
+      "explanation": "step이 0일 때만 예상하기 화면을 보여줘요. 상태 값에 따라 화면을 바꾸는 대표적인 방법이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 318,
+      "title": "목록에서 원하는 항목 찾기",
+      "explanation": "find로 선택된 key와 일치하는 실험 하나를 골라냅니다. 여러 데이터 중 조건에 맞는 것을 찾는 기능이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 336,
+      "title": "선택된 실험 화면에 데이터 넘겨주기",
+      "explanation": "고른 실험(active)을 exp로 전달해 아래 부품이 그 내용을 그리도록 해요. key를 바꾸면 화면이 새로 시작됩니다."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: MODI 센서로 빛·소리·온도·거리·기울기를 측정하며 과학을 배우는 탐구 실험실을 만들어줘\n튜터: 센서로 측정하며 배우는 모디 과학 탐구 실험실을 만들게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "MODI 센서로 빛·소리·온도·거리·기울기를 측정하며 과학을 배우는 탐구 실험실을 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "센서로 측정하며 배우는 모디 과학 탐구 실험실을 만들게요."
+    }
+  ]
+}

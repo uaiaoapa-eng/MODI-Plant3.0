@@ -1,0 +1,656 @@
+{
+  "session_id": "reference_bubble_bobble",
+  "title": "보글보글",
+  "description": "MODI 하드웨어(조이스틱·버튼)로 조작하는 보글보글 스타일 플랫폼 슈팅 게임",
+  "phase": "implement",
+  "diagram": "(아직 다이어그램이 없습니다)",
+  "generated_code": {
+    "App.tsx": "const { useState, useRef, useEffect } = React;\n\n// ===== 튜닝 상수 (한 곳에 모아 밸런스 조정을 쉽게) =====\nconst STAGE_W = 760;\nconst STAGE_H = 460;\nconst GROUND_H = 26;\nconst PLAYER_W = 40;\nconst PLAYER_H = 42;\nconst GRAVITY = 0.0017;       // 중력 가속도 (px/ms^2)\nconst JUMP_V = -0.8;          // 점프 초기 속도\nconst MOVE_SPEED = 0.33;      // 좌우 이동 속도\nconst BUBBLE = 36;            // 버블 지름\nconst BUBBLE_TRAVEL = 0.42;   // 버블이 날아가는 속도\nconst BUBBLE_RISE = 0.13;     // 버블이 떠오르는 속도\nconst BUBBLE_RANGE = 360;     // 버블이 날아가는 거리\nconst BUBBLE_LIFE = 5200;     // 빈 버블 수명(ms)\nconst CAPTURE_LIFE = 7000;    // 적을 가둔 버블의 안전장치 수명(보통은 위→아래 1왕복 후 바닥에서 부활)\nconst DEADZONE = 12;          // 조이스틱 데드존\nconst COMBO_WINDOW = 1500;    // 콤보 유지 시간(ms)\nconst SPAWN_INTERVAL = 1400;  // 적 등장 간격(ms)\n\nconst PLATFORMS = [\n  { x: 0, y: STAGE_H - GROUND_H, w: STAGE_W, h: GROUND_H },\n  { x: 70, y: 348, w: 210, h: 16 },\n  { x: 480, y: 348, w: 210, h: 16 },\n  { x: 290, y: 252, w: 180, h: 16 },\n  { x: 48, y: 158, w: 180, h: 16 },\n  { x: 532, y: 158, w: 180, h: 16 },\n];\n\nconst ENEMY_KINDS = [\n  { emoji: '👾', color: '#a78bfa' },\n  { emoji: '👻', color: '#f0abfc' },\n  { emoji: '🦠', color: '#fca5a5' },\n];\n\nconst COMBO_LED = [\n  [52, 211, 153], [250, 204, 21], [251, 146, 60], [248, 113, 113], [232, 121, 249],\n];\n\n// ===== 장식용 컴포넌트 =====\nfunction Platform({ block }) {\n  const isGround = block.w === STAGE_W;\n  return (\n    <div\n      className=\"absolute\"\n      style={{\n        left: block.x, top: block.y, width: block.w, height: block.h,\n        borderRadius: isGround ? '14px 14px 0 0' : 999,\n        background: 'linear-gradient(180deg,#5eead4 0%,#0d9488 70%,#0f766e 100%)',\n        boxShadow: '0 5px 0 rgba(8,68,60,0.5), 0 8px 18px rgba(0,0,0,0.32), inset 0 2px 3px rgba(255,255,255,0.55)',\n      }}\n    >\n      <div className=\"absolute inset-x-3 top-1 rounded-full\" style={{ height: 3, background: 'rgba(255,255,255,0.5)' }} />\n    </div>\n  );\n}\n\n// 플레이어 캐릭터 (CSS만으로 그린 귀여운 공룡)\nfunction PlayerSprite() {\n  return (\n    <div className=\"relative w-full h-full\">\n      <div className=\"absolute rounded-full\" style={{ left: '50%', bottom: -4, width: 28, height: 8, transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.28)', filter: 'blur(2px)' }} />\n      {/* 꼬리: 기본 스프라이트가 '오른쪽'을 보도록 왼쪽(뒤쪽)에 둔다 → dir=1(오른쪽 이동) 시 자연스러움 */}\n      <div className=\"absolute rounded-full\" style={{ left: -7, top: 16, width: 17, height: 17, background: 'linear-gradient(180deg,#34d399,#15803d)', borderRadius: '60% 0 60% 60%' }} />\n      <div className=\"absolute inset-0\" style={{ borderRadius: '46% 46% 42% 42%', background: 'linear-gradient(165deg,#86efac 0%,#22c55e 55%,#15803d 100%)', boxShadow: 'inset 0 -5px 7px rgba(0,0,0,0.25), inset 0 3px 4px rgba(255,255,255,0.55), 0 3px 6px rgba(0,0,0,0.3)' }} />\n      <div className=\"absolute rounded-full\" style={{ left: '50%', bottom: 5, width: '54%', height: '40%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.6)', borderRadius: '50%' }} />\n      <div className=\"absolute rounded-full bg-white\" style={{ width: 11, height: 11, left: 8, top: 9, boxShadow: 'inset 0 0 2px rgba(0,0,0,0.2)' }}>\n        <div className=\"absolute rounded-full bg-slate-900\" style={{ width: 5, height: 5, left: 4, top: 4 }} />\n      </div>\n      <div className=\"absolute rounded-full bg-white\" style={{ width: 11, height: 11, right: 8, top: 9, boxShadow: 'inset 0 0 2px rgba(0,0,0,0.2)' }}>\n        <div className=\"absolute rounded-full bg-slate-900\" style={{ width: 5, height: 5, left: 2, top: 4 }} />\n      </div>\n      <div className=\"absolute\" style={{ left: '50%', bottom: 10, width: 10, height: 5, transform: 'translateX(-50%)', borderBottom: '2px solid rgba(15,23,42,0.6)', borderRadius: '0 0 8px 8px' }} />\n      <div className=\"absolute\" style={{ left: 12, top: -3, width: 6, height: 9, background: '#16a34a', borderRadius: '60% 60% 0 0' }} />\n      <div className=\"absolute\" style={{ right: 12, top: -3, width: 6, height: 9, background: '#16a34a', borderRadius: '60% 60% 0 0' }} />\n    </div>\n  );\n}\n\nfunction App() {\n  const stageElRef = useRef(null);\n  const playerElRef = useRef(null);\n  const fxLayerRef = useRef(null);          // 파티클·점수팝업을 직접 그리는 레이어\n  const nodeMapRef = useRef(new Map());     // id -> DOM (버블/적 transform 직접 갱신)\n\n  const playerRef = useRef(null);\n  const joyRef = useRef({ x: 0, y: 0 });\n  const shootRef = useRef(false);\n  const bubblesRef = useRef([]);\n  const enemiesRef = useRef([]);\n  const fxRef = useRef([]);                  // {el, x, y, vx, vy, g, life, max, kind}\n  const idRef = useRef(1);\n\n  const comboRef = useRef(0);\n  const comboExpireRef = useRef(0);\n  const shakeRef = useRef(0);\n  const waveRef = useRef(1);\n  const toSpawnRef = useRef(0);\n  const phaseRef = useRef('ready');          // 루프가 읽는 현재 상태(ready/playing/clear/over)\n\n  const scoreRef = useRef(0);\n  const livesRef = useRef(3);\n  const lastHudRef = useRef(0);\n\n  const [, bump] = useState(0);              // 엔티티 '집합'이 바뀔 때만 리렌더\n  const [phase, setPhase] = useState('ready');\n  const [hud, setHud] = useState({ score: 0, lives: 3, wave: 1, combo: 0 });\n  const [best, setBest] = useState(() => Number(localStorage.getItem('bubble_best') || 0));\n  const [banner, setBanner] = useState('');\n\n  const freshPlayer = () => ({\n    x: STAGE_W / 2 - PLAYER_W / 2,\n    y: STAGE_H - GROUND_H - PLAYER_H,\n    vy: 0, dir: 1, onGround: true,\n    invincibleUntil: 0, landAt: 0, jumpAt: 0,\n  });\n\n  // ── MODI 입력: 조이스틱 → ref (매 프레임 최신값 사용) ──\n  useEffect(() => {\n    const offX = MODI.onValue('joystick', 1, 'x', (v) => { joyRef.current.x = v || 0; }, { pollMs: 24 });\n    const offY = MODI.onValue('joystick', 1, 'y', (v) => { joyRef.current.y = v || 0; }, { pollMs: 24 });\n    return () => { offX(); offY(); };\n  }, []);\n\n  // ── MODI 입력: 버튼 → 발사 / 화면 전환 ──\n  const btn = useButton(1);\n  useEffect(() => {\n    if (!btn.clicked) return;\n    if (phaseRef.current === 'playing') {\n      shootRef.current = true;\n    } else {\n      startGame();\n    }\n  }, [btn.clicked]);\n\n  // 키보드도 지원 (하드웨어 없이 테스트/시연용)\n  useEffect(() => {\n    const down = (e) => {\n      if (e.key === 'ArrowLeft' || e.key === 'a') joyRef.current.x = -100;\n      else if (e.key === 'ArrowRight' || e.key === 'd') joyRef.current.x = 100;\n      else if (e.key === 'ArrowUp' || e.key === 'w') joyRef.current.y = 100;\n      else if (e.key === ' ' || e.key === 'Enter') {\n        e.preventDefault();\n        if (phaseRef.current === 'playing') shootRef.current = true;\n        else startGame();\n      }\n    };\n    const up = (e) => {\n      if (['ArrowLeft', 'a', 'ArrowRight', 'd'].includes(e.key)) joyRef.current.x = 0;\n      if (['ArrowUp', 'w'].includes(e.key)) joyRef.current.y = 0;\n    };\n    window.addEventListener('keydown', down);\n    window.addEventListener('keyup', up);\n    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };\n  }, []);\n\n  const registerNode = (id, x, y) => (el) => {\n    if (el) { nodeMapRef.current.set(id, el); el.style.transform = `translate3d(${x}px,${y}px,0)`; }\n    else nodeMapRef.current.delete(id);\n  };\n\n  // ── 이펙트: 파티클을 fx 레이어에 직접 생성 (리렌더 없이 가볍게) ──\n  const burst = (cx, cy, color, n) => {\n    const layer = fxLayerRef.current;\n    if (!layer) return;\n    for (let i = 0; i < n; i++) {\n      const el = document.createElement('div');\n      const size = 5 + Math.random() * 6;\n      el.style.cssText = `position:absolute;left:0;top:0;width:${size}px;height:${size}px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color};will-change:transform,opacity;`;\n      layer.appendChild(el);\n      const ang = Math.random() * Math.PI * 2;\n      const sp = 0.12 + Math.random() * 0.26;\n      fxRef.current.push({ el, x: cx, y: cy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 0.1, g: 0.0011, life: 520 + Math.random() * 240, max: 760, kind: 'dot' });\n    }\n  };\n\n  const popText = (cx, cy, text, color) => {\n    const layer = fxLayerRef.current;\n    if (!layer) return;\n    const el = document.createElement('div');\n    el.textContent = text;\n    el.style.cssText = `position:absolute;left:0;top:0;font-weight:800;font-size:18px;color:${color};text-shadow:0 2px 6px rgba(0,0,0,0.5);white-space:nowrap;will-change:transform,opacity;`;\n    layer.appendChild(el);\n    fxRef.current.push({ el, x: cx, y: cy, vx: 0, vy: -0.06, g: 0, life: 900, max: 900, kind: 'text' });\n  };\n\n  const beginWave = (w) => {\n    waveRef.current = w;\n    toSpawnRef.current = 3 + w;            // 웨이브가 오를수록 적이 많아짐\n    setBanner(`WAVE ${w}`);\n    MODI.led(1).setColor(56, 189, 248);\n    setTimeout(() => MODI.led(1).off(), 400);\n    setTimeout(() => setBanner(''), 1100);\n  };\n\n  const startGame = () => {\n    enemiesRef.current = [];\n    bubblesRef.current = [];\n    fxRef.current.forEach((f) => f.el.remove());\n    fxRef.current = [];\n    nodeMapRef.current.clear();\n    scoreRef.current = 0;\n    livesRef.current = 3;\n    comboRef.current = 0;\n    shakeRef.current = 0;\n    playerRef.current = freshPlayer();\n    setHud({ score: 0, lives: 3, wave: 1, combo: 0 });\n    phaseRef.current = 'playing';\n    setPhase('playing');\n    beginWave(1);\n    bump((n) => n + 1);\n  };\n\n  // ── 메인 게임 루프 (requestAnimationFrame + 델타타임) ──\n  useEffect(() => {\n    playerRef.current = playerRef.current || freshPlayer();\n    let raf;\n    let last = performance.now();\n    let spawnTimer = 0;\n    let clearAt = 0;\n\n    const landOn = (e, sz, prevY) => {\n      if (e.vy < 0) return false;\n      for (const b of PLATFORMS) {\n        const footPrev = prevY + sz, footNow = e.y + sz;\n        const withinX = e.x + sz > b.x + 4 && e.x < b.x + b.w - 4;\n        if (withinX && footPrev <= b.y && footNow >= b.y) { e.y = b.y - sz; e.vy = 0; return true; }\n      }\n      return false;\n    };\n\n    const loop = (now) => {\n      let dt = now - last;\n      last = now;\n      if (dt > 50) dt = 50;                 // 탭 비활성 등으로 dt가 튀는 것 방지\n      const playing = phaseRef.current === 'playing';\n\n      const player = playerRef.current;\n      const joy = joyRef.current;\n      let changed = false;\n\n      if (playing) {\n        // 이동 (데드존 적용)\n        const jx = Math.abs(joy.x) < DEADZONE ? 0 : joy.x / 100;\n        if (jx !== 0) {\n          player.x += jx * MOVE_SPEED * dt;\n          player.dir = jx > 0 ? 1 : -1;\n          player.x = Math.max(0, Math.min(STAGE_W - PLAYER_W, player.x));\n        }\n        // 점프\n        if (joy.y > 45 && player.onGround) {\n          player.vy = JUMP_V; player.onGround = false; player.jumpAt = now;\n          MODI.speaker(1).playTone(523, 30); setTimeout(() => MODI.speaker(1).stop(), 70);\n        }\n        // 중력 + 착지\n        const prevY = player.y;\n        player.vy += GRAVITY * dt;\n        player.y += player.vy * dt;\n        const wasAir = !player.onGround;\n        player.onGround = landOn(player, PLAYER_H, prevY);\n        if (player.onGround && wasAir) player.landAt = now;\n        if (player.y > STAGE_H) { player.y = -PLAYER_H; player.vy = 0; }\n\n        // 발사\n        if (shootRef.current) {\n          shootRef.current = false;\n          bubblesRef.current.push({\n            id: idRef.current++, x: player.x + PLAYER_W / 2 - BUBBLE / 2, y: player.y + 2,\n            vx: player.dir * BUBBLE_TRAVEL, travelLeft: BUBBLE_RANGE, life: BUBBLE_LIFE, trapped: false, captured: null, bornAt: now,\n          });\n          MODI.speaker(1).playTone(700, 30); setTimeout(() => MODI.speaker(1).stop(), 90);\n          changed = true;\n        }\n      }\n\n      // 버블 이동\n      const bubbles = bubblesRef.current;\n      for (const b of bubbles) {\n        if (b.travelLeft > 0) { const m = b.vx * dt; b.x += m; b.travelLeft -= Math.abs(m); }\n        else if (b.trapped) {\n          // 적을 가둔 버블: 위로 떠오르다가 천장에 닿으면 '한 번' 다시 내려온다.\n          if (!b.falling) { b.y -= BUBBLE_RISE * dt; if (b.y <= 8) b.falling = true; }\n          else b.y += BUBBLE_RISE * dt;\n        } else {\n          b.y -= BUBBLE_RISE * dt;   // 빈 버블은 위로 떠올라 사라진다\n        }\n        b.x = Math.max(0, Math.min(STAGE_W - BUBBLE, b.x));\n        b.life -= dt;\n        const el = nodeMapRef.current.get(b.id);\n        if (el) {\n          const wob = Math.sin(now / 240 + b.id) * 2;\n          el.style.transform = `translate3d(${b.x}px,${b.y + wob}px,0)`;\n        }\n      }\n\n      // 적 등장 (웨이브에 남은 만큼)\n      if (playing) {\n        spawnTimer += dt;\n        const maxConcurrent = Math.min(3 + waveRef.current, 7);\n        if (spawnTimer > SPAWN_INTERVAL && toSpawnRef.current > 0 && enemiesRef.current.length < maxConcurrent) {\n          spawnTimer = 0; toSpawnRef.current -= 1;\n          const fromLeft = Math.random() > 0.5;\n          const kind = Math.floor(Math.random() * ENEMY_KINDS.length);\n          enemiesRef.current.push({\n            id: idRef.current++, x: fromLeft ? 6 : STAGE_W - BUBBLE - 6, y: 90 + Math.random() * 80,\n            vy: 0, dir: fromLeft ? 1 : -1, onGround: false, kind,\n            speed: 0.06 + waveRef.current * 0.012 + Math.random() * 0.02,\n          });\n          changed = true;\n        }\n      }\n\n      // 적 이동 (중력 + 플랫폼 위 순찰)\n      const enemies = enemiesRef.current;\n      for (const e of enemies) {\n        const prevY = e.y;\n        e.vy += GRAVITY * dt;\n        e.y += e.vy * dt;\n        e.onGround = landOn(e, BUBBLE, prevY);\n        if (e.y > STAGE_H + 40) { e.y = -BUBBLE; e.vy = 0; }\n        e.x += e.dir * e.speed * dt;\n        if (e.x < 4) { e.x = 4; e.dir = 1; }\n        if (e.x > STAGE_W - BUBBLE - 4) { e.x = STAGE_W - BUBBLE - 4; e.dir = -1; }\n        if (Math.random() < 0.003) e.dir *= -1;        // 가끔 방향 전환\n        const el = nodeMapRef.current.get(e.id);\n        if (el) { const wob = Math.sin(now / 180 + e.id) * 3; el.style.transform = `translate3d(${e.x}px,${e.y + wob}px,0)`; }\n      }\n\n      // 버블이 적을 가둠\n      for (let bi = bubbles.length - 1; bi >= 0; bi--) {\n        const b = bubbles[bi];\n        if (b.trapped) continue;\n        for (let ei = enemies.length - 1; ei >= 0; ei--) {\n          const e = enemies[ei];\n          const dx = (b.x + BUBBLE / 2) - (e.x + BUBBLE / 2);\n          const dy = (b.y + BUBBLE / 2) - (e.y + BUBBLE / 2);\n          if (dx * dx + dy * dy < BUBBLE * BUBBLE) {\n            burst(e.x + BUBBLE / 2, e.y + BUBBLE / 2, ENEMY_KINDS[e.kind].color, 6);\n            nodeMapRef.current.delete(e.id);\n            enemies.splice(ei, 1);\n            b.trapped = true; b.captured = e; b.travelLeft = 0; b.falling = false; b.life = CAPTURE_LIFE;\n            MODI.speaker(1).playTone(880, 40); setTimeout(() => MODI.speaker(1).stop(), 90);\n            changed = true;\n            break;\n          }\n        }\n      }\n\n      // 플레이어가 갇힌 버블을 몸으로 터뜨림 → 점수 + 콤보\n      for (let bi = bubbles.length - 1; bi >= 0; bi--) {\n        const b = bubbles[bi];\n        if (b.trapped && playing) {\n          const pdx = (player.x + PLAYER_W / 2) - (b.x + BUBBLE / 2);\n          const pdy = (player.y + PLAYER_H / 2) - (b.y + BUBBLE / 2);\n          if (pdx * pdx + pdy * pdy < ((PLAYER_W + BUBBLE) / 2) * ((PLAYER_W + BUBBLE) / 2) * 0.6) {\n            comboRef.current = now < comboExpireRef.current ? comboRef.current + 1 : 1;\n            comboExpireRef.current = now + COMBO_WINDOW;\n            const combo = comboRef.current;\n            const gained = 100 * combo;\n            scoreRef.current += gained;\n            const cx = b.x + BUBBLE / 2, cy = b.y + BUBBLE / 2;\n            burst(cx, cy, '#fde047', 12);\n            popText(cx - 14, cy - 10, `+${gained}`, '#fde047');\n            if (combo >= 2) popText(cx - 24, cy - 32, `COMBO x${combo}`, '#fb923c');\n            shakeRef.current = Math.min(10, 4 + combo);\n            const c = COMBO_LED[Math.min(combo - 1, COMBO_LED.length - 1)];\n            MODI.led(1).setColor(c[0], c[1], c[2]); setTimeout(() => MODI.led(1).off(), 220);\n            MODI.speaker(1).playTone(900 + combo * 120, 50); setTimeout(() => MODI.speaker(1).stop(), 140);\n            nodeMapRef.current.delete(b.id); bubbles.splice(bi, 1);\n            changed = true;\n            continue;\n          }\n        }\n        // 가둔 버블: 내려오기를 끝내면(바닥 근처) — 또는 안전장치 수명 초과 시 — 적이 부활.\n        //            (위로 올라갔다가 한 번 내려오는 동안 못 터뜨리면 풀려난다)\n        const reviveNow = b.trapped && b.captured &&\n          ((b.falling && b.y >= STAGE_H - GROUND_H - BUBBLE) || b.life <= 0);\n        // 빈 버블: 수명이 다하거나 화면 위로 빠져나가면 사라짐\n        const emptyGone = !b.trapped && (b.life <= 0 || b.y < -BUBBLE);\n        if (reviveNow || emptyGone) {\n          if (reviveNow) {\n            enemies.push({\n              id: idRef.current++, x: Math.max(4, Math.min(STAGE_W - BUBBLE - 4, b.x)),\n              y: Math.max(70, Math.min(STAGE_H - GROUND_H - BUBBLE, b.y)), vy: 0,\n              dir: Math.random() > 0.5 ? 1 : -1, onGround: false, kind: b.captured.kind, speed: b.captured.speed,\n            });\n            MODI.speaker(1).playTone(300, 50); setTimeout(() => MODI.speaker(1).stop(), 120);\n          } else {\n            burst(b.x + BUBBLE / 2, b.y + BUBBLE / 2, 'rgba(165,243,252,0.9)', 5);\n          }\n          nodeMapRef.current.delete(b.id); bubbles.splice(bi, 1);\n          changed = true;\n        }\n      }\n\n      // 콤보 만료\n      if (comboRef.current > 0 && now > comboExpireRef.current) comboRef.current = 0;\n\n      // 플레이어 vs 풀려난 적 (목숨 감소)\n      if (playing && now > player.invincibleUntil) {\n        for (const e of enemies) {\n          const hx = (player.x + PLAYER_W / 2) - (e.x + BUBBLE / 2);\n          const hy = (player.y + PLAYER_H / 2) - (e.y + BUBBLE / 2);\n          if (hx * hx + hy * hy < 30 * 30) {\n            livesRef.current = Math.max(0, livesRef.current - 1);\n            player.invincibleUntil = now + 1600;\n            player.x = STAGE_W / 2 - PLAYER_W / 2; player.y = STAGE_H - GROUND_H - PLAYER_H; player.vy = 0;\n            comboRef.current = 0;\n            shakeRef.current = 14;\n            burst(STAGE_W / 2, player.y, '#f87171', 14);\n            MODI.led(1).setColor(220, 30, 30); setTimeout(() => MODI.led(1).off(), 350);\n            MODI.speaker(1).playTone(180, 120); setTimeout(() => MODI.speaker(1).stop(), 260);\n            changed = true;\n            if (livesRef.current <= 0) {\n              phaseRef.current = 'over'; setPhase('over');\n              const b = Math.max(scoreRef.current, Number(localStorage.getItem('bubble_best') || 0));\n              localStorage.setItem('bubble_best', String(b)); setBest(b);\n            }\n            break;\n          }\n        }\n      }\n\n      // 웨이브 클리어 판정 (남은 등장·적·가둔버블이 모두 없을 때)\n      if (playing) {\n        const noTrapped = !bubbles.some((b) => b.captured);\n        if (toSpawnRef.current === 0 && enemies.length === 0 && noTrapped) {\n          if (clearAt === 0) clearAt = now + 600;\n          else if (now > clearAt) { clearAt = 0; scoreRef.current += 500; popText(STAGE_W / 2 - 40, STAGE_H / 2, '+500', '#5eead4'); beginWave(waveRef.current + 1); changed = true; }\n        } else clearAt = 0;\n      }\n\n      // 파티클·점수팝업 갱신 (직접 DOM)\n      const fx = fxRef.current;\n      for (let i = fx.length - 1; i >= 0; i--) {\n        const f = fx[i];\n        f.life -= dt;\n        if (f.life <= 0) { f.el.remove(); fx.splice(i, 1); continue; }\n        f.vy += f.g * dt; f.x += f.vx * dt; f.y += f.vy * dt;\n        const a = Math.max(0, f.life / f.max);\n        f.el.style.opacity = a;\n        f.el.style.transform = `translate3d(${f.x}px,${f.y}px,0)${f.kind === 'text' ? ` scale(${0.8 + a * 0.4})` : ''}`;\n      }\n\n      // 화면 흔들림\n      if (stageElRef.current) {\n        let sx = 0, sy = 0;\n        if (shakeRef.current > 0.2) {\n          shakeRef.current *= 0.86;\n          sx = (Math.random() - 0.5) * shakeRef.current * 2;\n          sy = (Math.random() - 0.5) * shakeRef.current * 2;\n        } else shakeRef.current = 0;\n        stageElRef.current.style.transform = `translate(${sx}px,${sy}px)`;\n      }\n\n      // 플레이어 렌더 (스쿼시·스트레치 + 깜빡임)\n      if (playerElRef.current) {\n        let sy = 1, sxq = 1;\n        const sinceLand = now - player.landAt, sinceJump = now - player.jumpAt;\n        if (sinceLand < 130) { const k = 1 - sinceLand / 130; sy = 1 - 0.22 * k; sxq = 1 + 0.22 * k; }\n        else if (!player.onGround && sinceJump < 200) { const k = 1 - sinceJump / 200; sy = 1 + 0.16 * k; sxq = 1 - 0.16 * k; }\n        const blink = now < player.invincibleUntil && Math.floor(now / 110) % 2 === 0;\n        playerElRef.current.style.opacity = blink ? '0.35' : '1';\n        playerElRef.current.style.transform = `translate3d(${player.x}px,${player.y}px,0) scaleX(${player.dir * sxq}) scaleY(${sy})`;\n      }\n\n      // HUD는 자주 안 바꿈 (리렌더 절약)\n      if (now - lastHudRef.current > 120) {\n        lastHudRef.current = now;\n        setHud((h) => {\n          const s = scoreRef.current, l = livesRef.current, w = waveRef.current, c = comboRef.current;\n          if (h.score === s && h.lives === l && h.wave === w && h.combo === c) return h;\n          return { score: s, lives: l, wave: w, combo: c };\n        });\n      }\n\n      if (changed) bump((n) => n + 1);\n      raf = requestAnimationFrame(loop);\n    };\n\n    raf = requestAnimationFrame(loop);\n    return () => cancelAnimationFrame(raf);\n  }, []);\n\n  return (\n    <div className=\"min-h-full flex flex-col items-center justify-center gap-5 p-6\" style={{ background: 'radial-gradient(circle at 50% -10%,#1e3a8a 0%,#0f172a 65%,#020617 100%)' }}>\n      <style>{`\n        @keyframes floatUp { from{transform:translateY(0)} to{transform:translateY(-26px)} }\n        @keyframes bannerPop { 0%{transform:scale(0.6);opacity:0} 25%{transform:scale(1.05);opacity:1} 75%{transform:scale(1);opacity:1} 100%{transform:scale(1.1);opacity:0} }\n        @keyframes drift { from{transform:translateY(0)} to{transform:translateY(-540px)} }\n      `}</style>\n\n      {/* HUD */}\n      <div className=\"flex items-center justify-between w-full max-w-[760px] px-6 py-3 rounded-2xl text-white\" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>\n        <h1 className=\"text-2xl font-extrabold tracking-tight flex items-center gap-2\">\n          <span className=\"text-3xl\">🫧</span>\n          <span className=\"bg-gradient-to-r from-cyan-300 to-emerald-300 bg-clip-text text-transparent\">보글보글</span>\n        </h1>\n        <div className=\"flex items-center gap-5\">\n          <div className=\"flex flex-col items-center leading-none\">\n            <span className=\"text-[10px] font-semibold tracking-widest text-cyan-300/70\">WAVE</span>\n            <span className=\"text-lg font-extrabold text-cyan-200 tabular-nums\">{hud.wave}</span>\n          </div>\n          <div className=\"flex flex-col items-end leading-none\">\n            <span className=\"text-[10px] font-semibold tracking-widest text-cyan-300/70\">SCORE</span>\n            <span className=\"text-xl font-extrabold text-amber-300 tabular-nums\">{hud.score}</span>\n          </div>\n          <span className=\"text-lg\">{'❤️'.repeat(Math.max(0, hud.lives))}</span>\n        </div>\n      </div>\n\n      {/* 게임 무대 (흔들림은 stageEl에만 적용) */}\n      <div ref={stageElRef} style={{ width: STAGE_W, height: STAGE_H, willChange: 'transform' }}>\n        <div className=\"relative overflow-hidden rounded-3xl w-full h-full\" style={{ background: 'linear-gradient(180deg,#0c4a6e 0%,#0e7490 45%,#155e75 100%)', border: '3px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 60px rgba(0,0,0,0.5), inset 0 0 90px rgba(8,47,73,0.55)' }}>\n          {/* 떠오르는 배경 거품 */}\n          <div className=\"absolute inset-0 pointer-events-none\">\n            {[12, 28, 46, 63, 78, 90].map((lx, i) => (\n              <div key={i} className=\"absolute rounded-full\" style={{ left: `${lx}%`, bottom: -30, width: 10 + (i % 3) * 8, height: 10 + (i % 3) * 8, background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.5), rgba(125,211,252,0.12))', animation: `drift ${7 + i}s linear ${i * 1.2}s infinite` }} />\n            ))}\n          </div>\n          <div className=\"absolute inset-x-0 top-0 h-28 pointer-events-none\" style={{ background: 'linear-gradient(180deg, rgba(125,211,252,0.22), transparent)' }} />\n\n          {PLATFORMS.map((b, i) => <Platform key={i} block={b} />)}\n\n          {enemiesRef.current.map((e) => (\n            <div key={e.id} ref={registerNode(e.id, e.x, e.y)} className=\"absolute flex items-center justify-center\" style={{ left: 0, top: 0, width: BUBBLE, height: BUBBLE, fontSize: 26, willChange: 'transform', filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.4))` }}>\n              {ENEMY_KINDS[e.kind].emoji}\n            </div>\n          ))}\n\n          {bubblesRef.current.map((b) => (\n            <div key={b.id} ref={registerNode(b.id, b.x, b.y)} className=\"absolute rounded-full flex items-center justify-center\" style={{\n              left: 0, top: 0, width: BUBBLE, height: BUBBLE, willChange: 'transform',\n              background: b.trapped ? 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95) 0%, rgba(253,224,71,0.5) 45%, rgba(251,191,36,0.22) 100%)' : 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95) 0%, rgba(165,243,252,0.5) 45%, rgba(56,189,248,0.18) 100%)',\n              border: b.trapped ? '2px solid rgba(253,224,71,0.85)' : '2px solid rgba(255,255,255,0.6)',\n              boxShadow: b.trapped ? '0 0 16px rgba(251,191,36,0.6), inset 0 0 8px rgba(255,255,255,0.6)' : '0 0 12px rgba(125,211,252,0.5), inset 0 0 8px rgba(255,255,255,0.6)',\n            }}>\n              {b.trapped && b.captured && <span style={{ fontSize: 18, opacity: 0.92 }}>{ENEMY_KINDS[b.captured.kind].emoji}</span>}\n            </div>\n          ))}\n\n          <div ref={playerElRef} className=\"absolute\" style={{ left: 0, top: 0, width: PLAYER_W, height: PLAYER_H, willChange: 'transform' }}>\n            <PlayerSprite />\n          </div>\n\n          {/* 파티클·점수팝업 레이어 (JS가 직접 그림) */}\n          <div ref={fxLayerRef} className=\"absolute inset-0 pointer-events-none\" />\n\n          {/* 웨이브 배너 */}\n          {banner && (\n            <div className=\"absolute inset-0 flex items-center justify-center pointer-events-none\">\n              <span className=\"text-5xl font-black text-white tracking-tight\" style={{ textShadow: '0 4px 14px rgba(0,0,0,0.6)', animation: 'bannerPop 1.1s ease forwards' }}>{banner}</span>\n            </div>\n          )}\n\n          {/* 시작 화면 */}\n          {phase === 'ready' && (\n            <div className=\"absolute inset-0 flex flex-col items-center justify-center gap-4\" style={{ background: 'rgba(2,6,23,0.7)', backdropFilter: 'blur(3px)' }}>\n              <p className=\"text-6xl\">🫧</p>\n              <p className=\"text-4xl font-black text-white tracking-tight\">보글보글</p>\n              <p className=\"text-cyan-200 text-center leading-relaxed text-sm\">조이스틱 <b>좌우</b>로 이동 · <b>위로</b> 점프 · <b>버튼</b>으로 버블 발사<br/>적을 버블에 가두고 <b>몸으로 터뜨려</b> 처치! 연속으로 터뜨리면 <b>콤보</b> 보너스</p>\n              {best > 0 && <p className=\"text-amber-300/90 text-sm\">최고 점수 <b>{best}</b></p>}\n              <button className=\"mt-1 px-8 py-3 rounded-2xl text-white font-bold transition-transform hover:scale-105\" style={{ background: 'linear-gradient(180deg,#34d399,#0d9488)', boxShadow: '0 6px 18px rgba(13,148,136,0.5)' }} onClick={startGame}>\n                버튼(또는 클릭)으로 시작 ▶\n              </button>\n            </div>\n          )}\n\n          {/* 게임 오버 */}\n          {phase === 'over' && (\n            <div className=\"absolute inset-0 flex flex-col items-center justify-center gap-4\" style={{ background: 'rgba(2,6,23,0.8)', backdropFilter: 'blur(4px)' }}>\n              <p className=\"text-5xl\">💥</p>\n              <p className=\"text-4xl font-black tracking-tight text-white\">GAME OVER</p>\n              <p className=\"text-lg text-cyan-200\">점수 <span className=\"font-bold text-amber-300\">{hud.score}</span> · WAVE <span className=\"font-bold text-cyan-200\">{hud.wave}</span></p>\n              <p className=\"text-amber-300/90 text-sm\">최고 점수 <b>{best}</b></p>\n              <button className=\"mt-1 px-8 py-3 rounded-2xl text-white font-bold transition-transform hover:scale-105\" style={{ background: 'linear-gradient(180deg,#34d399,#0d9488)', boxShadow: '0 6px 18px rgba(13,148,136,0.5)' }} onClick={startGame}>\n                다시 시작\n              </button>\n            </div>\n          )}\n        </div>\n      </div>\n\n      <p className=\"text-sm text-slate-300/70\">조이스틱 좌우: 이동 · 위로: 점프 · 버튼: 버블 발사 — 갇힌 적을 몸으로 터뜨려 처치!</p>\n    </div>\n  );\n}\n\nexport default App;\n"
+  },
+  "coding_type": "hybrid",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": {
+    "modules": [
+      {
+        "key": "network",
+        "role": "필수",
+        "reason": "PC와 통신하고 전원을 공급해요",
+        "count": 1
+      },
+      {
+        "key": "joystick",
+        "role": "입력",
+        "reason": "조이스틱 방향을 입력해요",
+        "count": 1
+      },
+      {
+        "key": "speaker",
+        "role": "출력",
+        "reason": "소리·멜로디를 출력해요",
+        "count": 1
+      },
+      {
+        "key": "led",
+        "role": "출력",
+        "reason": "색깔 빛을 표시해요",
+        "count": 1
+      },
+      {
+        "key": "button",
+        "role": "입력",
+        "reason": "버튼 누름을 감지해요",
+        "count": 1
+      }
+    ],
+    "layout": [
+      {
+        "key": "joystick",
+        "pos": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "key": "network",
+        "pos": [
+          0.0,
+          0.0
+        ],
+        "usbFace": "left"
+      },
+      {
+        "key": "button",
+        "pos": [
+          1.0,
+          1.0
+        ]
+      },
+      {
+        "key": "led",
+        "pos": [
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "key": "speaker",
+        "pos": [
+          2.0,
+          0.0
+        ]
+      }
+    ],
+    "assembly": [
+      "조이스틱 모듈을 자석 면에 맞대어 연결하세요.",
+      "네트워크 모듈을 놓고 USB 케이블을 PC에 연결하세요.",
+      "버튼 모듈을 자석 면에 맞대어 연결하세요.",
+      "LED 모듈을 자석 면에 맞대어 연결하세요.",
+      "스피커 모듈을 자석 면에 맞대어 연결하세요."
+    ],
+    "title": "보글보글 (MODI 미니게임)",
+    "description": "MODI 하드웨어(조이스틱·버튼)로 조작하는 보글보글 스타일 플랫폼 슈팅 게임"
+  },
+  "files": "- App.tsx (tsx): 보글보글 스타일 게임 - 귀여운 CSS 캐릭터, 버블로 적을 가두고 터뜨려 처치, 넓고 깔끔한 수중 테마",
+  "design_doc": {
+    "project_name": "보글보글 (MODI 미니게임)",
+    "description": "MODI 하드웨어(조이스틱·버튼)로 조작하는 보글보글 스타일 플랫폼 슈팅 게임",
+    "users": [
+      "플레이어"
+    ],
+    "features": [
+      {
+        "name": "캐릭터 좌우 이동",
+        "description": "조이스틱 x값(데드존 12)으로 캐릭터를 좌우로 속도형 이동, 스테이지 경계 클램프",
+        "priority": "mvp"
+      },
+      {
+        "name": "점프",
+        "description": "조이스틱 위(y>45) 또는 점프 요청 시 지면에 있을 때 점프(JUMP_VELOCITY)",
+        "priority": "mvp"
+      },
+      {
+        "name": "버블 발사",
+        "description": "하드웨어 버튼 클릭 시 캐릭터 방향으로 버블 발사, 일정 거리 이동 후 상승, 스피커 효과음(660Hz)",
+        "priority": "mvp"
+      },
+      {
+        "name": "중력 및 플랫폼 착지",
+        "description": "중력 적용 후 6개 플랫폼과 발 위치 비교로 착지 판정, 바닥 아래로 떨어지면 상단 재등장",
+        "priority": "mvp"
+      },
+      {
+        "name": "적 스폰 및 이동",
+        "description": "2.4초 간격으로 최대 5마리 적을 좌/우 무작위 위치에서 스폰, 좌우로 이동하며 벽에서 방향 전환",
+        "priority": "mvp"
+      },
+      {
+        "name": "버블-적 충돌 처리",
+        "description": "버블과 적 거리 충돌 시 둘 다 제거, 점수 +100, LED 녹색 점멸·스피커 880Hz",
+        "priority": "mvp"
+      },
+      {
+        "name": "플레이어-적 충돌 및 무적",
+        "description": "적과 충돌 시 생명 -1, 1.5초 무적(깜빡임), LED 빨강, 캐릭터 중앙 리스폰",
+        "priority": "mvp"
+      },
+      {
+        "name": "점수/생명 HUD",
+        "description": "상단에 SCORE와 하트(생명) 표시, 150ms throttle로 갱신",
+        "priority": "mvp"
+      },
+      {
+        "name": "게임 오버 및 재시작",
+        "description": "생명 0이면 GAME OVER 오버레이와 최종 점수 표시, 다시 시작 버튼으로 상태 초기화",
+        "priority": "mvp"
+      },
+      {
+        "name": "하드웨어 피드백",
+        "description": "MODI LED/스피커로 발사·득점·피격 시 시청각 피드백 제공",
+        "priority": "mvp"
+      }
+    ],
+    "pages": [
+      {
+        "name": "게임 화면",
+        "description": "640x440 단일 게임 스테이지와 상단 HUD, 하단 조작 안내로 구성된 단일 화면",
+        "components": [
+          "제목(보글보글)",
+          "SCORE 표시",
+          "생명 하트 표시",
+          "게임 스테이지",
+          "플랫폼",
+          "플레이어(🐲)",
+          "적(👾)",
+          "버블",
+          "GAME OVER 오버레이",
+          "다시 시작 버튼",
+          "조작 안내 텍스트"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Player",
+        "fields": [
+          "x",
+          "y",
+          "vy",
+          "dir",
+          "onGround",
+          "invincibleUntil"
+        ],
+        "description": "플레이어 위치/속도/방향/지면여부/무적 상태"
+      },
+      {
+        "name": "Bubble",
+        "fields": [
+          "id",
+          "x",
+          "y",
+          "vx",
+          "travelLeft",
+          "life"
+        ],
+        "description": "발사된 버블의 위치·이동량·수명"
+      },
+      {
+        "name": "Enemy",
+        "fields": [
+          "id",
+          "x",
+          "y",
+          "dir"
+        ],
+        "description": "적 위치와 이동 방향"
+      },
+      {
+        "name": "Platform",
+        "fields": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "description": "플랫폼 블록 위치/크기 (6개 고정 배치)"
+      },
+      {
+        "name": "GameState",
+        "fields": [
+          "score",
+          "lives"
+        ],
+        "description": "전역 점수와 생명 수"
+      }
+    ],
+    "user_flows": [
+      "조이스틱 이동/점프 → 버튼 버블 발사 → 적 명중 시 점수 획득",
+      "적과 충돌 → 생명 감소 → 무적 후 리스폰 → 생명 0 시 게임오버 → 다시 시작"
+    ],
+    "strengths": [
+      "ref 기반 게임 루프와 transform 직접 조작으로 렌더 성능 최적화",
+      "하드웨어(조이스틱·버튼·LED·스피커)와 화면이 긴밀히 연동",
+      "HUD throttle 등 성능 고려가 명확"
+    ],
+    "weaknesses": [
+      "난이도 상승(레벨/속도 증가) 로직이 없어 단조로움",
+      "버블에 갇힌 적을 터뜨리는 보글보글 원작 메커닉은 미구현(즉시 제거)",
+      "최고 점수 저장 등 영속 데이터 없음",
+      "사운드/시각 효과 외 다양한 적 유형 부재"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "캐릭터가 점프하면 왜 다시 떨어질까",
+      "what": "이 게임에는 진짜 세상처럼 보이지 않는 중력이 숨어 있어요. 캐릭터가 점프하면 위로 올라가다가 점점 느려지고, 결국 아래로 떨어지죠. 컴퓨터가 매 순간 '아래로 조금씩 당기는 힘'을 더해줘서 그래요. 공을 위로 던지면 다시 떨어지는 것과 똑같은 원리예요.",
+      "why": "이 당기는 힘이 없으면 캐릭터가 점프한 채로 하늘에 둥둥 떠 있게 돼요. 그러면 발판 위에 착지하는 재미도 없고 게임이 이상해지죠. 진짜 같은 움직임을 만들려면 이런 보이지 않는 규칙이 꼭 필요해요.",
+      "where": "휴대폰에서 화면을 손가락으로 휙 넘기면 스르륵 멈추잖아요. 그것도 마치 마찰처럼 자연스럽게 멈추도록 비슷한 힘 계산을 넣어둔 거예요."
+    },
+    {
+      "title": "버블이 적에게 닿은 걸 어떻게 알까",
+      "what": "게임은 버블과 적이 부딪혔는지 매 순간 둘 사이의 거리를 재서 확인해요. 두 물체가 충분히 가까워지면 '부딪혔다!'고 판단하는 거예요. 마치 두 친구가 팔을 뻗어서 손이 닿을 만큼 가까운지 확인하는 것과 같아요. 거리가 일정 수준보다 가까우면 적이 사라지고 점수가 올라가요.",
+      "why": "이런 거리 확인이 없으면 버블이 적을 그냥 통과해버려서 아무 일도 안 일어나요. 그러면 적을 잡을 수도, 점수를 얻을 수도 없어 게임이 성립하지 않죠. 부딪힘을 알아채는 건 거의 모든 게임의 핵심 규칙이에요.",
+      "where": "쿠팡에서 장바구니에 담은 물건끼리 겹치지 않게 배치하거나, 지도 앱에서 내 위치가 목적지에 도착했는지 알려주는 것도 비슷하게 거리를 재서 판단하는 거예요."
+    },
+    {
+      "title": "조이스틱을 살짝 건드려도 안 움직이는 이유",
+      "what": "조이스틱은 가만히 둬도 아주 미세하게 흔들리거나 정확히 가운데에 안 멈출 수 있어요. 그래서 이 게임은 '아주 살짝 움직인 정도는 무시'하는 안전 구역을 둡니다. 일정 세기 이상으로 확실히 밀어야만 캐릭터가 반응해요. 마치 문을 살짝 건드린 건 무시하고 제대로 밀었을 때만 열리게 하는 것과 같죠.",
+      "why": "이 무시 구역이 없으면 손을 안 댔는데도 캐릭터가 혼자 슬금슬금 움직여서 짜증이 납니다. 정확히 멈춰 있어야 할 때 제멋대로 흔들리면 조작이 엉망이 되죠. 작은 흔들림을 걸러주면 내가 원할 때만 깔끔하게 움직입니다. 조작감을 좋게 만드는 숨은 배려예요.",
+      "where": "게임기 컨트롤러나 핸드폰 게임의 화면 조이스틱이 다 이 안전 구역을 가지고 있어요. 자동차 핸들도 아주 살짝 돌린 건 무시하도록 만들어져 있죠. 마우스를 미세하게 떨어도 커서가 안 떨리는 것도 비슷한 거름 장치 덕분입니다."
+    },
+    {
+      "title": "연달아 터뜨리면 점수가 쑥쑥 오르는 콤보",
+      "what": "적을 가둔 버블을 짧은 시간 안에 연속으로 터뜨리면 '콤보'가 쌓여요. 한 번 터뜨릴 때마다 점수가 1배, 2배, 3배로 커지죠. 잠깐이라도 쉬면 콤보가 풀려 다시 1배부터예요. 컴퓨터는 '마지막으로 터뜨린 시각'을 기억해두고, 다음 터뜨림이 정해진 시간 안에 들어오면 콤보를 올려줘요.",
+      "why": "콤보가 없으면 하나씩 천천히 잡으나 몰아 잡으나 점수가 같아서 밋밋해요. 콤보 덕분에 '한꺼번에 몰아 잡으면 더 큰 보상'이 생겨서 더 과감하고 신나게 플레이하게 되죠. 게임을 짜릿하게 만드는 장치예요.",
+      "where": "리듬 게임에서 음표를 연속으로 맞히면 콤보가 붙고, 농구 게임에서 연속 득점하면 '불붙었다!'며 보너스를 주는 것도 똑같은 아이디어예요."
+    },
+    {
+      "title": "맞히는 순간 짜릿한 '손맛'의 정체",
+      "what": "버블을 터뜨리면 화면이 살짝 흔들리고, 색색의 입자가 팡 튀고, '+200' 같은 점수가 떠올라요. 점수를 올리는 규칙만 보면 없어도 되는데 일부러 넣은 거예요. 무슨 일이 '제대로 일어났다'는 걸 눈과 손으로 느끼게 해주는 양념이죠.",
+      "why": "효과가 하나도 없으면 적을 잡아도 밍밍하고 잘 맞췄는지도 헷갈려요. 흔들림·반짝임·소리·LED 같은 즉각 반응이 있으면 '내가 잘했다!'가 확 와닿아 훨씬 재미있어요. 좋은 게임과 평범한 게임을 가르는 숨은 차이랍니다.",
+      "where": "휴대폰 버튼을 누르면 '드르륵' 진동하거나, 메시지를 보낼 때 슝 날아가는 애니메이션도 같은 이유예요. 잘 됐다는 걸 몸으로 느끼게 해주는 거죠."
+    },
+    {
+      "title": "스테이지가 올라갈수록 더 어려워지는 까닭",
+      "what": "적을 다 잡으면 다음 '웨이브'로 넘어가요. 웨이브가 올라갈수록 한 번에 나오는 적이 많아지고 더 빨라지죠. 컴퓨터는 지금 몇 번째 웨이브인지를 기억해뒀다가 그 숫자에 맞춰 적의 수와 속도를 점점 키웁니다.",
+      "why": "처음부터 적이 우르르 빠르게 나오면 너무 어려워 금방 포기하고, 끝까지 쉬우면 금방 질려요. 조금씩 어려워지면 실력이 느는 만큼 도전할 맛이 나 계속하고 싶어지죠. 이렇게 난이도를 천천히 올리는 걸 '난이도 곡선'이라고 해요.",
+      "where": "학습 앱이 쉬운 문제부터 점점 어려운 문제를 주거나, 운동할 때 가벼운 무게부터 차츰 늘리는 것도 같은 원리예요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 3,
+      "title": "변하지 않는 값에 이름 붙이기 (상수)",
+      "explanation": "STAGE_W처럼 게임 화면 크기나 중력 같은 고정된 숫자에 이름을 붙여두면, 나중에 값을 바꾸거나 코드를 읽을 때 훨씬 편해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 16,
+      "title": "여러 데이터를 묶어 담는 배열",
+      "explanation": "PLATFORMS는 발판 여러 개의 정보를 한 줄에 하나씩 담아둔 목록(배열)이에요. {x, y, w, h}처럼 묶인 값을 객체라고 부릅니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 25,
+      "title": "화면 조각을 재사용하는 컴포넌트",
+      "explanation": "Platform 함수는 발판 하나를 그리는 작은 부품이에요. 같은 모양을 여러 번 그릴 때 이 부품을 반복해서 쓸 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 50,
+      "title": "화면에 보여줄 점수 기억하기 (상태)",
+      "explanation": "useState로 만든 score는 값이 바뀌면 화면을 다시 그려주는 '기억 상자'예요. 점수가 오르면 자동으로 화면 숫자도 바뀝니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 58,
+      "title": "센서 입력 값을 계속 받아오기",
+      "explanation": "조이스틱이 움직일 때마다 그 값을 joyRef에 저장해 둬요. 이렇게 외부 장치의 입력을 프로그램 안으로 가져옵니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 100,
+      "title": "매 순간 반복되는 게임 루프",
+      "explanation": "loop 함수는 1초에 수십 번 자동으로 다시 실행되면서 캐릭터를 움직이고 그림을 새로 그려요. 게임이 살아 움직이는 핵심이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 117,
+      "title": "조건이 맞을 때만 실행하기 (if)",
+      "explanation": "조이스틱이 충분히 기울었을 때만 캐릭터를 움직여요. if는 '~라면 ~해라'처럼 조건에 따라 동작을 결정합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 130,
+      "title": "중력으로 점점 빨라지는 낙하",
+      "explanation": "매 순간 아래 방향 속도(vy)를 조금씩 더해주면 캐릭터가 점점 빠르게 떨어져요. 실제 중력과 비슷하게 표현한 거예요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 148,
+      "title": "목록에 새 항목 추가하기 (push)",
+      "explanation": "버블을 발사하면 새 버블 정보를 bubbles 배열에 push로 추가해요. 이렇게 하면 화면에 버블이 하나 더 생깁니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 162,
+      "title": "목록의 모든 항목을 하나씩 처리하기 (반복문)",
+      "explanation": "for문으로 버블 배열을 처음부터 끝까지 돌면서 각 버블을 움직여요. 항목이 몇 개든 똑같은 작업을 반복해 줍니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 189,
+      "title": "두 물체가 부딪혔는지 거리로 검사",
+      "explanation": "버블과 적의 가로·세로 거리를 계산해서 충분히 가까우면 충돌로 판단해요. 게임에서 맞췄는지 판정하는 기본 방법이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 197,
+      "title": "맞은 적과 버블을 목록에서 빼기 (splice)",
+      "explanation": "충돌이 일어나면 splice로 해당 적과 버블을 배열에서 제거하고 점수를 100점 올려요. 화면에서도 사라집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 261,
+      "title": "조건으로 게임 종료 판단하기",
+      "explanation": "lives(목숨)가 0 이하가 되면 gameOver가 true가 돼요. 이 값으로 'GAME OVER' 화면을 보여줄지 결정합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 305,
+      "title": "목록을 화면 요소로 바꿔 그리기 (map)",
+      "explanation": "map은 적 배열의 항목마다 화면 요소 하나를 만들어줘요. 적이 5마리면 👾 그림도 5개가 자동으로 생깁니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 354,
+      "title": "버튼을 누르면 함수 실행하기 (이벤트)",
+      "explanation": "onClick에 restart 함수를 연결하면, '다시 시작' 버튼을 눌렀을 때 게임이 처음 상태로 되돌아가요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 3,
+      "title": "변하지 않는 값 미리 정해두기",
+      "explanation": "STAGE_W, GRAVITY처럼 게임 내내 바뀌지 않는 숫자들을 맨 위에 상수로 모아두면, 나중에 값을 바꾸고 싶을 때 한 곳만 고치면 됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 16,
+      "title": "여러 데이터를 배열로 모으기",
+      "explanation": "발판(플랫폼)들의 위치와 크기를 객체로 만들어 배열에 담았어요. 같은 모양의 데이터가 여러 개일 때 배열로 모으면 반복문으로 한 번에 다룰 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 25,
+      "title": "재사용할 수 있는 화면 조각(컴포넌트)",
+      "explanation": "발판 하나를 그리는 부분을 Platform 함수로 만들어두면, 똑같은 코드를 반복해서 쓰지 않고 여러 번 가져다 쓸 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 41,
+      "title": "값을 저장하는 상자 useRef",
+      "explanation": "플레이어의 위치·속도 같은 정보를 ref에 담아둡니다. ref는 값이 바뀌어도 화면을 다시 그리지 않아서, 매 순간 빠르게 바뀌는 게임 데이터에 적합해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 54,
+      "title": "화면에 보여줄 값 useState",
+      "explanation": "점수와 목숨처럼 화면에 표시되는 값은 useState로 관리합니다. 이 값이 바뀌면 React가 자동으로 화면을 새로 그려줍니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 60,
+      "title": "처음 한 번만 실행되는 준비 작업",
+      "explanation": "useEffect 안에서 조이스틱 입력을 연결하고, 마지막에 return으로 정리(연결 해제)하는 함수를 돌려줍니다. 시작할 때 켜고 끝날 때 끄는 셈이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 122,
+      "title": "조건이 맞을 때만 실행하기 (if)",
+      "explanation": "조이스틱을 살짝만 움직였을 때(데드존)는 무시하고, 충분히 움직였을 때만 캐릭터를 이동시킵니다. if로 조건을 걸러주는 거예요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 130,
+      "title": "화면 밖으로 못 나가게 막기",
+      "explanation": "Math.max와 Math.min으로 위치 값을 0과 화면 끝 사이로 묶어둡니다. 이렇게 하면 캐릭터가 무대 밖으로 벗어나지 않아요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 151,
+      "title": "새 버블을 배열에 추가하기 (push)",
+      "explanation": "발사 버튼을 누르면 새 버블 객체를 만들어 배열에 push로 넣습니다. 게임 도중에 항목이 늘어나는 데이터는 이렇게 배열에 추가해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 165,
+      "title": "모든 항목을 하나씩 처리하는 반복문",
+      "explanation": "for...of로 모든 버블을 차례대로 꺼내 위치를 갱신합니다. 여러 개를 똑같이 처리할 때 반복문을 쓰면 코드가 짧아져요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 200,
+      "title": "두 점이 가까운지 거리로 판단하기",
+      "explanation": "x, y 차이를 제곱해서 더한 값이 일정 값보다 작으면 두 물체가 충돌한 것으로 봅니다. 버블이 적과 부딪혔는지 확인하는 방법이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 207,
+      "title": "배열에서 항목 제거하기 (splice)",
+      "explanation": "적이 버블에 갇히면 splice로 적 배열에서 그 항목을 빼냅니다. 뒤에서부터 거꾸로 도는 이유는 중간을 지워도 순서가 꼬이지 않게 하기 위해서예요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 271,
+      "title": "목숨이 0보다 작아지지 않게 빼기",
+      "explanation": "적에게 맞으면 목숨을 1 줄이는데, Math.max(0, ...)로 0 밑으로는 내려가지 않게 합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 332,
+      "title": "조건에 따라 다른 화면 보여주기",
+      "explanation": "gameOver가 참일 때만 'GAME OVER' 화면을 보여줍니다. && 뒤의 내용은 앞 조건이 참일 때만 나타나요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 318,
+      "title": "배열을 화면 요소로 바꾸기 (map)",
+      "explanation": "map을 사용해 적 배열의 각 항목을 화면에 그릴 요소로 변환합니다. key를 붙여 React가 각 항목을 구분할 수 있게 해줘요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 1,
+      "title": "한 번에 여러 값 꺼내기 (구조 분해)",
+      "explanation": "React 안에 들어있는 useState, useRef, useEffect 기능을 한 줄로 꺼내서 짧은 이름으로 쓸 수 있게 만드는 문법이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 3,
+      "title": "변하지 않는 설정값(상수)",
+      "explanation": "게임 화면 크기처럼 게임 내내 바뀌지 않는 값들을 미리 이름표를 붙여 정해둔 거예요. 숫자를 바꾸면 게임 느낌이 달라집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 17,
+      "title": "여러 정보를 담는 배열",
+      "explanation": "발판들의 위치와 크기를 하나씩 객체로 만들어 배열에 모아둔 거예요. 이렇게 모아두면 반복문으로 한꺼번에 그릴 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 47,
+      "title": "화면을 만드는 함수(컴포넌트)",
+      "explanation": "App은 게임 전체 화면을 그려서 돌려주는 함수예요. 이 함수가 반환하는 내용이 실제로 화면에 보입니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 68,
+      "title": "화면에 보여줄 상태값 만들기",
+      "explanation": "useState로 점수처럼 변하는 값을 보관해요. 이 값이 바뀌면 화면(점수 표시)도 자동으로 다시 그려집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 75,
+      "title": "처음 한 번 실행하고 정리하기",
+      "explanation": "useEffect는 컴포넌트가 시작될 때 조이스틱 입력을 받기 시작하고, 끝날 때 return으로 연결을 끊어 뒷정리를 합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 102,
+      "title": "매 순간 반복되는 게임 루프",
+      "explanation": "requestAnimationFrame을 이용해 1초에 수십 번 화면을 갱신해요. 캐릭터와 적이 부드럽게 움직이는 비결입니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 109,
+      "title": "배열의 모든 항목 돌아보기",
+      "explanation": "for...of 반복문으로 모든 발판을 하나씩 확인해요. 플레이어가 어떤 발판 위에 닿았는지 검사하기 위함입니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 113,
+      "title": "조건이 맞을 때만 실행하기",
+      "explanation": "if 문으로 '발판 위에 정확히 내려왔는지' 확인하고, 맞으면 그 자리에 멈춰 서게 만듭니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 132,
+      "title": "조건에 따라 값 고르기 (삼항 연산자)",
+      "explanation": "조이스틱을 살짝만 움직였을 땐 0으로 무시하고, 충분히 움직였을 때만 값을 사용해요. 손 떨림 같은 작은 입력을 걸러줍니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 149,
+      "title": "값을 계속 더해 쌓기 (중력)",
+      "explanation": "떨어지는 속도에 중력을 조금씩 계속 더해줘요. 그래서 시간이 지날수록 점점 빨리 떨어지게 됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 162,
+      "title": "배열에 새 항목 추가하기",
+      "explanation": "push는 버블 하나를 만들어 버블 목록 끝에 넣어요. 이렇게 추가된 버블이 화면에 새로 나타납니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 161,
+      "title": "겹치지 않는 번호 만들기",
+      "explanation": "++ 로 숫자를 하나씩 올려서 각 버블/적에게 서로 다른 고유 번호를 붙여줘요. 누가 누군지 구분하기 위함이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 193,
+      "title": "두 조건이 모두 맞아야 실행 (&&)",
+      "explanation": "시간이 충분히 지났고 그리고 적이 너무 많지 않을 때만 새 적을 만들어요. && 는 두 조건이 다 참이어야 한다는 뜻이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 196,
+      "title": "무작위로 정하기 (랜덤)",
+      "explanation": "Math.random으로 적이 왼쪽에서 올지 오른쪽에서 올지 매번 다르게 정해요. 덕분에 게임이 예측하기 어려워집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 3,
+      "title": "상수로 게임 설정값 저장하기",
+      "explanation": "변하지 않는 숫자에 이름을 붙여두면 나중에 코드를 읽을 때 의미를 알기 쉽고, 값을 바꿀 때 한 곳만 수정하면 됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 17,
+      "title": "배열로 여러 발판 정보 모으기",
+      "explanation": "여러 개의 발판을 객체로 만들어 배열에 담아두면 반복문으로 한 번에 처리할 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 27,
+      "title": "컴포넌트로 화면 조각 만들기",
+      "explanation": "Platform처럼 화면의 일부를 함수로 만들어 두면, 같은 모양을 필요할 때마다 재사용할 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 87,
+      "title": "useRef로 값을 기억해두기",
+      "explanation": "useRef는 화면을 다시 그리지 않아도 값이 계속 유지되는 보관함으로, 플레이어 위치 같은 정보를 담아둡니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 104,
+      "title": "useState로 화면에 보이는 값 관리하기",
+      "explanation": "점수나 목숨처럼 화면에 표시되고 바뀔 때마다 다시 그려야 하는 값은 useState로 관리합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 110,
+      "title": "useEffect로 시작할 때 한 번 실행하기",
+      "explanation": "useEffect는 컴포넌트가 처음 나타날 때 입력 연결 같은 준비 작업을 실행하고, 끝날 때 정리도 해줍니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 137,
+      "title": "조건문으로 충돌 여부 판단하기",
+      "explanation": "if문으로 발판 위에 발이 닿았는지 검사해서, 맞으면 착지 처리를 하고 결과를 알려줍니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 165,
+      "title": "중력으로 점프 후 떨어지게 만들기",
+      "explanation": "매 순간 아래로 향하는 속도를 조금씩 더해 위치를 바꾸면, 점프했다가 자연스럽게 떨어지는 효과가 납니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 178,
+      "title": "배열에 새 버블 추가하기",
+      "explanation": "push를 사용하면 버블을 발사할 때마다 새 객체를 배열 맨 뒤에 끼워 넣어 개수를 늘릴 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 193,
+      "title": "반복문으로 모든 버블 움직이기",
+      "explanation": "for...of로 배열 안의 버블을 하나씩 꺼내서 위치를 갱신하면, 여러 버블을 동시에 처리할 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 226,
+      "title": "랜덤 값으로 적 등장 위치 정하기",
+      "explanation": "Math.random으로 무작위 숫자를 만들어 적이 왼쪽/오른쪽 중 어디서 나올지 매번 다르게 만듭니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 257,
+      "title": "거리 계산으로 충돌 검사하기",
+      "explanation": "두 물체의 x, y 차이를 제곱해 더한 값으로 거리를 비교하면, 버블과 적이 충분히 가까운지 알 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 263,
+      "title": "splice로 배열에서 항목 제거하기",
+      "explanation": "적이 버블에 잡히면 splice로 적을 배열에서 빼내, 화면에서 사라지게 합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 350,
+      "title": "데이터를 화면 요소로 바꿔 그리기",
+      "explanation": "map을 사용하면 발판 배열의 각 항목을 화면에 보이는 컴포넌트로 하나씩 변환해 줍니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 421,
+      "title": "조건에 따라 다른 화면 보여주기",
+      "explanation": "gameOver가 참일 때만 게임 오버 화면을 보여주는 식으로, 상태에 맞는 화면을 골라 표시합니다."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: 조이스틱으로 움직이고 버튼으로 버블을 쏴서 적을 잡는 보글보글 게임을 만들어줘\n튜터: MODI로 조작하는 보글보글 게임을 만들게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "조이스틱으로 움직이고 버튼으로 버블을 쏴서 적을 잡는 보글보글 게임을 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "MODI로 조작하는 보글보글 게임을 만들게요."
+    }
+  ]
+}

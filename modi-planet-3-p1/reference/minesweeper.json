@@ -1,0 +1,318 @@
+{
+  "session_id": "reference_minesweeper",
+  "title": "지뢰찾기",
+  "description": "난이도별 격자에서 지뢰를 피해 안전한 칸을 모두 여는 클래식 지뢰찾기 게임",
+  "phase": "implement",
+  "coding_type": "react",
+  "app_type": "desktop",
+  "conversation": "학습자: 지뢰찾기 게임을 만들어줘\n튜터: 지뢰찾기 게임을 만들게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "지뢰찾기 게임을 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "지뢰찾기 게임을 만들게요."
+    }
+  ],
+  "generated_code": {
+    "types.ts": "// 각 칸의 상태\nexport interface Cell {\n  isMine: boolean;\n  isOpen: boolean;\n  isFlagged: boolean;\n  adjacentMines: number;\n}\n\nexport type GameStatus = \"playing\" | \"won\" | \"lost\";\n\nexport type DifficultyKey = \"beginner\" | \"intermediate\" | \"expert\";\n\n// 난이도별 설정\nexport interface DifficultyConfig {\n  key: DifficultyKey;\n  label: string;\n  rows: number;\n  cols: number;\n  mineCount: number;\n}\n\n// 게임 전체 상태\nexport interface GameState {\n  difficulty: DifficultyConfig;\n  board: Cell[][];\n  flagsPlaced: number;\n  elapsedTime: number;\n  status: GameStatus;\n}\n\nexport const DIFFICULTIES: Record<DifficultyKey, DifficultyConfig> = {\n  beginner: { key: \"beginner\", label: \"초급\", rows: 9, cols: 9, mineCount: 10 },\n  intermediate: { key: \"intermediate\", label: \"중급\", rows: 16, cols: 16, mineCount: 30 },\n  expert: { key: \"expert\", label: \"고급\", rows: 16, cols: 30, mineCount: 70 },\n};\n",
+    "lib/minesweeper.ts": "import { Cell, DifficultyConfig } from \"../types\";\n\n// 빈 보드 생성\nfunction createEmptyBoard(rows: number, cols: number): Cell[][] {\n  return Array.from({ length: rows }, () =>\n    Array.from({ length: cols }, () => ({\n      isMine: false,\n      isOpen: false,\n      isFlagged: false,\n      adjacentMines: 0,\n    }))\n  );\n}\n\n// 8방향 이웃 좌표\nconst DIRECTIONS = [\n  [-1, -1], [-1, 0], [-1, 1],\n  [0, -1],           [0, 1],\n  [1, -1],  [1, 0],  [1, 1],\n];\n\nfunction inBounds(r: number, c: number, rows: number, cols: number): boolean {\n  return r >= 0 && r < rows && c >= 0 && c < cols;\n}\n\n// 지뢰를 무작위로 배치하고 인접 지뢰 수 계산\nexport function createBoard(config: DifficultyConfig): Cell[][] {\n  const { rows, cols, mineCount } = config;\n  const board = createEmptyBoard(rows, cols);\n\n  // 무작위 지뢰 배치\n  let placed = 0;\n  while (placed < mineCount) {\n    const r = Math.floor(Math.random() * rows);\n    const c = Math.floor(Math.random() * cols);\n    if (!board[r][c].isMine) {\n      board[r][c].isMine = true;\n      placed++;\n    }\n  }\n\n  // 인접 지뢰 수 계산\n  for (let r = 0; r < rows; r++) {\n    for (let c = 0; c < cols; c++) {\n      if (board[r][c].isMine) continue;\n      let count = 0;\n      for (const [dr, dc] of DIRECTIONS) {\n        const nr = r + dr;\n        const nc = c + dc;\n        if (inBounds(nr, nc, rows, cols) && board[nr][nc].isMine) count++;\n      }\n      board[r][c].adjacentMines = count;\n    }\n  }\n\n  return board;\n}\n\n// 보드 깊은 복사\nfunction cloneBoard(board: Cell[][]): Cell[][] {\n  return board.map((row) => row.map((cell) => ({ ...cell })));\n}\n\n// 칸 열기 (0이면 연쇄 오픈). 새 보드를 반환\nexport function openCell(board: Cell[][], row: number, col: number): Cell[][] {\n  const rows = board.length;\n  const cols = board[0].length;\n  const next = cloneBoard(board);\n\n  const stack: [number, number][] = [[row, col]];\n  while (stack.length > 0) {\n    const [r, c] = stack.pop()!;\n    const cell = next[r][c];\n    if (cell.isOpen || cell.isFlagged) continue;\n    cell.isOpen = true;\n\n    // 빈 칸이면 주변도 연쇄로 연다\n    if (!cell.isMine && cell.adjacentMines === 0) {\n      for (const [dr, dc] of DIRECTIONS) {\n        const nr = r + dr;\n        const nc = c + dc;\n        if (inBounds(nr, nc, rows, cols) && !next[nr][nc].isOpen) {\n          stack.push([nr, nc]);\n        }\n      }\n    }\n  }\n\n  return next;\n}\n\n// 깃발 토글\nexport function toggleFlag(board: Cell[][], row: number, col: number): Cell[][] {\n  const next = cloneBoard(board);\n  const cell = next[row][col];\n  if (!cell.isOpen) {\n    cell.isFlagged = !cell.isFlagged;\n  }\n  return next;\n}\n\n// 모든 지뢰를 드러내기 (패배 시)\nexport function revealAllMines(board: Cell[][]): Cell[][] {\n  const next = cloneBoard(board);\n  for (const row of next) {\n    for (const cell of row) {\n      if (cell.isMine) cell.isOpen = true;\n    }\n  }\n  return next;\n}\n\n// 안전한 칸을 모두 열었는지 (승리 판정)\nexport function checkWin(board: Cell[][]): boolean {\n  for (const row of board) {\n    for (const cell of row) {\n      if (!cell.isMine && !cell.isOpen) return false;\n    }\n  }\n  return true;\n}\n\n// 꽂은 깃발 수\nexport function countFlags(board: Cell[][]): number {\n  let count = 0;\n  for (const row of board) {\n    for (const cell of row) {\n      if (cell.isFlagged) count++;\n    }\n  }\n  return count;\n}\n",
+    "components/DifficultySelect.tsx": "import { Bomb, ChevronRight, Sprout, Flame, Skull } from \"lucide-react\";\nimport { DIFFICULTIES, DifficultyConfig, DifficultyKey } from \"../types\";\n\ninterface Props {\n  onSelect: (config: DifficultyConfig) => void;\n}\n\nconst ORDER: DifficultyKey[] = [\"beginner\", \"intermediate\", \"expert\"];\n\n// 난이도별 설명·색·아이콘\nconst META: Record<\n  DifficultyKey,\n  { desc: string; accent: string; chip: string; hoverRing: string; Icon: React.ElementType }\n> = {\n  beginner: {\n    desc: \"9 × 9 격자 · 지뢰 10개\",\n    accent: \"text-emerald-400\",\n    chip: \"bg-emerald-500/15 ring-1 ring-emerald-500/25\",\n    hoverRing: \"hover:ring-emerald-500/40\",\n    Icon: Sprout,\n  },\n  intermediate: {\n    desc: \"16 × 16 격자 · 지뢰 30개\",\n    accent: \"text-amber-400\",\n    chip: \"bg-amber-500/15 ring-1 ring-amber-500/25\",\n    hoverRing: \"hover:ring-amber-500/40\",\n    Icon: Flame,\n  },\n  expert: {\n    desc: \"16 × 30 격자 · 지뢰 70개\",\n    accent: \"text-rose-400\",\n    chip: \"bg-rose-500/15 ring-1 ring-rose-500/25\",\n    hoverRing: \"hover:ring-rose-500/40\",\n    Icon: Skull,\n  },\n};\n\nexport default function DifficultySelect({ onSelect }: Props) {\n  return (\n    <div className=\"min-h-screen w-full flex items-center justify-center bg-slate-950 relative overflow-hidden p-6\">\n      {/* 배경 장식 */}\n      <div className=\"pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-sky-500/10 blur-3xl\" />\n      <div className=\"pointer-events-none absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-rose-500/10 blur-3xl\" />\n\n      <div className=\"relative w-full max-w-md\">\n        <div className=\"flex flex-col items-center mb-10\">\n          <div className=\"w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-500/25 to-amber-500/10 ring-1 ring-rose-400/30 flex items-center justify-center mb-5 shadow-xl shadow-rose-950/40\">\n            <Bomb className=\"w-8 h-8 text-rose-400\" />\n          </div>\n          <h1 className=\"text-3xl font-extrabold tracking-tight bg-gradient-to-b from-slate-50 to-slate-400 bg-clip-text text-transparent\">\n            지뢰찾기\n          </h1>\n          <p className=\"text-slate-400 mt-2 text-sm\">난이도를 선택하세요</p>\n        </div>\n\n        <div className=\"space-y-3\">\n          {ORDER.map((key) => {\n            const cfg = DIFFICULTIES[key];\n            const meta = META[key];\n            const Icon = meta.Icon;\n            return (\n              <button\n                key={key}\n                onClick={() => onSelect(cfg)}\n                className={`group w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-slate-900/80 ring-1 ring-slate-800 ${meta.hoverRing} hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all shadow-lg`}\n              >\n                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${meta.chip}`}>\n                  <Icon className={`w-5 h-5 ${meta.accent}`} />\n                </div>\n                <div className=\"text-left flex-1\">\n                  <div className={`text-lg font-bold ${meta.accent}`}>{cfg.label}</div>\n                  <div className=\"text-sm text-slate-400 mt-0.5\">{meta.desc}</div>\n                </div>\n                <ChevronRight className=\"w-5 h-5 text-slate-600 group-hover:text-slate-300 group-hover:translate-x-0.5 transition-all\" />\n              </button>\n            );\n          })}\n        </div>\n      </div>\n    </div>\n  );\n}\n",
+    "components/StatusBar.tsx": "import { Bomb, Timer, RotateCcw } from \"lucide-react\";\n\ninterface Props {\n  minesRemaining: number;\n  elapsedTime: number;\n  onReset: () => void;\n}\n\nfunction formatTime(sec: number): string {\n  const m = Math.floor(sec / 60).toString().padStart(2, \"0\");\n  const s = (sec % 60).toString().padStart(2, \"0\");\n  return `${m}:${s}`;\n}\n\nexport default function StatusBar({ minesRemaining, elapsedTime, onReset }: Props) {\n  return (\n    <div className=\"flex items-center justify-between gap-3 mb-4 px-3 py-2.5 rounded-2xl bg-slate-900/90 ring-1 ring-slate-700/50 shadow-lg\">\n      {/* 남은 지뢰 수 */}\n      <div className=\"flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/10 ring-1 ring-rose-500/25 min-w-[5.5rem]\">\n        <Bomb className=\"w-4 h-4 text-rose-400\" />\n        <span className=\"text-lg font-bold tabular-nums text-rose-100\">\n          {minesRemaining}\n        </span>\n      </div>\n\n      <button\n        onClick={onReset}\n        className=\"group flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-b from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-white text-sm font-semibold shadow-lg shadow-sky-950/50 transition-all active:scale-95\"\n      >\n        <RotateCcw className=\"w-4 h-4 transition-transform duration-300 group-hover:-rotate-180\" />\n        새 게임\n      </button>\n\n      {/* 경과 시간 */}\n      <div className=\"flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-500/10 ring-1 ring-sky-500/25 min-w-[5.5rem] justify-end\">\n        <Timer className=\"w-4 h-4 text-sky-400\" />\n        <span className=\"text-lg font-bold tabular-nums text-sky-100\">\n          {formatTime(elapsedTime)}\n        </span>\n      </div>\n    </div>\n  );\n}\n",
+    "components/CellButton.tsx": "import { Bomb, Flag } from \"lucide-react\";\nimport { Cell } from \"../types\";\n\ninterface Props {\n  cell: Cell;\n  alt: boolean; // 체커보드 무늬용 (행+열이 홀수인 칸)\n  onOpen: () => void;\n  onFlag: (e: React.MouseEvent) => void;\n  disabled: boolean;\n}\n\n// 숫자별 색상\nconst NUMBER_COLORS: Record<number, string> = {\n  1: \"text-sky-400\",\n  2: \"text-emerald-400\",\n  3: \"text-rose-400\",\n  4: \"text-violet-400\",\n  5: \"text-amber-400\",\n  6: \"text-cyan-400\",\n  7: \"text-fuchsia-400\",\n  8: \"text-slate-300\",\n};\n\nexport default function CellButton({ cell, alt, onOpen, onFlag, disabled }: Props) {\n  const base =\n    \"w-7 h-7 flex items-center justify-center text-sm font-extrabold rounded-md select-none transition-all duration-100\";\n\n  // 닫힌 칸: 볼록 튀어나온 버튼 느낌 (체커보드로 미묘한 색 차이)\n  if (!cell.isOpen) {\n    return (\n      <button\n        onClick={onOpen}\n        onContextMenu={onFlag}\n        disabled={disabled}\n        className={`${base} ${alt ? \"bg-slate-600\" : \"bg-[#53637d]\"} shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-2px_0_rgba(0,0,0,0.25)] hover:brightness-110 active:scale-90 disabled:hover:brightness-100`}\n      >\n        {cell.isFlagged && (\n          <Flag className=\"w-4 h-4 text-amber-400 fill-amber-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]\" />\n        )}\n      </button>\n    );\n  }\n\n  // 밟은 지뢰\n  if (cell.isMine) {\n    return (\n      <div className={`${base} bg-gradient-to-b from-rose-500/50 to-rose-600/40 ring-1 ring-rose-400/50`}>\n        <Bomb className=\"w-4 h-4 text-rose-100\" />\n      </div>\n    );\n  }\n\n  // 열린 안전 칸: 움푹 들어간 느낌\n  return (\n    <div\n      className={`${base} ${alt ? \"bg-slate-800/70\" : \"bg-slate-800/45\"} shadow-[inset_0_2px_3px_rgba(0,0,0,0.3)]`}\n    >\n      {cell.adjacentMines > 0 && (\n        <span className={NUMBER_COLORS[cell.adjacentMines]}>{cell.adjacentMines}</span>\n      )}\n    </div>\n  );\n}\n",
+    "components/Board.tsx": "import { Cell } from \"../types\";\nimport CellButton from \"./CellButton\";\n\ninterface Props {\n  board: Cell[][];\n  disabled: boolean;\n  onOpen: (row: number, col: number) => void;\n  onFlag: (row: number, col: number) => void;\n}\n\nexport default function Board({ board, disabled, onOpen, onFlag }: Props) {\n  const cols = board[0]?.length ?? 0;\n\n  return (\n    <div className=\"inline-block p-3 rounded-2xl bg-slate-900/90 ring-1 ring-slate-700/50 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-auto max-w-full\">\n      <div\n        className=\"grid gap-1\"\n        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}\n      >\n        {board.map((row, r) =>\n          row.map((cell, c) => (\n            <CellButton\n              key={`${r}-${c}`}\n              cell={cell}\n              alt={(r + c) % 2 === 1}\n              disabled={disabled}\n              onOpen={() => onOpen(r, c)}\n              onFlag={(e) => {\n                e.preventDefault();\n                onFlag(r, c);\n              }}\n            />\n          ))\n        )}\n      </div>\n    </div>\n  );\n}\n",
+    "components/ResultModal.tsx": "import { PartyPopper, Bomb, RotateCcw, Home, Timer } from \"lucide-react\";\nimport { GameStatus } from \"../types\";\n\ninterface Props {\n  status: GameStatus;\n  elapsedTime: number;\n  onRestart: () => void;\n  onHome: () => void;\n}\n\nfunction formatTime(sec: number): string {\n  const m = Math.floor(sec / 60).toString().padStart(2, \"0\");\n  const s = (sec % 60).toString().padStart(2, \"0\");\n  return `${m}:${s}`;\n}\n\nexport default function ResultModal({ status, elapsedTime, onRestart, onHome }: Props) {\n  if (status === \"playing\") return null;\n  const won = status === \"won\";\n\n  return (\n    <div className=\"fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-6\">\n      {/* 모달 등장 애니메이션 */}\n      <style>{`@keyframes modal-pop{0%{opacity:0;transform:scale(.92) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}`}</style>\n      <div className=\"w-full max-w-sm rounded-3xl bg-slate-900 ring-1 ring-slate-700/60 shadow-2xl p-8 text-center [animation:modal-pop_.25s_ease-out]\">\n        <div\n          className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-5 ring-1 ${\n            won ? \"bg-emerald-500/15 ring-emerald-500/30\" : \"bg-rose-500/15 ring-rose-500/30\"\n          }`}\n        >\n          {won ? (\n            <PartyPopper className=\"w-8 h-8 text-emerald-400\" />\n          ) : (\n            <Bomb className=\"w-8 h-8 text-rose-400\" />\n          )}\n        </div>\n\n        <h2 className=\"text-2xl font-extrabold text-slate-50\">\n          {won ? \"승리!\" : \"게임 오버\"}\n        </h2>\n        {won ? (\n          <div className=\"inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-slate-800/80 ring-1 ring-slate-700 text-sm text-slate-300\">\n            <Timer className=\"w-4 h-4 text-sky-400\" />\n            클리어 시간\n            <span className=\"font-bold tabular-nums text-slate-100\">{formatTime(elapsedTime)}</span>\n          </div>\n        ) : (\n          <p className=\"text-slate-400 mt-2 text-sm\">지뢰를 밟았어요. 다시 도전해 볼까요?</p>\n        )}\n\n        <div className=\"flex gap-3 mt-7\">\n          <button\n            onClick={onHome}\n            className=\"flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 ring-1 ring-slate-700 text-slate-200 text-sm font-medium transition-colors\"\n          >\n            <Home className=\"w-4 h-4\" />\n            난이도\n          </button>\n          <button\n            onClick={onRestart}\n            className=\"flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-b from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white text-sm font-semibold shadow-lg shadow-indigo-950/50 transition-all active:scale-95\"\n          >\n            <RotateCcw className=\"w-4 h-4\" />\n            다시하기\n          </button>\n        </div>\n      </div>\n    </div>\n  );\n}\n",
+    "App.tsx": "import { useState, useEffect, useCallback } from \"react\";\nimport { Cell, DifficultyConfig, GameStatus } from \"./types\";\nimport {\n  createBoard,\n  openCell,\n  toggleFlag,\n  revealAllMines,\n  checkWin,\n  countFlags,\n} from \"./lib/minesweeper\";\nimport DifficultySelect from \"./components/DifficultySelect\";\nimport StatusBar from \"./components/StatusBar\";\nimport Board from \"./components/Board\";\nimport ResultModal from \"./components/ResultModal\";\n\nexport default function App() {\n  const [difficulty, setDifficulty] = useState<DifficultyConfig | null>(null);\n  const [board, setBoard] = useState<Cell[][]>([]);\n  const [status, setStatus] = useState<GameStatus>(\"playing\");\n  const [elapsedTime, setElapsedTime] = useState(0);\n\n  // 게임 시작 / 재시작\n  const startGame = useCallback((config: DifficultyConfig) => {\n    setDifficulty(config);\n    setBoard(createBoard(config));\n    setStatus(\"playing\");\n    setElapsedTime(0);\n  }, []);\n\n  // 타이머: 진행 중일 때만 1초씩 증가\n  useEffect(() => {\n    if (!difficulty || status !== \"playing\") return;\n    const id = setInterval(() => setElapsedTime((t) => t + 1), 1000);\n    return () => clearInterval(id);\n  }, [difficulty, status]);\n\n  // 칸 열기\n  const handleOpen = (row: number, col: number) => {\n    if (status !== \"playing\") return;\n    const cell = board[row][col];\n    if (cell.isOpen || cell.isFlagged) return;\n\n    // 지뢰를 밟으면 패배\n    if (cell.isMine) {\n      setBoard(revealAllMines(board));\n      setStatus(\"lost\");\n      return;\n    }\n\n    const next = openCell(board, row, col);\n    setBoard(next);\n    if (checkWin(next)) setStatus(\"won\");\n  };\n\n  // 깃발 토글\n  const handleFlag = (row: number, col: number) => {\n    if (status !== \"playing\") return;\n    setBoard(toggleFlag(board, row, col));\n  };\n\n  // 난이도 선택 화면\n  if (!difficulty) {\n    return <DifficultySelect onSelect={startGame} />;\n  }\n\n  const minesRemaining = difficulty.mineCount - countFlags(board);\n\n  return (\n    <div className=\"min-h-screen w-full bg-slate-950 relative overflow-hidden flex flex-col items-center justify-center p-6\">\n      {/* 배경 장식 */}\n      <div className=\"pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-sky-500/10 blur-3xl\" />\n      <div className=\"pointer-events-none absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-rose-500/10 blur-3xl\" />\n\n      <div className=\"relative w-full max-w-fit\">\n        <StatusBar\n          minesRemaining={minesRemaining}\n          elapsedTime={elapsedTime}\n          onReset={() => startGame(difficulty)}\n        />\n        <Board\n          board={board}\n          disabled={status !== \"playing\"}\n          onOpen={handleOpen}\n          onFlag={handleFlag}\n        />\n        <p className=\"text-center text-slate-500 text-xs mt-4\">\n          좌클릭: 열기 · 우클릭: 깃발\n        </p>\n      </div>\n\n      <ResultModal\n        status={status}\n        elapsedTime={elapsedTime}\n        onRestart={() => startGame(difficulty)}\n        onHome={() => setDifficulty(null)}\n      />\n    </div>\n  );\n}\n"
+  },
+  "design_doc": {
+    "project_name": "지뢰찾기",
+    "description": "난이도 선택 후 격자에서 지뢰를 피해 안전한 칸을 모두 여는 클래식 지뢰찾기",
+    "users": [
+      "플레이어"
+    ],
+    "features": [
+      {
+        "name": "난이도 선택",
+        "description": "초급 9×9(지뢰 10개) / 중급 16×16(30개) / 고급 16×30(70개)",
+        "priority": "mvp"
+      },
+      {
+        "name": "칸 열기(좌클릭)",
+        "description": "안전 칸이면 주변 지뢰 수 표시, 0이면 인접 칸 연쇄 자동 오픈, 지뢰면 게임 오버",
+        "priority": "mvp"
+      },
+      {
+        "name": "깃발 꽂기(우클릭)",
+        "description": "지뢰 의심 칸에 깃발 표시/해제",
+        "priority": "mvp"
+      },
+      {
+        "name": "승패 판정",
+        "description": "지뢰를 밟으면 패배, 안전한 칸을 모두 열면 승리",
+        "priority": "mvp"
+      },
+      {
+        "name": "남은 지뢰 수 표시",
+        "description": "전체 지뢰 − 꽂은 깃발 수를 상단 정보바에 표시",
+        "priority": "mvp"
+      },
+      {
+        "name": "타이머",
+        "description": "경과 시간을 상단 정보바에 표시",
+        "priority": "mvp"
+      },
+      {
+        "name": "결과창",
+        "description": "승리/패배 결과 모달과 다시하기·난이도 선택 버튼",
+        "priority": "mvp"
+      }
+    ],
+    "pages": [
+      {
+        "name": "난이도 선택 화면",
+        "description": "첫 화면. 난이도별 아이콘·색상 카드 3종",
+        "components": [
+          "난이도 카드 3개"
+        ]
+      },
+      {
+        "name": "게임 화면",
+        "description": "상단 정보바와 격자 게임판",
+        "components": [
+          "상단 정보바",
+          "격자 보드"
+        ]
+      },
+      {
+        "name": "결과창",
+        "description": "승리/패배 결과와 다시하기",
+        "components": [
+          "결과 메시지",
+          "다시하기 버튼",
+          "난이도 선택 버튼"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Cell",
+        "fields": [
+          "isMine",
+          "isOpen",
+          "isFlagged",
+          "adjacentMines"
+        ],
+        "description": "각 칸의 상태"
+      },
+      {
+        "name": "GameState",
+        "fields": [
+          "difficulty",
+          "board",
+          "flagsPlaced",
+          "elapsedTime",
+          "status(playing/won/lost)"
+        ],
+        "description": "게임 전체 상태"
+      }
+    ],
+    "user_flows": [
+      "난이도 선택 → 게임판 → 칸 열기/깃발 → 승리 또는 패배 → 결과창 → 다시하기/난이도 선택"
+    ],
+    "strengths": [
+      "흐름이 단순하고 명확함",
+      "데이터 구조가 깔끔하게 정리됨"
+    ],
+    "weaknesses": [
+      "첫 클릭 지뢰 보호 없음(운에 의존)",
+      "깃발 칸 보호 없음(실수로 터질 수 있음)"
+    ]
+  },
+  "diagram": "flowchart TD\n    A[난이도 선택 화면] -->|초급/중급/고급 선택| B[게임 화면]\n    B --> C{칸 클릭}\n    C -->|좌클릭: 안전 칸| D[\"주변 지뢰 수 표시<br/>0이면 연쇄 오픈\"]\n    C -->|좌클릭: 지뢰| E[패배]\n    C -->|우클릭| F[깃발 토글]\n    D --> G{안전 칸 전부 열림?}\n    G -->|예| H[승리]\n    G -->|아니오| C\n    F --> C\n    E --> I[결과창 + 다시하기]\n    H --> I\n    I -->|다시하기| A",
+  "task_plan": {
+    "tasks": [
+      {
+        "id": 1,
+        "name": "타입과 게임 로직",
+        "description": "Cell/GameState 타입, 난이도 설정, 보드 생성·지뢰 배치·연쇄 열기·승패 판정 로직",
+        "files": [
+          "types.ts",
+          "lib/minesweeper.ts"
+        ],
+        "status": "done"
+      },
+      {
+        "id": 2,
+        "name": "UI 컴포넌트",
+        "description": "난이도 선택, 상단 정보바, 격자 보드, 칸, 결과 모달 컴포넌트",
+        "files": [
+          "components/DifficultySelect.tsx",
+          "components/StatusBar.tsx",
+          "components/Board.tsx",
+          "components/CellButton.tsx",
+          "components/ResultModal.tsx"
+        ],
+        "status": "done"
+      },
+      {
+        "id": 3,
+        "name": "앱 조립",
+        "description": "전체 상태 관리와 화면 전환을 담당하는 엔트리",
+        "files": [
+          "App.tsx"
+        ],
+        "status": "done"
+      }
+    ],
+    "progress": "진행: 3/3\n[v] 1. 타입과 게임 로직\n[v] 2. UI 컴포넌트\n[v] 3. 앱 조립"
+  },
+  "files": "- types.ts (typescript): Cell/GameState 타입과 난이도 3종(지뢰 10·30·70개) 설정 정의\n- lib/minesweeper.ts (typescript): 보드 생성, 지뢰 무작위 배치, 연쇄 열기, 깃발 토글, 승패 판정 로직\n- components/DifficultySelect.tsx (typescript): 첫 화면. 난이도별 아이콘·색상 카드 3종 선택\n- components/StatusBar.tsx (typescript): 상단 정보바. 남은 지뢰·타이머 칩과 새 게임 버튼\n- components/CellButton.tsx (typescript): 개별 칸. 닫힘(볼록)/열림(오목)/깃발/지뢰 상태별 렌더링과 체커보드 무늬\n- components/Board.tsx (typescript): 격자 보드. 칸들을 그리드로 배치\n- components/ResultModal.tsx (typescript): 승리/패배 결과 모달과 다시하기·난이도 선택 버튼\n- App.tsx (typescript): 전체 상태 관리와 화면 전환을 담당하는 엔트리",
+  "learning_notes": [
+    {
+      "title": "게임이 내 행동을 기억하는 비밀",
+      "what": "프로그램은 평소엔 아무것도 기억하지 못해요. 그래서 '지금 어떤 칸이 열렸는지', '시간이 몇 초 지났는지' 같은 정보를 따로 적어두는 메모장 같은 공간이 필요해요. 이 메모장에 적힌 내용이 바뀌면 화면도 저절로 그 내용에 맞게 다시 그려져요. 지뢰찾기에서는 보드 상태, 흐른 시간, 승패 여부가 이 메모장에 담겨 있어요.",
+      "why": "이 기억 공간이 없으면 칸을 눌러도 화면이 바뀌지 않고, 시간이 흘러도 숫자가 그대로 멈춰 있을 거예요. 매번 게임을 처음부터 다시 시작해야 하는 셈이죠. 무엇이 바뀌었는지 기억해야 그에 맞춰 화면을 새로 보여줄 수 있어요. 그래서 거의 모든 앱의 핵심이 바로 이 '기억하기'예요.",
+      "where": "인스타에서 하트를 누르면 빨갛게 변하는 것, 카톡에서 안 읽은 메시지 숫자가 줄어드는 것 모두 같은 원리예요. 앱이 '하트를 눌렀다', '메시지를 읽었다'를 기억하고 화면을 바꿔주는 거죠. 쿠팡 장바구니에 담은 물건 개수가 화면에 표시되는 것도 마찬가지예요."
+    },
+    {
+      "title": "지뢰는 왜 매번 다른 곳에 숨어 있을까",
+      "what": "게임을 새로 시작할 때마다 컴퓨터가 주사위를 굴리듯 무작위로 지뢰 위치를 정해요. 빈 칸을 골라 지뢰를 하나씩 놓다가, 이미 지뢰가 있는 칸이면 건너뛰고 다른 칸을 다시 골라요. 정해진 개수만큼 다 놓을 때까지 이 과정을 반복해요. 그래서 매판마다 지뢰 배치가 완전히 달라져요.",
+      "why": "만약 지뢰가 항상 같은 자리에 있다면 한 번 외우면 끝이라 게임이 전혀 재미없어져요. 무작위가 있어야 매번 새로운 도전이 되고 긴장감이 생겨요. 또 같은 칸에 지뢰가 겹치지 않게 확인하는 과정이 없으면 지뢰 개수가 맞지 않게 돼요. 그래서 무작위와 중복 방지가 함께 쓰여요.",
+      "where": "유튜브나 인스타 릴스가 매번 다른 영상을 섞어서 보여주는 것, 음악 앱의 '셔플' 기능이 노래 순서를 뒤죽박죽 섞는 것이 같은 아이디어예요. 게임 앱에서 카드를 섞거나 아이템이 랜덤으로 나오는 뽑기도 마찬가지죠."
+    },
+    {
+      "title": "빈 칸 하나 눌렀는데 와르르 열리는 마법",
+      "what": "지뢰가 주변에 하나도 없는 빈 칸을 누르면, 그 옆의 빈 칸들도 줄줄이 자동으로 열려요. 이건 도미노가 쓰러지듯 '내가 비었으면 옆 칸도 확인해봐'를 계속 이어가기 때문이에요. 옆 칸도 비었으면 또 그 옆을 확인하고, 숫자가 나오면 거기서 멈춰요. 이렇게 한 번의 클릭으로 안전한 영역이 한꺼번에 드러나요.",
+      "why": "이 자동 열기가 없으면 빈 칸을 하나하나 다 눌러야 해서 너무 지루하고 시간이 오래 걸려요. 안전한 게 뻔한 곳까지 일일이 클릭하는 건 의미가 없죠. 연쇄로 열어주니 플레이어는 진짜 고민이 필요한 부분에만 집중할 수 있어요. 게임의 속도감과 재미가 여기서 나와요.",
+      "where": "단톡방에서 메시지 하나를 신고하면 연결된 대화가 줄줄이 처리되는 것, 폴더를 삭제하면 안에 든 파일이 한꺼번에 사라지는 것과 비슷해요. 하나를 건드리면 연결된 것들이 줄지어 처리되는 방식이에요."
+    },
+    {
+      "title": "혼자서도 1초씩 똑딱이는 시계의 정체",
+      "what": "게임이 진행되는 동안 화면의 시간은 1초마다 저절로 늘어나요. 이건 '1초 뒤에 숫자 하나 올려줘'라는 알람을 계속 맞춰두는 것과 같아요. 게임이 끝나거나 멈추면 이 알람도 깔끔하게 꺼져요. 그래서 끝난 뒤에도 시간이 계속 흐르는 일이 없어요.",
+      "why": "이 자동 시계가 없으면 내가 얼마나 빨리 깼는지 알 수 없어서 기록 경쟁의 재미가 사라져요. 또 게임이 끝났는데도 알람을 끄지 않으면 시간이 멈추지 않고 계속 올라가는 오류가 생겨요. 그래서 '시작할 때 켜고 끝날 때 끄는' 정리가 꼭 필요해요.",
+      "where": "배달 앱에서 '도착까지 15분' 같은 시간이 알아서 줄어드는 것, 운동 앱의 스톱워치, 인스타 스토리가 몇 초 뒤 자동으로 다음 장면으로 넘어가는 것 모두 이런 자동 타이머예요."
+    },
+    {
+      "title": "원본은 남겨두고 복사본을 고치는 이유",
+      "what": "칸을 열거나 깃발을 꽂을 때, 기존 보드를 직접 고치지 않고 똑같이 복사한 새 보드를 만들어 그걸 바꿔요. 마치 원본 사진은 그대로 두고 복사본에만 낙서하는 것과 같아요. 그리고 바뀐 새 보드로 화면을 다시 보여줘요. 원본을 함부로 건드리지 않는 게 핵심이에요.",
+      "why": "원본을 직접 고치면 컴퓨터가 '내용이 바뀐 건지 아닌지' 헷갈려서 화면을 제때 새로 그리지 못할 수 있어요. 그러면 칸을 눌렀는데 아무 변화가 없어 보이는 버그가 생기죠. 새 복사본으로 바꿔야 '아, 달라졌구나' 하고 정확히 화면을 갱신해요. 깔끔하고 예측 가능한 동작을 위해 꼭 필요해요.",
+      "where": "문서 편집 앱에서 원본을 두고 '다른 이름으로 저장'하는 것, 사진 앱에서 보정할 때 원본은 보존하고 편집본을 따로 만드는 것과 같은 안전장치예요. 실수해도 원래대로 돌아갈 수 있게 해주죠."
+    },
+    {
+      "title": "이겼는지 졌는지 어떻게 척척 알아낼까",
+      "what": "게임은 매번 행동할 때마다 규칙에 맞춰 결과를 확인해요. 지뢰가 아닌 칸을 전부 열었으면 '승리', 지뢰를 밟으면 '패배'라고 판단하죠. 모든 칸을 하나씩 살펴보면서 '아직 안 연 안전한 칸이 있나?'를 따져요. 하나도 없으면 이긴 거예요.",
+      "why": "이 자동 판정이 없으면 게임이 끝났는지 사람이 직접 칸을 세어봐야 해서 너무 불편해요. 또 지뢰를 밟았는데도 게임이 안 끝나면 규칙이 무너지죠. 명확한 승패 기준이 있어야 결과 화면을 띄우고 다음 행동을 안내할 수 있어요. 모든 게임의 공정함이 여기서 나와요.",
+      "where": "퀴즈 앱이 정답 개수를 세어 합격/불합격을 알려주는 것, 쇼핑 앱이 '재고가 0이면 품절 표시'를 자동으로 하는 것과 같아요. 조건을 확인해서 결과를 자동으로 알려주는 방식이에요."
+    },
+    {
+      "title": "화면을 레고 블록처럼 나눠 만드는 법",
+      "what": "이 게임 화면은 통째로 만든 게 아니라 상단의 점수판, 칸 하나하나, 전체 판, 결과 창처럼 작은 조각으로 나눠서 만들었어요. 각 조각은 자기 일만 맡고, 필요할 때 가져다 조립해요. 칸 하나를 그리는 블록을 만들어두고 수백 번 재사용하는 식이죠. 마치 같은 모양 레고 블록을 여러 개 끼워 큰 작품을 만드는 것과 같아요.",
+      "why": "화면을 한 덩어리로 만들면 어디 하나 고칠 때 전체를 헤집어야 해서 실수가 많아져요. 조각으로 나누면 '점수판만 고치고 싶다'면 그 조각만 손보면 돼요. 또 똑같은 칸을 수백 개 만들 때 블록 하나만 만들어 반복하면 되니 훨씬 효율적이에요. 만들기도 쉽고 고치기도 편해져요.",
+      "where": "인스타 피드에서 게시물 하나하나가 똑같은 틀로 반복되는 것, 쿠팡 상품 목록에서 상품 카드가 같은 모양으로 줄지어 나오는 것이 바로 이 블록 재사용이에요. 유튜브의 영상 목록도 같은 조각을 반복해 만든 거예요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "types.ts",
+      "line": 2,
+      "title": "객체의 모양을 미리 정해두기",
+      "explanation": "interface는 데이터가 어떤 항목들을 가져야 하는지 약속하는 설계도예요. 여기선 칸 하나가 지뢰인지, 열렸는지 등을 담아요."
+    },
+    {
+      "file": "types.ts",
+      "line": 9,
+      "title": "정해진 값들 중 하나만 허용하기",
+      "explanation": "게임 상태는 '진행 중', '승리', '패배' 세 가지 중 하나만 될 수 있도록 제한한 타입이에요."
+    },
+    {
+      "file": "types.ts",
+      "line": 31,
+      "title": "키로 값을 찾는 사전 만들기",
+      "explanation": "난이도 이름을 키로 주면 그에 맞는 설정(행, 열, 지뢰 수)을 꺼낼 수 있는 표예요."
+    },
+    {
+      "file": "lib/minesweeper.ts",
+      "line": 5,
+      "title": "2차원 배열로 격자 만들기",
+      "explanation": "배열 안에 배열을 넣어 가로·세로가 있는 격자판을 만들어요. 지뢰찾기의 칸들을 표현하는 기본 구조예요."
+    },
+    {
+      "file": "lib/minesweeper.ts",
+      "line": 33,
+      "title": "조건이 만족될 때까지 반복하기",
+      "explanation": "while 반복문으로 원하는 개수의 지뢰가 다 놓일 때까지 무작위 위치에 계속 지뢰를 배치해요."
+    },
+    {
+      "file": "lib/minesweeper.ts",
+      "line": 44,
+      "title": "이중 반복문으로 모든 칸 살펴보기",
+      "explanation": "for문을 두 번 겹쳐서 격자의 모든 줄과 칸을 하나씩 방문하며 주변 지뢰 수를 세요."
+    },
+    {
+      "file": "lib/minesweeper.ts",
+      "line": 79,
+      "title": "스택으로 연쇄 작업 처리하기",
+      "explanation": "열어야 할 칸들을 스택에 쌓아두고 하나씩 꺼내 처리해요. 빈 칸이면 주변 칸도 스택에 넣어 연쇄로 열려요."
+    },
+    {
+      "file": "lib/minesweeper.ts",
+      "line": 119,
+      "title": "조건에 맞으면 일찍 멈추기",
+      "explanation": "지뢰가 아닌데 안 열린 칸이 하나라도 있으면 바로 false를 돌려줘요. 모두 열렸을 때만 승리예요."
+    },
+    {
+      "file": "components/DifficultySelect.tsx",
+      "line": 5,
+      "title": "함수를 부모에게서 받아 쓰기",
+      "explanation": "onSelect는 부모가 넘겨준 함수예요. 버튼을 누르면 이 함수를 실행해 어떤 난이도를 골랐는지 알려줘요."
+    },
+    {
+      "file": "components/DifficultySelect.tsx",
+      "line": 57,
+      "title": "목록을 화면 요소로 바꾸기",
+      "explanation": "map을 쓰면 난이도 배열의 각 항목마다 버튼을 하나씩 자동으로 만들어 화면에 뿌려줘요."
+    },
+    {
+      "file": "components/Board.tsx",
+      "line": 20,
+      "title": "격자 데이터를 화면에 그리기",
+      "explanation": "두 번의 map으로 각 줄과 각 칸을 돌면서 칸 버튼을 하나하나 만들어 보드를 완성해요."
+    },
+    {
+      "file": "components/Board.tsx",
+      "line": 23,
+      "title": "각 항목에 고유한 이름표 붙이기",
+      "explanation": "key는 React가 어떤 칸이 어떤 칸인지 구분하게 해주는 표시예요. 행과 열 번호를 합쳐 겹치지 않게 만들어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 17,
+      "title": "변하는 값을 상태로 저장하기",
+      "explanation": "useState는 화면이 바뀔 때 기억해야 할 값을 담아요. 값이 바뀌면 화면도 자동으로 다시 그려져요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 31,
+      "title": "시간이 지나며 자동 실행하기",
+      "explanation": "useEffect와 setInterval로 1초마다 시간을 1씩 늘려요. 게임이 끝나면 정리(clearInterval)해서 멈춰요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 62,
+      "title": "조건에 따라 다른 화면 보여주기",
+      "explanation": "난이도를 아직 안 골랐으면 선택 화면을, 골랐으면 게임 화면을 보여줘요. if로 화면을 갈라요."
+    },
+    {
+      "file": "components/Board.tsx",
+      "line": 25,
+      "title": "나머지 연산으로 체커보드 무늬 만들기",
+      "explanation": "(행+열)을 2로 나눈 나머지가 0인지 1인지에 따라 칸 색을 번갈아 칠해요. 홀짝을 판별할 때 쓰는 % (나머지) 연산의 대표적인 활용법이에요."
+    }
+  ],
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": null
+}

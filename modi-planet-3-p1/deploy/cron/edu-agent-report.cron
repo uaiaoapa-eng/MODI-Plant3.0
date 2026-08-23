@@ -1,0 +1,26 @@
+# edu-agent — 일별 사용량·비용 리포트 확정본 생성 (밤 크론)
+#
+# 설치:
+#   sudo cp deploy/cron/edu-agent-report.cron /etc/cron.d/edu-agent-report
+#   sudo chmod 644 /etc/cron.d/edu-agent-report
+#   sudo systemctl restart cron        # (데비안/우분투)
+#
+# 확인:
+#   grep CRON /var/log/syslog | tail
+#   tail /var/log/edu-agent-report.log
+#   curl -s "localhost:8100/api/usage/snapshots?start=2026-08-01" | head -c 300
+#
+# ⚠ /etc/cron.d 파일은 5번째 필드 뒤에 **실행 사용자**가 온다(사용자 crontab 과 다름).
+# ⚠ 크론은 로그인 셸이 아니라 PATH 가 빈약하다 — 절대경로를 쓴다.
+# ⚠ 마지막 줄은 개행으로 끝나야 한다. 아니면 크론이 통째로 무시한다.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+# 00:10 KST — 자정 직후 '어제' 확정치를 DB(usage_reports)에 굳힌다.
+#   왜 00:00 이 아닌가: 자정 직전에 시작된 턴이 자정을 넘겨 끝나면서 usage_turns 에
+#   적재되는 창이 있다. 10분 여유를 두면 그 꼬리까지 담긴다.
+#   AI 분석도 이때 하루 한 번만 만든다(화면에서는 버튼을 눌러야 재생성 — 새로고침이
+#   곧 과금이 되는 걸 막기 위함).
+10 0 * * * root cd /opt/docker/infra/edu-agent && /usr/bin/python3 scripts/report_snapshot.py --day yesterday >> /var/log/edu-agent-report.log 2>&1

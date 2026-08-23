@@ -1,0 +1,373 @@
+{
+  "session_id": "reference_rhythm-game",
+  "title": "리듬 게임",
+  "description": "버튼, 조이스틱, 다이얼로 즐기는 DDR 스타일 리듬 게임.",
+  "phase": "implement",
+  "diagram": "flowchart TD\n    A[시작 화면] -->|START| B[게임 시작]\n    B --> C[\"노트 미리 생성<br/>시간 구간별로 속도·밀도 상승\"]\n    C --> D[노트 낙하]\n    D --> E{판정선 도달 순간 입력?}\n    E -->|\"버튼 클릭 / 조이스틱 방향 / 다이얼 회전\"| F[\"시간차 판정<br/>excellent(±45ms)/great(±90ms)/nice(±145ms)\"]\n    E -->|입력 없음·시간 초과| G[oops · HP 감소]\n    F --> H[점수·콤보 갱신 + LED·스피커 피드백]\n    H --> D\n    G --> I{HP 0?}\n    I -->|아니오| D\n    I -->|예| J[\"GAME OVER<br/>최종 점수·최대 콤보\"]\n    J -->|RESTART| A",
+  "generated_code": {
+    "App.tsx": "declare const React: any;\ndeclare const MODI: any;\ndeclare const useButton: any;\n\nconst { useState, useEffect, useRef } = React;\n\nconst RAW_LANES = [\n  { id: 'button', label: 'BUTTON', glyph: '●', color: '#38bdf8', rgb: [56, 189, 248] },\n  { id: 'left', label: 'LEFT', glyph: '←', color: '#f87171', rgb: [248, 113, 113] },\n  { id: 'down', label: 'DOWN', glyph: '↓', color: '#fbbf24', rgb: [251, 191, 36] },\n  { id: 'up', label: 'UP', glyph: '↑', color: '#34d399', rgb: [52, 211, 153] },\n  { id: 'right', label: 'RIGHT', glyph: '→', color: '#60a5fa', rgb: [96, 165, 250] },\n  { id: 'dial', label: 'DIAL', glyph: '↻', color: '#c084fc', rgb: [192, 132, 252] },\n];\n\nconst LANES = RAW_LANES.map((lane, index) => ({\n  ...lane,\n  x: ((index + 0.5) / RAW_LANES.length) * 100,\n}));\nconst LANE_BY_ID = LANES.reduce((acc, lane) => ({ ...acc, [lane.id]: lane }), {});\n\nconst START_Y = 8;\nconst TARGET_Y = 74;\nconst INTRO_TRAVEL_MS = 3600;\nconst EXCELLENT_MS = 45;\nconst GREAT_MS = 90;\nconst NICE_MS = 145;\nconst MISS_MS = 190;\nconst JOY_DEADZONE = 42;\n\nconst SEQUENCE = [\n  'button', 'left', 'up', 'dial', 'right', 'down',\n  'button', 'right', 'up', 'left', 'dial', 'down',\n  'left', 'button', 'up', 'right', 'dial', 'down',\n  'button', 'left', 'right', 'up', 'dial', 'down',\n];\nconst CHORD_SEQUENCE = [\n  ['button', 'up'],\n  ['dial', 'left'],\n  ['button', 'right'],\n  ['dial', 'down'],\n  ['button', 'dial'],\n  ['dial', 'up'],\n];\nconst DIFFICULTY_STEPS = [\n  { at: 0, travelMs: INTRO_TRAVEL_MS, gaps: [1650, 1550, 1750, 1500, 1850, 1600], chordEvery: 0 },\n  { at: 18000, travelMs: 3100, gaps: [1320, 1240, 1400, 1180, 1500, 1280], chordEvery: 0 },\n  { at: 40000, travelMs: 2650, gaps: [1040, 960, 1120, 900, 1200, 980], chordEvery: 7 },\n  { at: 70000, travelMs: 2300, gaps: [840, 780, 920, 740, 980, 800], chordEvery: 5 },\n  { at: 105000, travelMs: 2050, gaps: [700, 640, 760, 610, 820, 680], chordEvery: 4 },\n];\n\nconst GRADE = {\n  excellent: { text: 'EXCELLENT', score: 320, rgb: [255, 202, 40], color: '#facc15', tone: 1320 },\n  great: { text: 'GREAT', score: 180, rgb: [34, 211, 238], color: '#22d3ee', tone: 1040 },\n  nice: { text: 'NICE', score: 80, rgb: [52, 211, 153], color: '#34d399', tone: 820 },\n  oops: { text: 'OOPS', score: 0, rgb: [248, 113, 113], color: '#f87171', tone: 220 },\n};\n\nconst KEY_TO_LANE = {\n  ' ': 'button',\n  Enter: 'button',\n  b: 'button',\n  B: 'button',\n  ArrowLeft: 'left',\n  a: 'left',\n  A: 'left',\n  ArrowDown: 'down',\n  s: 'down',\n  S: 'down',\n  ArrowUp: 'up',\n  w: 'up',\n  W: 'up',\n  ArrowRight: 'right',\n  d: 'right',\n  D: 'right',\n  q: 'dial',\n  Q: 'dial',\n  e: 'dial',\n  E: 'dial',\n};\n\nfunction safeModi(run) {\n  try {\n    if (typeof MODI !== 'undefined') run();\n  } catch (error) {\n    // Preview can run without connected hardware.\n  }\n}\n\nfunction subscribeModi(moduleKey, valueKey, onValue, pollMs) {\n  let off = () => {};\n  safeModi(() => {\n    const maybeOff = MODI.onValue(moduleKey, 1, valueKey, onValue, { pollMs });\n    if (typeof maybeOff === 'function') off = maybeOff;\n  });\n  return off;\n}\n\nfunction getNoteY(note, gameTime) {\n  const travelMs = note.travelMs || INTRO_TRAVEL_MS;\n  const startedAt = note.judgeAt - travelMs;\n  const progress = Math.max(0, Math.min(1, (gameTime - startedAt) / travelMs));\n  return START_Y + (TARGET_Y - START_Y) * progress;\n}\n\nfunction difficultyAt(gameTime) {\n  let difficulty = DIFFICULTY_STEPS[0];\n  for (const step of DIFFICULTY_STEPS) {\n    if (gameTime >= step.at) difficulty = step;\n  }\n  return difficulty;\n}\n\nfunction lanesForChartStep(chartIndex, difficulty) {\n  if (difficulty.chordEvery && chartIndex > 10 && chartIndex % difficulty.chordEvery === difficulty.chordEvery - 1) {\n    return CHORD_SEQUENCE[Math.floor(chartIndex / difficulty.chordEvery) % CHORD_SEQUENCE.length];\n  }\n  return [SEQUENCE[chartIndex % SEQUENCE.length]];\n}\n\nfunction gradeFromDelta(delta) {\n  if (delta <= EXCELLENT_MS) return 'excellent';\n  if (delta <= GREAT_MS) return 'great';\n  if (delta <= NICE_MS) return 'nice';\n  return null;\n}\n\nfunction joystickDirection(x, y) {\n  const ax = Math.abs(x);\n  const ay = Math.abs(y);\n  if (ax < JOY_DEADZONE && ay < JOY_DEADZONE) return null;\n  if (ax >= ay) return x > 0 ? 'right' : 'left';\n  return y > 0 ? 'up' : 'down';\n}\n\nfunction dialDelta(current, previous) {\n  if (previous === null || previous === undefined) return 0;\n  const range = Math.max(Math.abs(current), Math.abs(previous)) > 120 ? 360 : 100;\n  let delta = current - previous;\n  if (delta > range / 2) delta -= range;\n  if (delta < -range / 2) delta += range;\n  return delta;\n}\n\nfunction ScoreHud({ hud }) {\n  return (\n    <div className=\"absolute left-5 right-5 top-4 z-30 flex items-start justify-between gap-4 text-white\">\n      <div>\n        <div className=\"text-xs font-black tracking-widest text-cyan-200/70\">SCORE</div>\n        <div className=\"text-4xl font-black tabular-nums text-amber-300\" style={{ textShadow: '0 0 18px rgba(251,191,36,0.45)' }}>\n          {hud.score.toString().padStart(7, '0')}\n        </div>\n      </div>\n      <div className=\"flex items-start gap-8 text-right\">\n        <div>\n          <div className=\"text-xs font-black tracking-widest text-cyan-200/70\">COMBO</div>\n          <div className=\"text-4xl font-black tabular-nums\" style={{ color: hud.combo > 0 ? '#f472b6' : '#64748b' }}>\n            {hud.combo}\n          </div>\n        </div>\n        <div>\n          <div className=\"text-xs font-black tracking-widest text-cyan-200/70\">MAX</div>\n          <div className=\"text-3xl font-black tabular-nums text-cyan-200\">{hud.maxCombo}</div>\n        </div>\n      </div>\n      <div className=\"absolute left-0 right-0 top-16 h-3 overflow-hidden rounded-full border border-white/15 bg-black/50\">\n        <div\n          className=\"h-full transition-all duration-150\"\n          style={{\n            width: `${hud.hp}%`,\n            background: hud.hp > 45\n              ? 'linear-gradient(90deg,#10b981,#84cc16)'\n              : hud.hp > 20\n                ? 'linear-gradient(90deg,#f97316,#facc15)'\n                : 'linear-gradient(90deg,#dc2626,#fb7185)',\n          }}\n        />\n      </div>\n    </div>\n  );\n}\n\nfunction TargetPad({ lane, active, onInput }) {\n  return (\n    <button\n      type=\"button\"\n      aria-label={lane.label}\n      onPointerDown={(event) => {\n        event.preventDefault();\n        onInput(lane.id);\n      }}\n      className=\"absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-xl border-2 bg-black/70 font-black shadow-xl transition-transform active:scale-95\"\n      style={{\n        left: `${lane.x}%`,\n        top: `${TARGET_Y}%`,\n        width: 'clamp(50px, 8vw, 78px)',\n        height: 'clamp(58px, 8.5vw, 84px)',\n        borderColor: active ? '#ffffff' : lane.color,\n        color: active ? '#ffffff' : lane.color,\n        boxShadow: active\n          ? `0 0 34px ${lane.color}, inset 0 0 22px ${lane.color}66`\n          : `0 0 14px ${lane.color}55, inset 0 0 18px rgba(255,255,255,0.04)`,\n        background: active ? `linear-gradient(180deg, ${lane.color}cc, rgba(8,13,25,0.95))` : 'rgba(3,7,18,0.82)',\n      }}\n    >\n      <span style={{ fontSize: 'clamp(26px, 4vw, 42px)', lineHeight: 1 }}>{lane.glyph}</span>\n      <span className=\"mt-1 text-[10px] tracking-widest\">{lane.label}</span>\n    </button>\n  );\n}\n\nfunction FallingNote({ note, gameTime }) {\n  const lane = LANE_BY_ID[note.lane];\n  const y = getNoteY(note, gameTime);\n  const nearTarget = Math.abs(y - TARGET_Y) < 5;\n  return (\n    <div\n      className=\"absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl border-2 font-black\"\n      style={{\n        left: `${lane.x}%`,\n        top: `${y}%`,\n        width: 'clamp(46px, 7.4vw, 70px)',\n        height: 'clamp(46px, 7.4vw, 70px)',\n        color: '#ffffff',\n        borderColor: lane.color,\n        background: `radial-gradient(circle at 35% 25%, rgba(255,255,255,0.92), ${lane.color} 38%, rgba(5,10,25,0.95) 100%)`,\n        boxShadow: nearTarget\n          ? `0 0 44px ${lane.color}, 0 0 16px #ffffff`\n          : `0 0 24px ${lane.color}99`,\n        fontSize: 'clamp(24px, 4vw, 40px)',\n      }}\n    >\n      {lane.glyph}\n    </div>\n  );\n}\n\nfunction JudgmentBurst({ judgment }) {\n  if (!judgment) return null;\n  const grade = GRADE[judgment.grade] || GRADE.oops;\n  return (\n    <div className=\"pointer-events-none absolute inset-0 z-40 flex items-center justify-center\">\n      <div\n        key={judgment.id}\n        className=\"font-black\"\n        style={{\n          animation: 'judgePop 520ms ease-out forwards',\n          color: grade.color,\n          fontSize: 'clamp(44px, 9vw, 118px)',\n          textShadow: `0 0 16px ${grade.color}, 0 0 46px ${grade.color}`,\n        }}\n      >\n        {grade.text}\n      </div>\n    </div>\n  );\n}\n\nfunction HardwareStatus({ inputView }) {\n  const joyDir = inputView.joyDir ? inputView.joyDir.toUpperCase() : 'CENTER';\n  return (\n    <div className=\"absolute bottom-3 left-1/2 z-30 grid w-[min(92vw,760px)] -translate-x-1/2 grid-cols-3 gap-2 text-white\">\n      <div className=\"rounded-lg border border-cyan-300/30 bg-black/70 px-3 py-2\">\n        <div className=\"text-[10px] font-black tracking-widest text-cyan-200/70\">BUTTON</div>\n        <div className=\"mt-1 text-xl font-black\" style={{ color: inputView.button ? '#38bdf8' : '#94a3b8' }}>\n          {inputView.button ? 'CLICK' : 'READY'}\n        </div>\n      </div>\n      <div className=\"rounded-lg border border-emerald-300/30 bg-black/70 px-3 py-2\">\n        <div className=\"text-[10px] font-black tracking-widest text-emerald-200/70\">JOYSTICK</div>\n        <div className=\"mt-1 text-xl font-black text-emerald-200\">{joyDir}</div>\n        <div className=\"text-[10px] text-slate-400\">X {Math.round(inputView.joyX)} / Y {Math.round(inputView.joyY)}</div>\n      </div>\n      <div className=\"rounded-lg border border-violet-300/30 bg-black/70 px-3 py-2\">\n        <div className=\"text-[10px] font-black tracking-widest text-violet-200/70\">DIAL</div>\n        <div className=\"mt-1 text-xl font-black\" style={{ color: inputView.dialPulse ? '#c084fc' : '#c4b5fd' }}>\n          {inputView.dialPulse ? 'TURN' : Math.round(inputView.dial)}\n        </div>\n      </div>\n    </div>\n  );\n}\n\nfunction ReadyOverlay({ onStart }) {\n  return (\n    <div className=\"absolute inset-0 z-50 flex items-center justify-center bg-slate-950/82 backdrop-blur-sm\">\n      <div className=\"text-center\">\n        <div className=\"text-7xl font-black tracking-widest text-white\" style={{ textShadow: '0 0 32px rgba(34,211,238,0.65)' }}>\n          MODI DDR\n        </div>\n        <button\n          type=\"button\"\n          onClick={onStart}\n          className=\"mt-8 rounded-xl border-2 border-cyan-200 bg-cyan-400 px-12 py-4 text-2xl font-black tracking-widest text-slate-950 shadow-2xl transition-transform hover:scale-105 active:scale-95\"\n          style={{ boxShadow: '0 0 34px rgba(34,211,238,0.62)' }}\n        >\n          START\n        </button>\n      </div>\n    </div>\n  );\n}\n\nfunction GameOverOverlay({ hud, onStart }) {\n  return (\n    <div className=\"absolute inset-0 z-50 flex items-center justify-center bg-slate-950/88 backdrop-blur-sm\">\n      <div className=\"text-center text-white\">\n        <div className=\"text-6xl font-black text-rose-300\" style={{ textShadow: '0 0 24px rgba(251,113,133,0.7)' }}>\n          GAME OVER\n        </div>\n        <div className=\"mt-6 text-7xl font-black tabular-nums text-amber-300\">{hud.score.toString().padStart(7, '0')}</div>\n        <div className=\"mt-3 text-xl font-black tracking-widest text-cyan-100\">MAX COMBO {hud.maxCombo}</div>\n        <button\n          type=\"button\"\n          onClick={onStart}\n          className=\"mt-8 rounded-xl border-2 border-amber-200 bg-amber-300 px-12 py-4 text-2xl font-black tracking-widest text-slate-950 transition-transform hover:scale-105 active:scale-95\"\n        >\n          RESTART\n        </button>\n      </div>\n    </div>\n  );\n}\n\nfunction App() {\n  const [phase, setPhase] = useState('ready');\n  const [gameTime, setGameTime] = useState(0);\n  const [notes, setNotes] = useState([]);\n  const [hud, setHud] = useState({ score: 0, combo: 0, maxCombo: 0, hp: 100, excellent: 0, great: 0, nice: 0, oops: 0 });\n  const [judgment, setJudgment] = useState(null);\n  const [laneFlash, setLaneFlash] = useState({});\n  const [inputView, setInputView] = useState({ button: false, joyX: 0, joyY: 0, joyDir: null, dial: 0, dialPulse: false });\n\n  const phaseRef = useRef('ready');\n  const startAtRef = useRef(0);\n  const notesRef = useRef([] as any[]);\n  const nextIdRef = useRef(1);\n  const nextJudgeAtRef = useRef(INTRO_TRAVEL_MS);\n  const chartIndexRef = useRef(0);\n  const hudRef = useRef({ score: 0, combo: 0, maxCombo: 0, hp: 100, excellent: 0, great: 0, nice: 0, oops: 0 });\n  const inputRef = useRef({\n    joyX: 0,\n    joyY: 0,\n    joyDir: null,\n    dial: 0,\n    dialLast: null,\n    lastInputAt: {},\n    viewAt: 0,\n  });\n\n  const button = useButton(1);\n  const btnClicked = button && button.clicked;\n\n  useEffect(() => {\n    phaseRef.current = phase;\n  }, [phase]);\n\n  function commitHud() {\n    setHud({ ...hudRef.current });\n  }\n\n  function flashLane(laneId, duration = 150) {\n    setLaneFlash((current) => ({ ...current, [laneId]: true }));\n    window.setTimeout(() => {\n      setLaneFlash((current) => ({ ...current, [laneId]: false }));\n    }, duration);\n  }\n\n  function showJudgment(gradeName) {\n    const id = performance.now();\n    setJudgment({ id, grade: gradeName });\n    window.setTimeout(() => {\n      setJudgment((current) => (current && current.id === id ? null : current));\n    }, 520);\n  }\n\n  function playFeedback(gradeName) {\n    const grade = GRADE[gradeName] || GRADE.oops;\n    safeModi(() => {\n      MODI.led(1).setColor(...grade.rgb);\n      MODI.speaker(1).playTone(grade.tone, gradeName === 'oops' ? 55 : 75);\n      window.setTimeout(() => MODI.speaker(1).stop(), gradeName === 'oops' ? 150 : 105);\n      window.setTimeout(() => MODI.led(1).off(), 180);\n    });\n  }\n\n  function startGame() {\n    notesRef.current = [];\n    nextIdRef.current = 1;\n    chartIndexRef.current = 0;\n    nextJudgeAtRef.current = INTRO_TRAVEL_MS;\n    startAtRef.current = performance.now();\n    hudRef.current = { score: 0, combo: 0, maxCombo: 0, hp: 100, excellent: 0, great: 0, nice: 0, oops: 0 };\n    inputRef.current.lastInputAt = {};\n    phaseRef.current = 'playing';\n    setPhase('playing');\n    setGameTime(0);\n    setNotes([]);\n    setJudgment(null);\n    setLaneFlash({});\n    commitHud();\n    safeModi(() => {\n      MODI.led(1).setColor(20, 180, 255);\n      window.setTimeout(() => MODI.led(1).off(), 220);\n    });\n  }\n\n  function finishGame() {\n    if (phaseRef.current === 'gameOver') return;\n    phaseRef.current = 'gameOver';\n    setPhase('gameOver');\n    safeModi(() => {\n      MODI.led(1).setColor(255, 35, 35);\n      MODI.speaker(1).playTone(160, 70);\n      window.setTimeout(() => MODI.speaker(1).stop(), 240);\n    });\n  }\n\n  function registerMiss(note) {\n    const lane = LANE_BY_ID[note.lane];\n    hudRef.current.hp = Math.max(0, hudRef.current.hp - 12);\n    hudRef.current.combo = 0;\n    hudRef.current.oops += 1;\n    flashLane(note.lane, 210);\n    showJudgment('oops');\n    playFeedback('oops');\n    commitHud();\n    if (lane) {\n      setInputView((current) => ({ ...current, lastMiss: lane.id }));\n    }\n    if (hudRef.current.hp <= 0) finishGame();\n  }\n\n  function queueInput(laneId) {\n    if (phaseRef.current !== 'playing') {\n      if (laneId === 'button') startGame();\n      return;\n    }\n\n    const realNow = performance.now();\n    const lastAt = inputRef.current.lastInputAt[laneId] || -Infinity;\n    if (realNow - lastAt < 90) return;\n    inputRef.current.lastInputAt[laneId] = realNow;\n    flashLane(laneId);\n\n    const now = realNow - startAtRef.current;\n    let best: any = null;\n    let bestDelta = Infinity;\n    for (const note of notesRef.current) {\n      if (note.lane !== laneId) continue;\n      const delta = Math.abs(now - note.judgeAt);\n      if (delta < bestDelta) {\n        best = note;\n        bestDelta = delta;\n      }\n    }\n\n    const gradeName = gradeFromDelta(bestDelta);\n    if (!best || !gradeName) return;\n\n    notesRef.current = notesRef.current.filter((note) => note.id !== best.id);\n    setNotes([...notesRef.current]);\n\n    const grade = GRADE[gradeName];\n    hudRef.current.score += grade.score + hudRef.current.combo * 8;\n    hudRef.current.combo += 1;\n    hudRef.current.maxCombo = Math.max(hudRef.current.maxCombo, hudRef.current.combo);\n    hudRef.current[gradeName] += 1;\n    commitHud();\n    showJudgment(gradeName);\n    playFeedback(gradeName);\n  }\n\n  useEffect(() => {\n    if (btnClicked) {\n      setInputView((current) => ({ ...current, button: true }));\n      window.setTimeout(() => setInputView((current) => ({ ...current, button: false })), 140);\n      queueInput('button');\n    }\n  }, [btnClicked]);\n\n  useEffect(() => {\n    const updateJoy = () => {\n      const nextDir = joystickDirection(inputRef.current.joyX, inputRef.current.joyY);\n      if (nextDir !== inputRef.current.joyDir) {\n        inputRef.current.joyDir = nextDir;\n        if (nextDir) queueInput(nextDir);\n      }\n\n      const now = performance.now();\n      if (now - inputRef.current.viewAt > 45) {\n        inputRef.current.viewAt = now;\n        setInputView((current) => ({\n          ...current,\n          joyX: inputRef.current.joyX,\n          joyY: inputRef.current.joyY,\n          joyDir: nextDir,\n        }));\n      }\n    };\n\n    const offX = subscribeModi('joystick', 'x', (value) => {\n      inputRef.current.joyX = Number(value) || 0;\n      updateJoy();\n    }, 24);\n    const offY = subscribeModi('joystick', 'y', (value) => {\n      inputRef.current.joyY = Number(value) || 0;\n      updateJoy();\n    }, 24);\n    return () => {\n      offX();\n      offY();\n    };\n  }, []);\n\n  useEffect(() => {\n    const offDial = subscribeModi('dial', 'turn', (value) => {\n      const current = Number(value) || 0;\n      const previous = inputRef.current.dialLast;\n      const delta = dialDelta(current, previous);\n      const range = Math.max(Math.abs(current), Math.abs(previous || 0)) > 120 ? 360 : 100;\n      inputRef.current.dialLast = current;\n      inputRef.current.dial = current;\n      setInputView((view) => ({ ...view, dial: current }));\n\n      if (Math.abs(delta) >= (range === 360 ? 8 : 3)) {\n        setInputView((view) => ({ ...view, dial: current, dialPulse: true }));\n        window.setTimeout(() => setInputView((view) => ({ ...view, dialPulse: false })), 150);\n        queueInput('dial');\n      }\n    }, 35);\n    return () => offDial();\n  }, []);\n\n  useEffect(() => {\n    const onKeyDown = (event) => {\n      if (event.repeat) return;\n      const laneId = KEY_TO_LANE[event.key];\n      if (!laneId) return;\n      event.preventDefault();\n      if (laneId === 'button') {\n        setInputView((current) => ({ ...current, button: true }));\n        window.setTimeout(() => setInputView((current) => ({ ...current, button: false })), 120);\n      }\n      if (laneId === 'dial') {\n        setInputView((current) => ({ ...current, dialPulse: true }));\n        window.setTimeout(() => setInputView((current) => ({ ...current, dialPulse: false })), 150);\n      }\n      queueInput(laneId);\n    };\n    window.addEventListener('keydown', onKeyDown);\n    return () => window.removeEventListener('keydown', onKeyDown);\n  }, []);\n\n  useEffect(() => {\n    if (phase !== 'playing') return;\n\n    let raf = 0;\n    const loop = () => {\n      const now = performance.now() - startAtRef.current;\n      let changed = false;\n\n      while (true) {\n        const difficulty = difficultyAt(nextJudgeAtRef.current);\n        if (nextJudgeAtRef.current > now + difficulty.travelMs) break;\n\n        const laneIds = lanesForChartStep(chartIndexRef.current, difficulty);\n        for (const laneId of laneIds) {\n          notesRef.current.push({\n            id: nextIdRef.current++,\n            lane: laneId,\n            judgeAt: nextJudgeAtRef.current,\n            travelMs: difficulty.travelMs,\n          });\n        }\n        nextJudgeAtRef.current += difficulty.gaps[chartIndexRef.current % difficulty.gaps.length];\n        chartIndexRef.current += 1;\n        changed = true;\n      }\n\n      const kept: any[] = [];\n      for (const note of notesRef.current) {\n        if (now - note.judgeAt > MISS_MS) {\n          registerMiss(note);\n          changed = true;\n        } else {\n          kept.push(note);\n        }\n      }\n      notesRef.current = kept;\n\n      if (changed) setNotes([...notesRef.current]);\n      setGameTime(now);\n      if (phaseRef.current === 'playing') raf = requestAnimationFrame(loop);\n    };\n\n    raf = requestAnimationFrame(loop);\n    return () => cancelAnimationFrame(raf);\n  }, [phase]);\n\n  return (\n    <div className=\"relative h-screen w-full overflow-hidden bg-slate-950 text-white\">\n      <style>{`\n        @keyframes judgePop {\n          0% { opacity: 0; transform: translateY(18px) scale(0.72); }\n          18% { opacity: 1; transform: translateY(0) scale(1.08); }\n          70% { opacity: 1; transform: translateY(-5px) scale(1); }\n          100% { opacity: 0; transform: translateY(-24px) scale(0.94); }\n        }\n        @keyframes scanFall {\n          from { transform: translateY(-120px); opacity: 0; }\n          20% { opacity: 0.55; }\n          to { transform: translateY(100vh); opacity: 0; }\n        }\n      `}</style>\n\n      <div className=\"absolute inset-0\" style={{ background: 'linear-gradient(180deg,#07111f 0%,#0f172a 48%,#111827 100%)' }} />\n      <div className=\"absolute inset-0 opacity-45\" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)', backgroundSize: '42px 42px' }} />\n      <div className=\"absolute left-0 right-0 top-0 h-28 bg-gradient-to-b from-cyan-400/14 to-transparent\" />\n      <div className=\"absolute left-[18%] top-[-120px] h-28 w-[2px] bg-cyan-200/35\" style={{ animation: 'scanFall 2.8s linear infinite' }} />\n      <div className=\"absolute left-[61%] top-[-120px] h-28 w-[2px] bg-amber-200/35\" style={{ animation: 'scanFall 3.4s linear 0.7s infinite' }} />\n\n      <ScoreHud hud={hud} />\n\n      <div className=\"absolute left-1/2 top-0 h-full w-[min(92vw,920px)] -translate-x-1/2\">\n        {LANES.map((lane) => (\n          <div\n            key={lane.id}\n            className=\"absolute top-28 bottom-28 w-px -translate-x-1/2\"\n            style={{\n              left: `${lane.x}%`,\n              background: `linear-gradient(180deg, transparent, ${lane.color}44 18%, ${lane.color}22 82%, transparent)`,\n              boxShadow: `0 0 18px ${lane.color}55`,\n            }}\n          />\n        ))}\n\n        <div\n          className=\"absolute left-0 right-0 z-0 h-px\"\n          style={{\n            top: `${TARGET_Y}%`,\n            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent)',\n            boxShadow: '0 0 28px rgba(255,255,255,0.8), 0 0 54px rgba(34,211,238,0.55)',\n          }}\n        />\n        <div\n          className=\"absolute left-0 right-0 z-0 -translate-y-1/2\"\n          style={{\n            top: `${TARGET_Y}%`,\n            height: 'clamp(52px, 8vw, 78px)',\n            background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.07), transparent)',\n          }}\n        />\n\n        {notes.map((note) => (\n          <FallingNote key={note.id} note={note} gameTime={gameTime} />\n        ))}\n\n        {LANES.map((lane) => (\n          <TargetPad key={lane.id} lane={lane} active={laneFlash[lane.id]} onInput={queueInput} />\n        ))}\n      </div>\n\n      <JudgmentBurst judgment={judgment} />\n      <HardwareStatus inputView={inputView} />\n\n      {phase === 'ready' && <ReadyOverlay onStart={startGame} />}\n      {phase === 'gameOver' && <GameOverOverlay hud={hud} onStart={startGame} />}\n    </div>\n  );\n}\n\nexport default App;\n"
+  },
+  "coding_type": "hybrid",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": {
+    "modules": [
+      {
+        "key": "network",
+        "role": "필수",
+        "reason": "PC와 통신하고 전원을 공급해요",
+        "count": 1
+      },
+      {
+        "key": "button",
+        "role": "입력",
+        "reason": "클릭 노트를 입력해요",
+        "count": 1
+      },
+      {
+        "key": "joystick",
+        "role": "입력",
+        "reason": "상하좌우 방향 노트를 입력해요",
+        "count": 1
+      },
+      {
+        "key": "dial",
+        "role": "입력",
+        "reason": "회전 노트를 입력해요",
+        "count": 1
+      },
+      {
+        "key": "led",
+        "role": "출력",
+        "reason": "판정 결과를 색상으로 알려줘요",
+        "count": 1
+      },
+      {
+        "key": "speaker",
+        "role": "출력",
+        "reason": "판정 효과음을 출력해요",
+        "count": 1
+      }
+    ],
+    "layout": [
+      {
+        "key": "network",
+        "pos": [
+          0,
+          0
+        ],
+        "usbFace": "left"
+      },
+      {
+        "key": "led",
+        "pos": [
+          1,
+          0
+        ]
+      },
+      {
+        "key": "speaker",
+        "pos": [
+          2,
+          0
+        ]
+      },
+      {
+        "key": "button",
+        "pos": [
+          0,
+          1
+        ]
+      },
+      {
+        "key": "joystick",
+        "pos": [
+          1,
+          1
+        ]
+      },
+      {
+        "key": "dial",
+        "pos": [
+          2,
+          1
+        ]
+      }
+    ],
+    "assembly": [
+      "네트워크 모듈을 왼쪽 위에 놓고 USB 케이블을 PC에 연결하세요.",
+      "LED 모듈을 네트워크 오른쪽에 연결해 판정 색상 피드백을 확인하세요.",
+      "스피커 모듈을 LED 오른쪽에 연결해 판정 효과음을 들으세요.",
+      "버튼 모듈을 네트워크 아래에 연결해 BUTTON 노트를 입력하세요.",
+      "조이스틱 모듈을 버튼 오른쪽에 연결해 LEFT, DOWN, UP, RIGHT 노트를 입력하세요.",
+      "다이얼 모듈을 조이스틱 오른쪽에 연결해 DIAL 노트를 입력하세요."
+    ],
+    "title": "리듬 게임",
+    "description": "버튼 클릭, 조이스틱 상하좌우, 다이얼 회전을 섞어 입력하는 DDR 스타일 리듬 액션 게임. 초반에는 느린 단일 노트로 시작하고, 시간이 지날수록 속도와 밀도가 올라가며 후반에는 실제 모듈로 입력 가능한 2개 동시 노트가 등장한다."
+  },
+  "files": "- App.tsx (tsx): 버튼, 조이스틱 상하좌우, 다이얼 6레인을 쓰는 DDR 스타일 리듬 게임. 느린 단일 노트에서 시작해 점진적으로 빨라지고 후반에는 실제 입력 가능한 2개 동시 노트가 등장한다.",
+  "design_doc": {
+    "project_name": "리듬 게임",
+    "description": "버튼 클릭, 조이스틱 상하좌우, 다이얼 회전을 섞어 입력하는 DDR 스타일 리듬 액션 게임. 초반에는 느린 단일 노트로 시작하고, 시간이 지날수록 속도와 밀도가 올라가며 후반에는 실제 모듈로 입력 가능한 2개 동시 노트가 등장한다.",
+    "users": [
+      "MODI 입력 장치로 리듬 게임을 플레이해 보고 싶은 학습자",
+      "타이밍 판정과 난이도 설계를 게임으로 익히려는 학습자"
+    ],
+    "features": [
+      {
+        "name": "6레인 DDR 판정 라인",
+        "priority": "mvp",
+        "description": "BUTTON, LEFT, DOWN, UP, RIGHT, DIAL 6개 레인을 아래 판정선에 고정하고 노트 중심이 타겟 시각에 도달할 때만 입력을 인정한다."
+      },
+      {
+        "name": "MODI 입력 조합",
+        "priority": "mvp",
+        "description": "버튼 클릭은 BUTTON, 조이스틱 방향은 상하좌우, 다이얼 회전은 DIAL 노트로 연결한다. 키보드 입력도 테스트용으로 지원한다."
+      },
+      {
+        "name": "점진 난이도 램프",
+        "priority": "mvp",
+        "description": "3.6초 낙하 시간과 넓은 간격으로 시작하고 18초, 40초, 70초, 105초 구간마다 노트 간격과 낙하 시간을 단계적으로 줄인다."
+      },
+      {
+        "name": "후반 2개 동시 노트",
+        "priority": "mvp",
+        "description": "40초 이후부터 버튼+조이스틱, 다이얼+조이스틱, 버튼+다이얼처럼 실제 손으로 입력 가능한 2개 동시 노트가 등장한다."
+      },
+      {
+        "name": "정밀 타이밍 판정",
+        "priority": "mvp",
+        "description": "입력 시각과 목표 판정 시각의 차이로 excellent(±45ms), great(±90ms), nice(±145ms), oops를 결정하고 점수, 콤보, HP, LED, 스피커 피드백을 즉시 갱신한다."
+      }
+    ],
+    "pages": [
+      {
+        "name": "게임플레이 화면",
+        "description": "하단 타겟 패드, 떨어지는 노트, 점수/콤보/HP HUD, 모듈 입력 상태가 함께 보이는 메인 게임 화면",
+        "components": [
+          "ScoreHud",
+          "FallingNote",
+          "TargetPad",
+          "JudgmentBurst",
+          "HardwareStatus"
+        ]
+      },
+      {
+        "name": "결과 화면",
+        "description": "HP가 0이 되었을 때 최종 점수와 최대 콤보를 보여주고 다시 시작할 수 있는 화면",
+        "components": [
+          "GameOverOverlay",
+          "RESTART 버튼"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Lane",
+        "fields": [
+          "id",
+          "label",
+          "glyph",
+          "color",
+          "x"
+        ],
+        "description": "각 입력 레인의 표시 이름, 아이콘, 색상, 화면 위치를 정의한다."
+      },
+      {
+        "name": "Note",
+        "fields": [
+          "id",
+          "lane",
+          "judgeAt",
+          "travelMs"
+        ],
+        "description": "노트가 어떤 레인에 속하고 언제 판정선에 닿아야 하는지 저장한다."
+      },
+      {
+        "name": "HudState",
+        "fields": [
+          "score",
+          "combo",
+          "maxCombo",
+          "hp",
+          "excellent",
+          "great",
+          "nice",
+          "oops"
+        ],
+        "description": "플레이 중 점수, 콤보, 체력, 판정 개수를 관리한다."
+      }
+    ],
+    "user_flows": [
+      "START를 누르면 느린 단일 노트부터 시작한다.",
+      "노트가 하단 타겟 패드에 도착하는 순간 버튼, 조이스틱, 다이얼로 대응 입력을 한다.",
+      "입력이 목표 시각에 가까울수록 excellent/great/nice 판정을 받고, 지나친 노트는 oops로 처리되어 HP가 줄어든다.",
+      "시간이 지나면 노트가 조금씩 빨라지고, 후반에는 2개 동시 노트를 처리하며 높은 콤보를 노린다."
+    ],
+    "strengths": [
+      "초반이 느려 처음 플레이하는 학습자가 리듬과 판정선을 이해하기 쉽다.",
+      "6레인과 모듈 상태 표시가 분명해서 어떤 장치를 입력해야 하는지 바로 보인다.",
+      "입력 시각 기준 판정이라 노트가 중앙에 있을 때 미리 맞는 문제를 피한다.",
+      "동시 노트가 실제 버튼, 조이스틱, 다이얼 조합으로 가능하도록 제한되어 있다."
+    ],
+    "weaknesses": [
+      "실제 음악 파일이나 BPM 기반 악보와의 동기화는 아직 없다.",
+      "점수 저장, 리더보드, 사용자별 기록 기능은 아직 없다.",
+      "노트 패턴은 코드에 정의된 시퀀스 기반이라 외부 편집기는 없다."
+    ]
+  },
+  "task_plan": {
+    "tasks": [
+      {
+        "id": 1,
+        "name": "하단 판정선과 6레인 UI 구성",
+        "description": "",
+        "files": [
+          "App.tsx"
+        ],
+        "status": "done"
+      },
+      {
+        "id": 2,
+        "name": "버튼, 조이스틱, 다이얼 입력 연결",
+        "description": "",
+        "files": [
+          "App.tsx"
+        ],
+        "status": "done"
+      },
+      {
+        "id": 3,
+        "name": "excellent/great/nice/oops 타이밍 판정 구현",
+        "description": "",
+        "files": [
+          "App.tsx"
+        ],
+        "status": "done"
+      },
+      {
+        "id": 4,
+        "name": "느린 시작, 점진 가속, 후반 동시 노트 패턴 적용",
+        "description": "",
+        "files": [
+          "App.tsx"
+        ],
+        "status": "done"
+      }
+    ],
+    "progress": "진행: 4/4\n[v] 1. 하단 판정선과 6레인 UI 구성\n[v] 2. 버튼, 조이스틱, 다이얼 입력 연결\n[v] 3. excellent/great/nice/oops 타이밍 판정 구현\n[v] 4. 느린 시작, 점진 가속, 후반 동시 노트 패턴 적용"
+  },
+  "learning_notes": [
+    {
+      "title": "노트가 '거기 있을 때'가 아니라 '그 시각'에 판정해요",
+      "what": "모든 노트에는 '판정선에 도착해야 하는 목표 시각'이 정해져 있어요. 여러분이 입력한 순간과 이 목표 시각의 차이를 밀리초 단위로 재서, 45ms 안이면 EXCELLENT, 90ms 안이면 GREAT, 145ms 안이면 NICE로 등급을 나눠요. 노트 그림이 화면 어디에 있는지가 아니라 '시간이 얼마나 정확했는지'만 보는 거예요.",
+      "why": "화면 위치로 판정하면 노트가 판정선 근처에 넓게 걸쳐 있는 동안 아무 때나 눌러도 맞아버려서 리듬 게임의 재미가 사라져요. 또 컴퓨터가 느려져 그림이 늦게 그려져도, 시간 기준 판정은 흔들리지 않아요. 보이는 것과 판정하는 것을 분리하면 공정하고 정확한 게임이 돼요.",
+      "where": "실제 리듬 게임(DDR, 태고의 달인)의 Perfect/Great 판정이 정확히 이 방식이에요. 100m 달리기에서 출발 총소리와 발이 떨어진 시각의 차이로 부정 출발을 가려내는 것도 같은 원리죠."
+    },
+    {
+      "title": "난이도표의 숫자만 바꾸면 게임이 쉬워지고 어려워져요",
+      "what": "난이도표에 '0초부터, 18초부터, 40초부터…' 시간 구간마다 노트가 떨어지는 시간(3600ms에서 2050ms까지)과 노트 사이 간격, 동시 노트 빈도를 적어뒀어요. 게임은 매 순간 지금 시각에 맞는 줄을 골라 그 숫자대로 노트를 만들어요. 난이도를 조절하는 코드가 따로 있는 게 아니라, 표의 숫자가 곧 난이도예요.",
+      "why": "난이도가 로직 코드 곳곳에 흩어져 있으면 '초반을 조금만 쉽게' 바꾸려 해도 코드를 뒤져야 해서 실수하기 쉬워요. 표 하나에 모아두면 숫자만 고쳐서 밸런스를 다듬을 수 있고, 게임을 해보며 '40초 구간이 너무 어렵네' 싶을 때 그 줄만 수정하면 돼요.",
+      "where": "테트리스가 레벨이 오를수록 블록이 빨라지는 것, RPG 게임에서 몬스터 능력치가 표로 관리되는 것과 같아요. 게임 회사에서 기획자가 코드를 몰라도 엑셀 표로 밸런스를 조정하는 게 바로 이 구조 덕분이에요."
+    },
+    {
+      "title": "모듈 하나가 레인 하나 — 그리고 키보드로도 쳐볼 수 있어요",
+      "what": "버튼 모듈은 BUTTON 레인, 조이스틱은 LEFT/DOWN/UP/RIGHT 네 레인, 다이얼은 DIAL 레인을 담당해요. 그런데 같은 레인을 키보드로도 칠 수 있게 해뒀어요. 스페이스는 버튼, 화살표는 조이스틱, Q/E는 다이얼 역할을 대신하죠. 어떤 입력이든 결국 '이 레인에 입력이 들어왔다'라는 하나의 신호로 모여요.",
+      "why": "MODI 모듈이 아직 연결되지 않았거나 친구 것을 빌려 쓰는 중에도 게임을 만들고 테스트할 수 있어야 해요. 입력 장치와 게임 규칙을 분리해두면, 새 입력 방법을 추가할 때도 게임 규칙은 하나도 고칠 필요가 없어요. 하드웨어와 함께 만드는 앱에서 특히 중요한 습관이에요.",
+      "where": "PC 게임이 키보드와 게임패드를 모두 지원하는 것, 모바일 게임이 터치와 블루투스 컨트롤러를 같이 받는 것과 같아요. 자동차의 크루즈 컨트롤 버튼이 핸들에도, 레버에도 달려 있는 것처럼 '다른 입력, 같은 동작'이죠."
+    },
+    {
+      "title": "조이스틱의 미세한 떨림은 무시해요 — 데드존",
+      "what": "조이스틱은 '위로 조금, 오른쪽으로 많이'처럼 부드러운 숫자(x, y)를 보내요. 게임은 두 값 중 더 센 쪽을 골라 상하좌우 중 하나로 바꾸는데, 둘 다 42보다 작으면 아예 입력이 없던 걸로 쳐요. 이 '무시 구간'을 데드존이라고 불러요.",
+      "why": "데드존이 없으면 스틱에서 손을 뗐는데도 스프링이 완전히 가운데로 돌아오지 않아 남은 미세한 값이 계속 입력으로 들어와요. 가만히 있는데 LEFT 노트가 저절로 눌리는 억울한 오입력이 생기죠. 작은 신호를 걸러내야 '내가 민 것만' 정확하게 인식돼요.",
+      "where": "게임기 컨트롤러의 아날로그 스틱에도 전부 데드존이 있어요. 스마트폰이 살짝 흔들려도 화면이 가로세로로 마구 돌지 않는 것도 작은 움직임을 무시하는 같은 장치예요."
+    },
+    {
+      "title": "다이얼이 '돌았다'는 걸 어떻게 알까 — 이전 값과 비교하기",
+      "what": "다이얼은 지금 가리키는 각도만 알려줄 뿐 '돌렸다'고 말해주지 않아요. 그래서 직전 값을 기억해뒀다가 현재 값과의 차이로 회전을 알아내요. 한 가지 함정은 눈금이 끝에서 처음으로 넘어가는 순간(359→0)인데, 차이가 반 바퀴보다 크면 '반대로 조금 돈 것'으로 고쳐 계산해서 자연스럽게 이어줘요.",
+      "why": "이 보정이 없으면 눈금 경계를 지나는 순간 '한 바퀴를 거꾸로 확 돌렸다'는 엉뚱한 값이 튀어나와 DIAL 노트가 오작동해요. 센서가 주는 값을 그대로 믿지 않고, 값의 '변화'와 '경계'를 살피는 건 하드웨어 다룰 때 늘 필요한 자세예요.",
+      "where": "시계 분침이 59분에서 0분으로 넘어가도 '1분 지났다'로 계산하는 것과 같아요. 마우스 휠 스크롤, 오디오 볼륨 노브도 모두 절대 위치가 아니라 '얼마나 돌았나'의 변화량으로 동작해요."
+    },
+    {
+      "title": "노트는 미리 만들고, 지나간 노트는 바로 치워요",
+      "what": "게임은 매 프레임 '지금부터 낙하 시간 안에 판정될 노트'를 미리 만들어 떨어뜨리기 시작하고, 판정 시각에서 190ms가 지나도록 입력이 없던 노트는 OOPS로 처리한 뒤 목록에서 삭제해요. 그래서 노트 목록에는 항상 '화면에 보이거나 곧 보일 노트'만 남아 있어요.",
+      "why": "노트를 전부 처음에 만들어두면 아직 몇 분 뒤에나 나올 노트까지 매 프레임 계산에 끼어들어 게임이 무거워져요. 반대로 지나간 노트를 안 치우면 목록이 끝없이 자라 점점 느려지다 멈추죠. '필요할 때 만들고 끝나면 버리기'가 오래 돌아가는 게임의 비결이에요.",
+      "where": "유튜브가 영상 전체가 아니라 앞으로 볼 몇 초만 미리 받아두는 것(버퍼링), 병원 심전도 모니터가 오래된 그래프를 왼쪽으로 흘려보내는 것과 같은 관리 방식이에요."
+    },
+    {
+      "title": "동시 노트는 '진짜 손으로 가능한' 조합만 나와요",
+      "what": "후반부의 2개 동시 노트는 버튼+조이스틱, 다이얼+조이스틱, 버튼+다이얼처럼 서로 다른 모듈의 조합만 나와요. 조이스틱 하나로 왼쪽과 오른쪽을 동시에 미는 것 같은, 물리적으로 불가능한 패턴은 아예 만들지 않아요.",
+      "why": "화면 속 게임이라면 어떤 조합이든 상관없지만, 이 게임의 컨트롤러는 진짜 손과 진짜 모듈이에요. 불가능한 패턴이 하나라도 나오면 실력과 무관하게 콤보가 끊겨서 게임이 불공정해져요. 하드웨어와 함께하는 앱은 '기계가 할 수 있는 것'만큼 '사람 손이 할 수 있는 것'도 설계에 넣어야 해요.",
+      "where": "피아노 악보가 한 손으로 닿을 수 있는 건반 범위 안에서 화음을 쓰는 것, 게임의 버튼 연출(QTE)이 실제로 누를 수 있는 버튼 조합만 요구하는 것과 같은 배려예요."
+    },
+    {
+      "title": "판정 순간 LED가 번쩍, 스피커가 삑 — 그리고 스스로 꺼져요",
+      "what": "노트를 치는 순간 판정 등급에 맞는 색으로 LED를 켜고 스피커로 등급별 높이의 소리를 내요. 그리고 잠깐 뒤(0.1~0.2초) 자동으로 LED를 끄고 소리를 멈추도록 예약해둬요. 켜는 코드와 끄는 예약이 항상 한 쌍으로 다녀요.",
+      "why": "눈은 떨어지는 노트를 쫓느라 바쁘기 때문에, 빛과 소리로도 알려주면 화면을 안 보고도 몸으로 판정을 느낄 수 있어요. 그리고 끄는 예약이 없으면 LED가 계속 켜진 채로 남아 다음 판정과 구분이 안 되고, 소리도 겹쳐서 뭉개져요. 하드웨어는 '켰으면 끈다'까지가 한 동작이에요.",
+      "where": "게임 컨트롤러가 피격 순간 짧게 진동하고 바로 멈추는 것, 휴대폰 알림이 '띠링' 한 번 울리고 그치는 것과 같아요. 자동차 방향지시등이 일정 시간 뒤 저절로 꺼지는 것도 같은 설계죠."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 7,
+      "title": "6개 입력 레인 정의",
+      "explanation": "버튼, 조이스틱 상하좌우, 다이얼을 각각 별도 레인으로 만들고 색상과 아이콘을 지정한다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 45,
+      "title": "시간별 난이도 단계",
+      "explanation": "게임 시간이 지날수록 낙하 시간과 노트 간격을 줄이고, 40초 이후부터 동시 노트가 나오게 만든다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 122,
+      "title": "밀리초 기반 판정",
+      "explanation": "입력 시각과 노트 목표 시각의 차이가 작을수록 excellent, great, nice 판정을 준다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 129,
+      "title": "조이스틱 방향 변환",
+      "explanation": "x, y 값 중 더 크게 움직인 축을 기준으로 left, right, up, down 방향을 결정한다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 137,
+      "title": "다이얼 회전 감지",
+      "explanation": "이전 다이얼 값과 현재 값의 차이를 계산해 충분히 돌렸을 때 DIAL 입력으로 처리한다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 435,
+      "title": "가장 가까운 노트 찾기",
+      "explanation": "입력한 레인에서 현재 시각과 판정 시각이 가장 가까운 노트를 찾아 한 번만 처리한다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 564,
+      "title": "미리 노트 생성하기",
+      "explanation": "노트가 화면 위에서부터 떨어질 수 있도록 목표 판정 시간보다 travelMs만큼 앞서 생성한다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 584,
+      "title": "지나간 노트 미스 처리",
+      "explanation": "목표 판정 시각을 MISS_MS 이상 지나면 oops로 처리하고 HP를 줄인다."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: 버튼, 조이스틱, 다이얼로 조작하는 DDR 스타일 리듬 게임을 만들어줘.\n튜터: 버튼 클릭, 조이스틱 상하좌우, 다이얼 회전으로 리듬 게임을 만들게요. 하단 타겟에 닿는 순간 excellent/great/nice/oops로 판정하고, 난이도는 점진적으로 올라가게 구성할게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "버튼, 조이스틱, 다이얼로 조작하는 DDR 스타일 리듬 게임을 만들어줘."
+    },
+    {
+      "role": "ai",
+      "content": "버튼 클릭, 조이스틱 상하좌우, 다이얼 회전으로 리듬 게임을 만들게요. 하단 타겟에 닿는 순간 excellent/great/nice/oops로 판정하고, 난이도는 점진적으로 올라가게 구성할게요."
+    }
+  ]
+}

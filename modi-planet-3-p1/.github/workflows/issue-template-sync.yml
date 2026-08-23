@@ -1,0 +1,38 @@
+# issue-template 자동 업데이트 — 매주 upstream을 확인해 변경이 있을 때만 PR을 연다.
+# 필요 설정(1회): 리포/조직 Settings → Actions → General →
+#   "Allow GitHub Actions to create and approve pull requests" 체크
+# 이 파일 자체는 install.sh가 최초 1회만 설치하며 이후 업데이트 대상에서 제외된다
+# (GITHUB_TOKEN은 워크플로우 파일을 수정할 수 없으므로 — 팀에서 자유롭게 수정 가능).
+name: issue-template sync
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # 매주 월요일 00:00 UTC (한국 월요일 오전 9시)
+  workflow_dispatch: # Actions 탭에서 수동 실행 가능
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: install.sh 실행 (설치 = 업데이트)
+        run: curl -fsSL https://raw.githubusercontent.com/nlook-service/issue-template/main/install.sh | bash
+
+      - name: 변경이 있으면 PR 생성
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+        with:
+          branch: chore/issue-template-sync
+          title: "chore: issue-template 업데이트"
+          commit-message: "chore: issue-template 업데이트"
+          body: |
+            issue-template upstream 변경을 반영하는 자동 PR입니다.
+
+            - `<파일>.new` 가 포함되어 있다면 해당 파일은 팀에서 커스터마이징한 것입니다 —
+              덮어쓰지 않았으니 diff를 확인해 수동으로 병합한 뒤 `.new` 파일을 지우세요.
+            - 버전·체크섬 기록: `.claude/issue-template.lock`
+          delete-branch: true

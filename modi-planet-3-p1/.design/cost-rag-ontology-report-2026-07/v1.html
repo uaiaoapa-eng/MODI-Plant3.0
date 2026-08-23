@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>edu-agent 비용절감·RAG·온톨로지 구축 검증 보고서 — 2026-07</title>
+<style>
+  :root{
+    --ink:#1a202c; --sub:#5a6472; --line:#dde3ea; --bg:#ffffff; --panel:#f6f8fa;
+    --accent:#1d4ed8; --accent-bg:#eff4ff;
+    --ok:#166534; --ok-bg:#f0fdf4;
+    --warn:#92400e; --warn-bg:#fffbeb;
+    --bad:#991b1b; --bad-bg:#fef2f2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+       color:var(--ink);background:#eef1f5;line-height:1.65;font-size:15px}
+  .page{max-width:980px;margin:24px auto;background:var(--bg);padding:56px 64px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  @media(max-width:720px){.page{padding:28px 20px;margin:0}}
+
+  .doc-kicker{font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:700;text-transform:uppercase}
+  h1{font-size:27px;font-weight:800;margin:6px 0 4px;letter-spacing:-.01em}
+  .doc-meta{color:var(--sub);font-size:13px;margin-bottom:8px}
+  .doc-meta b{color:var(--ink)}
+
+  h2{font-size:19px;font-weight:800;margin:44px 0 6px;padding-top:20px;border-top:2px solid var(--ink);letter-spacing:-.01em}
+  h2 .no{color:var(--accent);margin-right:8px}
+  h3{font-size:15.5px;font-weight:700;margin:22px 0 8px}
+  p{margin:8px 0}
+  .lead{color:var(--sub);font-size:13.5px;margin-bottom:14px}
+
+  .verdict{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 6px}
+  @media(max-width:720px){.verdict{grid-template-columns:1fr}}
+  .verdict .card{border:1px solid var(--line);padding:14px 16px;background:var(--panel)}
+  .verdict .k{font-size:12px;color:var(--sub);font-weight:700}
+  .verdict .v{font-size:21px;font-weight:800;margin:2px 0}
+  .verdict .d{font-size:12.5px;color:var(--sub)}
+  .verdict .v .unit{font-size:13px;font-weight:600;color:var(--sub)}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th{background:var(--panel);text-align:left;font-weight:700;padding:8px 10px;border:1px solid var(--line);white-space:nowrap}
+  td{padding:8px 10px;border:1px solid var(--line);vertical-align:top}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .best{background:var(--ok-bg);color:var(--ok);font-weight:700}
+  .worst{background:var(--bad-bg);color:var(--bad);font-weight:700}
+  .tbl-scroll{overflow-x:auto}
+
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:3px;white-space:nowrap}
+  .p-ok{background:var(--ok-bg);color:var(--ok)}
+  .p-warn{background:var(--warn-bg);color:var(--warn)}
+  .p-bad{background:var(--bad-bg);color:var(--bad)}
+
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12.5px;background:var(--panel);
+       border:1px solid var(--line);padding:0 4px;border-radius:3px;white-space:nowrap}
+  .src{font-size:11.5px;color:var(--sub);font-family:ui-monospace,Consolas,monospace}
+
+  .note{border-left:3px solid var(--accent);background:var(--accent-bg);padding:10px 14px;font-size:13.5px;margin:12px 0}
+  .note.warn{border-color:#d97706;background:var(--warn-bg)}
+  figure{margin:16px 0}
+  figcaption{font-size:12.5px;color:var(--sub);margin-top:6px;text-align:center}
+  svg{max-width:100%;height:auto;display:block;margin:0 auto}
+  .svg-scroll{overflow-x:auto}
+
+  ul,ol{padding-left:22px;margin:8px 0}
+  li{margin:3px 0}
+  .footer{margin-top:48px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--sub)}
+  @media print{body{background:#fff}.page{box-shadow:none;margin:0;max-width:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-kicker">LUXROBO · edu-agent 기술 보고서</div>
+  <h1>비용절감·RAG·온톨로지 구축 검증 보고서</h1>
+  <div class="doc-meta">
+    작성일 <b>2026-07-08</b> · 기준 브랜치 <b>master (a708abd)</b> · 근거 범위 EDU-27 / EDU-67 / EDU-68 / 이슈 #84 실측
+    · 본 문서의 모든 수치는 코드·테스트·실측 로그에서 검증한 값이며 각 항목에 <span class="src">파일:라인</span> 출처를 병기함
+  </div>
+
+  <div class="verdict">
+    <div class="card">
+      <div class="k">비용절감 인프라</div>
+      <div class="v" style="color:var(--ok)">구축 완료</div>
+      <div class="d">3-tier 재사용 라우팅 + 직접서브, 2026-07-07 배포 (PR #85·#86)</div>
+    </div>
+    <div class="card">
+      <div class="k">턴당 최대 절감 (실측)</div>
+      <div class="v">~100<span class="unit">%</span></div>
+      <div class="d">델타 없는 반복 요청 → 저장물 직접서브, 생성 LLM 호출 0회</div>
+    </div>
+    <div class="card">
+      <div class="k">테스트 (본 보고서 작성 시 실행)</div>
+      <div class="v">427<span class="unit"> passed</span></div>
+      <div class="d">3 skipped · 10.5초 · 36개 테스트 파일 · 간헐 실패 1건 관찰(§5.1)</div>
+    </div>
+  </div>
+
+  <p><b>한 줄 결론</b> — 비용절감의 기술 기반(RAG 폐루프 → 온톨로지 → 재사용 게이트 → 직접서브)은 검증을 거쳐 배포 완료 상태다.
+  절감은 <b>직접서브 적중 턴부터 즉시</b> 발생하며, 전체 절감률은 적중률에 비례하므로 앞으로의 과제는 기술이 아니라
+  <b>코퍼스 축적과 적중률 확대</b>다.</p>
+
+  <!-- ═══════════════════ 1. 비용절감 근거 ═══════════════════ -->
+  <h2><span class="no">1</span>비용절감 근거 — 무엇을 실측했고, 언제 줄어드는가</h2>
+  <p class="lead">이슈 #84에서 프로덕션과 동일 경로(CLI 모드)로 3가지 통제 실험을 수행. 동일 요청("파란 하트 좋아요 버튼")으로 재사용 전략별 비용·속도·품질을 격리 비교했다.</p>
+
+  <h3>1.1 실측 ① — 재사용 전략별 비용·속도·품질 (D3 하네스)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>전략 (Arm)</th><th>사용 도구</th><th>출력 토큰 (평균)</th><th>소요 시간</th><th>빌드 품질</th><th>판정</th></tr>
+    <tr>
+      <td>COLD — 재사용 없음, 신규 생성</td><td><code>generate_code</code></td>
+      <td class="num">1,199</td><td class="num">~47초</td><td>최고 (빌드 성공)</td><td>기준선</td>
+    </tr>
+    <tr>
+      <td>REUSE_OFF — 유사물 참고 프라임 + 자유 생성</td><td><code>generate_code</code></td>
+      <td class="num best">973 (−19%)</td><td class="num">~55초</td><td>양호 (빌드 성공)</td><td><span class="pill p-ok">채택 — near tier</span></td>
+    </tr>
+    <tr>
+      <td>REUSE_ON — 시드 주입 + edit 강제 (구 PR#79)</td><td><code>edit_code</code></td>
+      <td class="num worst">2,408 (+101%)</td><td class="num worst">~84초</td><td>최저 (빌드 실패)</td><td><span class="pill p-bad">폐기 — 기본 OFF</span></td>
+    </tr>
+  </table>
+  </div>
+  <p>핵심 발견: <b>"LLM에게 저장물을 편집시키는" 재사용은 비용·속도·품질 3축 모두 손해</b>였다.
+  절감은 편집이 아니라 <b>"저장물을 LLM 없이 그대로 서브"</b>할 때만 실현된다. 이 실측이 현재 아키텍처(3-tier)의 직접 근거다.
+  <span class="src">근거: 이슈 #84 (d3_savings.py·d3_quality.py, n=2), REUSE_SEED_EDIT 기본 OFF — agent/prime_service.py:33</span></p>
+
+  <h3>1.2 실측 ② — 직접서브가 안전한 경계 (만족도 검증)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>요청 유형 (저장물: "하트 좋아요 버튼")</th><th>만족도 점수</th><th>저장물 그대로 제공?</th></tr>
+    <tr><td>델타 없음 — "좋아요 버튼", "하트 좋아요 버튼"</td><td class="num best">95~100</td><td><span class="pill p-ok">직접서브 OK</span></td></tr>
+    <tr><td>색상 델타 — "<b>파란</b> 하트 좋아요 버튼"</td><td class="num">20</td><td><span class="pill p-bad">거부 → 생성</span></td></tr>
+    <tr><td>기능 델타 — "커지는 애니메이션 추가"</td><td class="num">15</td><td><span class="pill p-bad">거부 → 생성</span></td></tr>
+    <tr><td>무관 — "별점 리뷰"</td><td class="num">0</td><td><span class="pill p-bad">거부 → 생성</span></td></tr>
+  </table>
+  </div>
+  <p>유사도 점수만으로는 "파란 하트"처럼 <b>주제는 같지만 요구가 다른(델타)</b> 요청을 구분하지 못한다.
+  그래서 직접서브 앞에 <b>저비용 만족도 검증 1회</b>(Haiku, 입력 ~1k 토큰)를 두었다.
+  검증 비용(~1k 입력) ≪ 생성 비용(1,200~2,400 출력)이므로 <b>적중 시 항상 순이득</b>이다.
+  수락 조건은 <code>score ≥ 90 AND 델타 없음</code>의 이중 가드로 보수적으로 설정했다.
+  <span class="src">근거: 이슈 #84 (d3_directserve.py) · agent/direct_serve.py:38-45,112</span></p>
+
+  <h3>1.3 비용 구조 — 왜 "출력 회피"가 정답인가</h3>
+  <ul>
+    <li>Langfuse 실측 기준 <b>출력 토큰 비용이 비캐시 입력의 5.6배</b> — 비용을 지배하는 것은 출력이다. <span class="src">agent/orchestrator_stream.py:65-66</span></li>
+    <li>프로덕션은 CLI 구독 모드(<code>USE_LOCAL_CLAUDE=true</code>)로 <code>max_tokens</code>·프롬프트 캐시가 무시됨 → 상한·캐시가 아닌 <b>호출 자체의 회피</b>만이 실효 수단. <span class="src">agent/claude_client.py:24 · agent/prompt_cache.py:8-11</span></li>
+  </ul>
+
+  <h3>1.4 그래서, 언제 비용이 줄어드는가</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>시점</th><th>절감 형태</th><th>조건</th></tr>
+    <tr>
+      <td><b>지금 즉시</b> (2026-07-07 배포 이후)</td>
+      <td>직접서브 적중 턴마다 생성 토큰 1,199 → 0, 응답도 즉시 반환. near 적중 턴은 출력 −19%</td>
+      <td>이미 켜져 있음 (<code>DIRECT_SERVE</code> 기본 ON). 단 적중하려면 코퍼스에 유사 저장물이 있어야 함</td>
+    </tr>
+    <tr>
+      <td><b>단기 (수주)</b> — 실트래픽 축적</td>
+      <td>write-back 폐루프로 코퍼스가 자동으로 두꺼워짐 → 적중률 상승 → 절감률 상승</td>
+      <td>사용자 트래픽 + near-miss 계측 기반 임계값(TAU) 튜닝 (§6 로드맵 P1)</td>
+    </tr>
+    <tr>
+      <td><b>중기 (1~2개월)</b> — 사전제작</td>
+      <td>표준 커리큘럼 예제를 미리 생성·등록 → 적중률을 구조적으로 끌어올림 (최대 지렛대)</td>
+      <td>콘텐츠 팩토리 파일럿 (§6 로드맵 P2)</td>
+    </tr>
+    <tr>
+      <td><b>과금 형태 주의</b></td>
+      <td>CLI 구독 모드에서 절감은 청구액이 아니라 <b>세션 리밋(429) 헤드룸 확대 + 응답속도</b>로 나타남. API 모드 전환 시 직접 청구액 절감 + 캐시·상한까지 실효</td>
+      <td>API 전환은 P1 실측 후 결정 (§6 로드맵 P3)</td>
+    </tr>
+  </table>
+  </div>
+  <div class="note">
+    <b>전체 절감률 추정식</b> — 코드턴 생성비 기준: <code>절감률 ≈ 직접서브 적중률 × 95% + near 적중률 × 19%</code><br>
+    예) 코드턴의 20%가 직접서브·30%가 near에 적중하면 생성비 약 <b>25% 절감</b>. 교육 도메인은 표준 예제 반복 비중이 높아
+    적중률 상방이 크다. 실측 절감률은 실트래픽 축적 후 Langfuse 코호트(<code>reuse_tier</code>별 비용)로 확정한다.
+  </div>
+
+  <!-- ═══════════════════ 2. AS-IS vs TO-BE ═══════════════════ -->
+  <h2><span class="no">2</span>AS-IS → TO-BE 비교</h2>
+  <p class="lead">AS-IS는 EDU-27 착수 전(모든 요청을 LLM이 생성), TO-BE는 현재 배포 상태. NEXT는 로드맵 반영 후 목표 상태다.</p>
+
+  <figure>
+  <div class="svg-scroll">
+  <svg viewBox="0 0 900 330" font-family="Pretendard,system-ui,sans-serif">
+    <!-- AS-IS -->
+    <text x="20" y="26" font-size="14" font-weight="800" fill="#991b1b">AS-IS (개선 전) — 모든 요청이 LLM 생성</text>
+    <rect x="20" y="42" width="130" height="44" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="85" y="61" text-anchor="middle" font-size="12.5" fill="#1a202c">사용자 요청</text>
+    <text x="85" y="77" text-anchor="middle" font-size="10.5" fill="#5a6472">매 턴</text>
+    <line x1="150" y1="64" x2="205" y2="64" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="205" y="42" width="180" height="44" rx="4" fill="#fef2f2" stroke="#fca5a5"/>
+    <text x="295" y="61" text-anchor="middle" font-size="12.5" fill="#991b1b" font-weight="700">LLM 전체 생성 (항상)</text>
+    <text x="295" y="77" text-anchor="middle" font-size="10.5" fill="#991b1b">출력 ~1,199 tok · ~47초</text>
+    <line x1="385" y1="64" x2="440" y2="64" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="440" y="42" width="130" height="44" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="505" y="61" text-anchor="middle" font-size="12.5" fill="#1a202c">응답</text>
+    <text x="505" y="77" text-anchor="middle" font-size="10.5" fill="#5a6472">결과물은 버려짐</text>
+    <text x="600" y="68" font-size="11.5" fill="#991b1b">동일 요청도 매번 재생성 · 재사용 0%</text>
+
+    <line x1="20" y1="108" x2="880" y2="108" stroke="#dde3ea" stroke-dasharray="4 4"/>
+
+    <!-- TO-BE -->
+    <text x="20" y="134" font-size="14" font-weight="800" fill="#166534">TO-BE (현재 배포) — 3-tier 라우팅 + 폐루프</text>
+    <rect x="20" y="150" width="120" height="44" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="80" y="169" text-anchor="middle" font-size="12.5" fill="#1a202c">사용자 요청</text>
+    <line x1="140" y1="172" x2="188" y2="172" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="188" y="144" width="168" height="56" rx="4" fill="#eff4ff" stroke="#93b4f5"/>
+    <text x="272" y="164" text-anchor="middle" font-size="12.5" fill="#1d4ed8" font-weight="700">재사용 게이트</text>
+    <text x="272" y="180" text-anchor="middle" font-size="10.5" fill="#1d4ed8">RAG 검색 + 유사도 판정</text>
+    <text x="272" y="193" text-anchor="middle" font-size="10.5" fill="#1d4ed8">TAU 0.62 / 0.48</text>
+
+    <line x1="356" y1="158" x2="420" y2="128" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="420" y="112" width="250" height="42" rx="4" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="545" y="129" text-anchor="middle" font-size="12" fill="#166534" font-weight="700">tier 1 · 직접서브 — 생성 LLM 0회</text>
+    <text x="545" y="144" text-anchor="middle" font-size="10.5" fill="#166534">만족도 검증(~1k 입력)만 · 즉시 반환</text>
+
+    <line x1="356" y1="172" x2="420" y2="180" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="420" y="162" width="250" height="42" rx="4" fill="#fffbeb" stroke="#e5c469"/>
+    <text x="545" y="179" text-anchor="middle" font-size="12" fill="#92400e" font-weight="700">tier 2 · near — 프라임 + 자유 생성</text>
+    <text x="545" y="194" text-anchor="middle" font-size="10.5" fill="#92400e">출력 973 tok (COLD −19%) · 품질 양호</text>
+
+    <line x1="356" y1="186" x2="420" y2="232" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="420" y="212" width="250" height="42" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="545" y="229" text-anchor="middle" font-size="12" fill="#1a202c" font-weight="700">tier 3 · cold — 신규 생성</text>
+    <text x="545" y="244" text-anchor="middle" font-size="10.5" fill="#5a6472">후보 없음 · 기존과 동일 경로</text>
+
+    <line x1="670" y1="172" x2="730" y2="172" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="730" y="150" width="120" height="44" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="790" y="169" text-anchor="middle" font-size="12.5" fill="#1a202c">응답</text>
+    <text x="790" y="185" text-anchor="middle" font-size="10.5" fill="#5a6472">+ Langfuse 계측</text>
+
+    <path d="M 790 194 L 790 290 L 272 290 L 272 200" fill="none" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrB)"/>
+    <text x="530" y="283" text-anchor="middle" font-size="11.5" fill="#1d4ed8" font-weight="700">write-back 폐루프 — 빌드 결과(코드·학습노트·설계)를 검색 코퍼스에 자동 등록 → 다음 요청의 적중률 상승</text>
+
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5a6472"/></marker>
+      <marker id="arrB" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1d4ed8"/></marker>
+    </defs>
+  </svg>
+  </div>
+  <figcaption>그림 1 — AS-IS(항상 생성) vs TO-BE(3-tier 라우팅 + write-back 폐루프). 수치는 §1.1 실측값.</figcaption>
+  </figure>
+
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>항목</th><th>AS-IS (개선 전)</th><th>TO-BE (현재 배포)</th><th>NEXT (로드맵 목표)</th></tr>
+    <tr><td>코드 생성</td><td>매 턴 전체 생성</td><td>3-tier: 직접서브(0) / near(−19%) / cold</td><td>사전제작으로 직접서브 적중률 30%+</td></tr>
+    <tr><td>생성 결과물</td><td>1회용, 버려짐</td><td>write-back으로 코퍼스 자산화 (165건 백필 완료)</td><td>품질 게이트 통과분만 선별 등록</td></tr>
+    <tr><td>검색</td><td>lexical 단독 수준</td><td>BGE-m3 벡터 + lexical + 개념 centroid 융합, 품질 8/8</td><td>TAU를 실분포로 재튜닝</td></tr>
+    <tr><td>온톨로지</td><td>없음</td><td>개념 그래프 → 선수학습·관련·MODI 모듈 프라임 주입</td><td>커버리지 갭 영역 우선 보강</td></tr>
+    <tr><td>수정 턴</td><td>전체 재작성 빈발</td><td>edit 유도 + 재출력 가드, forced-edit는 실측 후 폐기</td><td>—</td></tr>
+    <tr><td>후처리 (노트·설계·주석)</td><td>매번 재생성</td><td>기존 산출물 있으면 스킵(게이팅) + 병렬 샤딩</td><td>—</td></tr>
+    <tr><td>관측</td><td>없음 (감으로 판단)</td><td>Langfuse에 tier·near-miss·출력구성·직접서브 점수 전량 기록</td><td>주간 코호트 리포트 자동화</td></tr>
+    <tr><td>검증 수단</td><td>수동 확인</td><td>LLM 비용 0의 시뮬레이터(/api/simulate) + 배치 러너</td><td>CI 상시 회귀로 승격</td></tr>
+  </table>
+  </div>
+
+  <!-- ═══════════════════ 3. 아키텍처 변경 내역 ═══════════════════ -->
+  <h2><span class="no">3</span>아키텍처 변경 내역 (검증 가능한 이력)</h2>
+  <p class="lead">모든 변경은 이슈·PR로 추적 가능하며, 각 단계가 다음 단계의 전제가 되는 순서로 쌓였다.</p>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>순서</th><th>이슈/PR</th><th>변경 내용</th><th>왜 필요했나</th><th>상태</th></tr>
+    <tr><td>1</td><td>#27, #38</td><td>온톨로지·페르소나 시스템 + 개념 centroid·alias 재랭킹</td><td>검색 정확도 확보 (8/8 달성) — 재사용의 전제</td><td><span class="pill p-ok">배포</span></td></tr>
+    <tr><td>2</td><td>#44, #57/#65</td><td>청크 메타필드(concept_key·domain·difficulty·intent·modi_keys·payload) + write-back 폐루프 + 기존 세션 165건 백필</td><td>생성물을 자산화해 코퍼스가 스스로 자라는 구조</td><td><span class="pill p-ok">배포</span></td></tr>
+    <tr><td>3</td><td>#67</td><td>프롬프트 캐시 분리·출력 상한·재사용 계측·TAU 스윕 (T1~T4)</td><td>비용 구조 계측 — "출력이 지배(5.6배)" 발견</td><td><span class="pill p-ok">배포</span></td></tr>
+    <tr><td>4</td><td>#68→PR69, #70→PR71</td><td>출력 구성 분해 계측, 수정턴 edit 유도, 후처리 게이팅·상한·병렬 샤딩</td><td>재작성 낭비 제거 + 후처리 임계경로 단축</td><td><span class="pill p-ok">배포</span></td></tr>
+    <tr><td>5</td><td>PR75/76</td><td>/api/simulate 시뮬레이터 + 게이트·그래프를 rag-search 프록시로 정합</td><td>LLM 비용 0으로 파이프라인 전체를 검증할 수단</td><td><span class="pill p-ok">배포</span></td></tr>
+    <tr><td>6</td><td>PR78</td><td>등록 청크에 concept_key 부여</td><td>재사용 게이트 실발동 (그전까지 발동 0%의 원인)</td><td><span class="pill p-ok">배포</span></td></tr>
+    <tr><td>7</td><td>PR79 → #84 실측 → PR85</td><td>forced-edit 시도 → <b>실측으로 순손해 확인 → 기본 OFF</b>, 직접서브 tier 신설 + near-miss 계측</td><td>§1 실측이 가리킨 유일한 실효 절감 경로</td><td><span class="pill p-ok">배포</span></td></tr>
+    <tr><td>8</td><td>PR86</td><td>Redis 벡터 검색 복구 (payload kwarg 충돌·태그 escape)</td><td>검색 백엔드 안정화</td><td><span class="pill p-ok">배포</span></td></tr>
+  </table>
+  </div>
+  <div class="note">
+    이 이력에서 주목할 점: <b>7번(PR79)은 "만들었다가 실측으로 폐기"한 사례</b>다. 가설(edit 강제가 싸다)을 배포 전 실측으로 반증하고
+    기본 OFF로 내린 뒤 올바른 경로(직접서브)로 갈아탔다 — 의사결정이 감이 아니라 측정으로 이루어지고 있다는 증거.
+  </div>
+
+  <!-- ═══════════════════ 4. RAG·온톨로지 상세 ═══════════════════ -->
+  <h2><span class="no">4</span>RAG·온톨로지 — 어떤 관계로 검색되어 제공되는가</h2>
+  <p class="lead">"제대로 구축됐는가"를 판단할 수 있도록, 요청 1건이 통과하는 실제 경로를 코드 기준으로 기술한다.</p>
+
+  <figure>
+  <div class="svg-scroll">
+  <svg viewBox="0 0 900 470" font-family="Pretendard,system-ui,sans-serif">
+    <rect x="20" y="20" width="150" height="46" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="95" y="40" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1a202c">사용자 요청</text>
+    <text x="95" y="56" text-anchor="middle" font-size="10.5" fill="#5a6472">"LED 신호등 만들어줘"</text>
+
+    <line x1="170" y1="43" x2="230" y2="43" stroke="#5a6472" stroke-width="1.5" marker-end="url(#a2)"/>
+
+    <rect x="230" y="20" width="170" height="46" rx="4" fill="#eff4ff" stroke="#93b4f5"/>
+    <text x="315" y="40" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d4ed8">임베딩 (BGE-m3)</text>
+    <text x="315" y="56" text-anchor="middle" font-size="10.5" fill="#1d4ed8">1024차원 벡터</text>
+
+    <line x1="400" y1="43" x2="460" y2="43" stroke="#5a6472" stroke-width="1.5" marker-end="url(#a2)"/>
+
+    <rect x="460" y="8" width="420" height="118" rx="4" fill="#fff" stroke="#93b4f5" stroke-width="1.5"/>
+    <text x="670" y="28" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1d4ed8">3중 스코어 융합 검색 (rag-search :8100)</text>
+    <rect x="474" y="38" width="126" height="36" rx="3" fill="#eff4ff" stroke="#c4d5f7"/>
+    <text x="537" y="53" text-anchor="middle" font-size="11" fill="#1d4ed8">벡터 유사도</text>
+    <text x="537" y="67" text-anchor="middle" font-size="10" fill="#1d4ed8">Redis HNSW · W=0.40</text>
+    <rect x="608" y="38" width="126" height="36" rx="3" fill="#eff4ff" stroke="#c4d5f7"/>
+    <text x="671" y="53" text-anchor="middle" font-size="11" fill="#1d4ed8">어휘 일치</text>
+    <text x="671" y="67" text-anchor="middle" font-size="10" fill="#1d4ed8">lexical · W=0.15</text>
+    <rect x="742" y="38" width="126" height="36" rx="3" fill="#dbe7fd" stroke="#93b4f5"/>
+    <text x="805" y="53" text-anchor="middle" font-size="11" font-weight="700" fill="#1d4ed8">개념 유사도 ★</text>
+    <text x="805" y="67" text-anchor="middle" font-size="10" fill="#1d4ed8">centroid · W=0.45 최대</text>
+    <text x="670" y="96" text-anchor="middle" font-size="10.5" fill="#5a6472">개념 centroid = 같은 concept_key 청크들의 임베딩 평균 — "led-traffic-light" 개념 단위로 군집 매칭</text>
+    <text x="670" y="112" text-anchor="middle" font-size="10.5" fill="#5a6472">원천: MySQL knowledge_chunks (콘텐츠·메타) · 색인: Redis Stack (벡터)</text>
+
+    <line x1="670" y1="126" x2="670" y2="160" stroke="#5a6472" stroke-width="1.5" marker-end="url(#a2)"/>
+    <rect x="480" y="160" width="380" height="64" rx="4" fill="#fffbeb" stroke="#e5c469"/>
+    <text x="670" y="181" text-anchor="middle" font-size="12.5" font-weight="800" fill="#92400e">재사용 게이트 판정 (융합점수 기준)</text>
+    <text x="670" y="199" text-anchor="middle" font-size="11" fill="#92400e">≥ 0.62 → reuse (직접서브 후보) · ≥ 0.48 → review (참고 프라임) · 미만 → register (신규)</text>
+    <text x="670" y="215" text-anchor="middle" font-size="10" fill="#92400e">reuse여도 만족도 검증(score≥90 + 델타 없음) 통과 시에만 직접서브 — 이중 안전장치</text>
+
+    <rect x="20" y="160" width="400" height="150" rx="4" fill="#fff" stroke="#86c99a" stroke-width="1.5"/>
+    <text x="220" y="182" text-anchor="middle" font-size="12.5" font-weight="800" fill="#166534">온톨로지 그래프 (개념 관계망)</text>
+    <circle cx="90" cy="230" r="24" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="90" y="227" text-anchor="middle" font-size="9.5" fill="#166534">LED</text>
+    <text x="90" y="238" text-anchor="middle" font-size="9.5" fill="#166534">제어</text>
+    <circle cx="200" cy="210" r="26" fill="#dcf5e3" stroke="#4d9e66" stroke-width="1.5"/>
+    <text x="200" y="207" text-anchor="middle" font-size="9.5" font-weight="700" fill="#166534">신호등</text>
+    <text x="200" y="218" text-anchor="middle" font-size="9.5" fill="#166534">(개념)</text>
+    <circle cx="310" cy="230" r="24" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="310" y="227" text-anchor="middle" font-size="9.5" fill="#166534">타이머</text>
+    <text x="310" y="238" text-anchor="middle" font-size="9.5" fill="#166534">반복</text>
+    <circle cx="140" cy="278" r="22" fill="#f6f8fa" stroke="#a9b4c0"/>
+    <text x="140" y="276" text-anchor="middle" font-size="9" fill="#5a6472">MODI</text>
+    <text x="140" y="286" text-anchor="middle" font-size="9" fill="#5a6472">LED모듈</text>
+    <circle cx="260" cy="278" r="22" fill="#f6f8fa" stroke="#a9b4c0"/>
+    <text x="260" y="276" text-anchor="middle" font-size="9" fill="#5a6472">학습노트</text>
+    <text x="260" y="286" text-anchor="middle" font-size="9" fill="#5a6472">카드</text>
+    <line x1="113" y1="223" x2="175" y2="213" stroke="#4d9e66" stroke-width="1.2"/>
+    <text x="140" y="209" font-size="8.5" fill="#166534">선수학습</text>
+    <line x1="226" y1="215" x2="287" y2="225" stroke="#4d9e66" stroke-width="1.2"/>
+    <text x="248" y="212" font-size="8.5" fill="#166534">관련</text>
+    <line x1="185" y1="233" x2="152" y2="260" stroke="#a9b4c0" stroke-width="1.2"/>
+    <text x="145" y="252" font-size="8.5" fill="#5a6472">uses</text>
+    <line x1="216" y1="233" x2="250" y2="259" stroke="#a9b4c0" stroke-width="1.2"/>
+    <text x="240" y="252" font-size="8.5" fill="#5a6472">chunks</text>
+
+    <line x1="420" y1="235" x2="480" y2="210" stroke="#166534" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a3)"/>
+
+    <line x1="670" y1="224" x2="670" y2="258" stroke="#5a6472" stroke-width="1.5" marker-end="url(#a2)"/>
+    <rect x="480" y="258" width="380" height="72" rx="4" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="670" y="280" text-anchor="middle" font-size="12.5" font-weight="800" fill="#166534">프라임 조립 → 생성 컨텍스트 주입</text>
+    <text x="670" y="298" text-anchor="middle" font-size="10.5" fill="#166534">개념 → 선수학습 경로 → 관련 개념 → 필요한 MODI 모듈 → 학습노트 카드</text>
+    <text x="670" y="314" text-anchor="middle" font-size="10.5" fill="#166534">+ 재사용 후보 코드/예시 (near tier) — 정확성과 비용절감을 같은 파이프라인이 담당</text>
+
+    <line x1="670" y1="330" x2="670" y2="362" stroke="#5a6472" stroke-width="1.5" marker-end="url(#a2)"/>
+    <rect x="530" y="362" width="280" height="46" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="670" y="382" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1a202c">응답 (직접서브 또는 생성)</text>
+    <text x="670" y="398" text-anchor="middle" font-size="10.5" fill="#5a6472">학습노트·설계문서·코드 산출</text>
+
+    <path d="M 530 385 L 95 385 L 95 66" fill="none" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a4)"/>
+    <text x="270" y="378" text-anchor="middle" font-size="11" font-weight="700" fill="#1d4ed8">write-back: 산출물을 concept_key와 함께 코퍼스에 등록 (폐루프)</text>
+
+    <text x="450" y="448" text-anchor="middle" font-size="10.5" fill="#5a6472">근거: scripts/search_lib.py:30-39,249-254 · scripts/vector_redis.py:1-25 · agent/reuse.py:150-234 · agent/direct_serve.py · server.py:520-559 · docs/design/rag-db-schema.md</text>
+
+    <defs>
+      <marker id="a2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5a6472"/></marker>
+      <marker id="a3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#166534"/></marker>
+      <marker id="a4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1d4ed8"/></marker>
+    </defs>
+  </svg>
+  </div>
+  <figcaption>그림 2 — 요청 1건의 실제 경로: 3중 스코어 융합 검색 → 게이트 판정 → 온톨로지 프라임 → 응답 → write-back 폐루프</figcaption>
+  </figure>
+
+  <h3>4.1 검색이 "제대로" 되는 이유 — 3중 스코어의 역할 분담</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>스코어</th><th>가중치</th><th>잡아내는 것</th><th>혼자서는 놓치는 것</th></tr>
+    <tr><td>벡터 유사도 (BGE-m3 + Redis HNSW)</td><td class="num">0.40</td><td>표현이 달라도 의미가 같은 요청 ("신호등" ↔ "빨강초록 번갈아")</td><td>교육 도메인 특유의 개념 단위 (예제 계열)</td></tr>
+    <tr><td>어휘 일치 (lexical)</td><td class="num">0.15</td><td>정확한 키워드 (모듈명 "LED", "IMU")</td><td>동의어·표현 변형</td></tr>
+    <tr><td><b>개념 유사도 (centroid)</b></td><td class="num"><b>0.45</b></td><td>같은 <code>concept_key</code> 군집 전체와의 근접도 — 개별 문서가 아닌 "개념"에 매칭</td><td>— (이게 최대 가중치인 이유: 교육 콘텐츠는 개념 단위 반복이 본질)</td></tr>
+  </table>
+  </div>
+  <p>이 융합 점수가 게이트 판정(0.62/0.48)의 입력이 된다. 검색 품질은 #38에서 <b>표준 질의 8/8 통과</b>로 검증했고,
+  회귀는 <code>tests/test_search_quality.py</code>·<code>test_redis_rerank.py</code>가 지킨다.
+  <span class="src">scripts/search_lib.py:30-39 (가중치·TAU) · :249-254 (판정 함수)</span></p>
+
+  <h3>4.2 온톨로지가 하는 일 — 검색을 "교육 문맥"으로 확장</h3>
+  <ul>
+    <li><b>구조</b>: 개념 노드(<code>ontology_nodes</code>) + 관계 엣지(<code>ontology_edges</code>: 선수학습·관련·uses). <span class="src">docs/design/rag-db-schema.md:202-210</span></li>
+    <li><b>동작</b>: 요청에서 개념이 잡히면 그래프를 따라 <b>선수학습 경로 → 관련 개념 → 필요한 MODI 모듈 → 학습노트 카드</b>를 모아 생성 프롬프트 앞에 주입(프라임). <span class="src">agent/reuse.py:150-234 (ontology_suggest)</span></li>
+    <li><b>효과</b>: 검색(무엇이 비슷한가)에 <b>교육 관계(무엇을 먼저 알아야 하는가)</b>를 더해, 생성물이 학습 맥락에 맞게 나온다. 정확성 축과 비용 축이 같은 인프라를 공유하는 구조.</li>
+    <li><b>배포 정합</b>: 메인 앱에는 torch가 없어 벡터 검색이 불가하므로, 그래프·게이트 조회를 rag-search(:8100)로 프록시하고 실패 시 로컬 폴백. PR76에서 정합 완료. <span class="src">agent/reuse.py:81-147</span></li>
+  </ul>
+
+  <h3>4.3 코퍼스(자산) 현황</h3>
+  <ul>
+    <li>청크 스키마: <code>chunk_type</code>(코드·학습노트·설계문서·다이어그램 등 8종) + <code>concept_key</code>·<code>intent</code>·<code>domain</code>·<code>difficulty</code>·<code>modi_keys</code>·<code>payload</code>. <span class="src">docs/design/rag-db-schema.md:63-101</span></li>
+    <li>기존 세션 <b>165건 백필 완료</b> + 이후 매 빌드가 write-back으로 자동 등록 (<code>source="registered"</code> 태그로 base 자산과 구분). <span class="src">server.py:520-559 · scripts/backfill_writeback.py</span></li>
+    <li>한계 (정직하게): 코퍼스가 아직 얇아 실유저 reuse 적중이 시작 단계다. 적중률을 올리는 것이 §6 로드맵의 중심.</li>
+  </ul>
+
+  <!-- ═══════════════════ 5. 안정성·테스트 ═══════════════════ -->
+  <h2><span class="no">5</span>안정성·테스트 — 제대로 하고 있는지의 증거</h2>
+
+  <h3>5.1 자동 테스트 (본 보고서 작성 시 직접 실행)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>항목</th><th>결과</th></tr>
+    <tr><td>전체 스위트 (<code>pytest tests/</code>)</td><td><b>427 passed, 3 skipped</b> · 10.5초 · 테스트 파일 36개</td></tr>
+    <tr><td>간헐 실패 (flaky)</td><td><code>test_code_retry.py::test_clarification_non_answer_stays_no_code</code> 1건 — 첫 실행 실패, 재실행·단독 실행은 통과. <span class="pill p-warn">추적 필요</span></td></tr>
+  </table>
+  </div>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>보호 영역</th><th>대표 테스트 파일</th></tr>
+    <tr><td>재사용·직접서브 (비용절감 핵심 경로)</td><td><code>test_reuse.py</code> · <code>test_reuse_instrumentation.py</code> · <code>test_direct_serve.py</code> · <code>test_prime_service.py</code></td></tr>
+    <tr><td>검색 품질·백엔드</td><td><code>test_search_quality.py</code> · <code>test_search_lib.py</code> · <code>test_redis_rerank.py</code> · <code>test_vector_redis.py</code> · <code>test_tau_sweep.py</code></td></tr>
+    <tr><td>온톨로지·RAG 배선</td><td><code>test_ontology_backend.py</code> · <code>test_ontology_prime.py</code> · <code>test_rag_modes.py</code> · <code>test_rag_writeback.py</code> · <code>test_chunk_fields.py</code></td></tr>
+    <tr><td>출력 감축·후처리</td><td><code>test_output_attribution.py</code> · <code>test_output_reduction.py</code> · <code>test_post_gating.py</code> · <code>test_prompt_cache.py</code></td></tr>
+    <tr><td>서버·동시성·복원</td><td><code>test_server_endpoints.py</code> · <code>test_concurrency.py</code> · <code>test_redis_lock.py</code> · <code>test_session_store.py</code> · <code>test_cancellation.py</code></td></tr>
+    <tr><td>시뮬레이터</td><td><code>test_simulate_endpoint.py</code> — /api/simulate가 /chat과 동일 프라임 경로를 타는지 검증</td></tr>
+  </table>
+  </div>
+
+  <h3>5.2 LLM 없이 도는 검증 수단 (비용 0 회귀)</h3>
+  <ul>
+    <li><code>/api/simulate</code>: 실서비스와 <b>동일한</b> 프라임·게이트 코드를 타되 LLM 호출만 생략 — intent 분기·주입 프라임·게이트 판정을 그대로 재현. <span class="src">server.py:185-227 · agent/prime_service.py:164-184</span></li>
+    <li><code>scripts/simulate_batch.py</code>: 표준 시나리오 묶음으로 정확성(PASS/WARN/FAIL)·지연(avg/p90)·게이트 결정 분포·코퍼스 커버리지를 배치 측정, JSON 리포트 저장.</li>
+  </ul>
+
+  <h3>5.3 운영 관측 (배포 후 안전망)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>수단</th><th>내용</th></tr>
+    <tr><td>Langfuse (매 코드턴)</td><td>tier 분포(<code>reuse_tier</code>) · 직접서브 여부/점수(<code>direct_served</code>·<code>direct_serve_score</code>) · near-miss(<code>reuse_top1</code>·<code>reuse_cand_score</code>) · 출력 구성 분해(generate/edit/prose) · 잘림 감시 · 캐시 토큰 — 절감률 실측과 임계 튜닝의 데이터 원천</td></tr>
+    <tr><td>Sentry</td><td>런타임 예외 자동 이슈화. <b>현재 열린 이슈 3건</b>: #73(수정턴 메서드 누락 크래시) · #80(세션 리밋 429 원시 노출) · #81(파싱 방어 누락) → 로드맵 P0에서 최우선 처리</td></tr>
+    <tr><td>킬스위치 (env, 재배포 없이 차단)</td><td><code>DIRECT_SERVE</code>(직접서브, 기본 ON) · <code>REUSE_SEED_EDIT</code>(기본 OFF·폐기) · <code>REUSE_ON_MODIFY</code> · <code>PRIME_INCLUDE_MODI</code>/<code>_CARDS</code> — 신규 동작 전부 즉시 롤백 가능</td></tr>
+  </table>
+  </div>
+  <div class="note warn">
+    <b>정직한 평가</b> — 인프라·테스트·킬스위치는 갖춰졌으나, ① 직접서브의 실트래픽 검증은 아직 없음(실험 n=1~2, 방향성은 3개 실측 일치),
+    ② 열린 런타임 버그 3건, ③ flaky 테스트 1건이 남아 있다. "구축은 완료, 실증은 진행 중"이 정확한 상태다.
+  </div>
+
+  <!-- ═══════════════════ 6. 로드맵 ═══════════════════ -->
+  <h2><span class="no">6</span>로드맵 — 절감을 숫자로 확정하기까지</h2>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>단계</th><th>기간</th><th>내용</th><th>완료 판단 기준</th></tr>
+    <tr>
+      <td><b>P0 안정화</b></td><td>~1주</td>
+      <td>열린 버그 3건(#73·#80·#81) 수정 · simulate_batch를 CI 상시 회귀로</td>
+      <td>Sentry 신규 발생 0 · CI 그린</td>
+    </tr>
+    <tr>
+      <td><b>P1 실측·튜닝</b></td><td>2~4주</td>
+      <td>실트래픽 코호트 측정(tier별 비용·지연) 주간 자동화 · near-miss 분포로 TAU(0.62/0.48)·직접서브 컷오프(90) 재튜닝 · 직접서브 오판 프록시(후속 수정률) 계측</td>
+      <td><b>실측 절감률 첫 확정</b> · 직접서브 적중률 10%+ · 오판(후속 수정률) &lt;10%</td>
+    </tr>
+    <tr>
+      <td><b>P2 적중률 확대</b></td><td>1~2개월</td>
+      <td>콘텐츠 팩토리: 표준 커리큘럼(초등 수학·과학 파일럿) 사전제작·선별 등록 · 커버리지 갭 영역 우선 보강</td>
+      <td>직접서브 적중률 30%+ · 코드턴 평균 출력 −20%+</td>
+    </tr>
+    <tr>
+      <td><b>P3 모델·과금 전략</b></td><td>P1 데이터 후 결정</td>
+      <td>API 모드 전환 평가(캐시·상한 실효 + 청구액 직접 절감) · 생성만 Sonnet 승격 검토 — 품질 상승 비용을 직접서브 절감으로 상쇄하는 구조</td>
+      <td>tier별 비용 데이터 기반 의사결정 문서</td>
+    </tr>
+  </table>
+  </div>
+  <p>실행 단위 업무지시는 별도 문서 <code>docs/design/sonnet-work-orders-2026-07.md</code>(W1~W8)에 세션 단위로 분해되어 있다.</p>
+
+  <div class="footer">
+    출처 — 코드: LUXROBO/edu-agent master(a708abd) 직접 조사 (agent/direct_serve.py, agent/reuse.py, agent/prime_service.py, agent/orchestrator_stream.py, scripts/search_lib.py, scripts/vector_redis.py, server.py) ·
+    실측: 이슈 #84 D3 하네스(d3_savings·d3_quality·d3_directserve) ·
+    테스트: 2026-07-08 pytest 전체 실행(427 passed/3 skipped) ·
+    설계: docs/design/rag-db-schema.md, langfuse-rag-architecture.md ·
+    이력: 이슈 #27 #38 #44 #57 #65 #67 #68 #70 #84, PR #69 #71 #75 #76 #78 #79 #85 #86
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "modi-hybrid-sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "바이브코딩 웹앱이 MODI 하드웨어와 실시간 상호작용하기 위한 SDK + 데모",
+  "scripts": {
+    "test": "node sdk.test.mjs"
+  }
+}

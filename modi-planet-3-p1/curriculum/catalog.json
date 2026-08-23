@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "grade_bands": [
+    {
+      "id": "elementary",
+      "label": "초등",
+      "lesson_count": 9,
+      "lessons": [
+        {"id": "elementary-01", "lesson_no": 1, "status": "placeholder"},
+        {"id": "elementary-02", "lesson_no": 2, "status": "placeholder"},
+        {"id": "elementary-03", "lesson_no": 3, "status": "placeholder"},
+        {"id": "elementary-04", "lesson_no": 4, "status": "placeholder"},
+        {"id": "elementary-05", "lesson_no": 5, "status": "placeholder"},
+        {"id": "elementary-06", "lesson_no": 6, "status": "placeholder"},
+        {"id": "elementary-07", "lesson_no": 7, "status": "placeholder"},
+        {"id": "elementary-08", "lesson_no": 8, "status": "placeholder"},
+        {"id": "elementary-09", "lesson_no": 9, "status": "placeholder"}
+      ]
+    },
+    {
+      "id": "middle",
+      "label": "중등",
+      "lesson_count": 9,
+      "lessons": [
+        {"id": "middle-01", "lesson_no": 1, "status": "placeholder"},
+        {"id": "middle-02", "lesson_no": 2, "status": "placeholder"},
+        {"id": "middle-03", "lesson_no": 3, "status": "placeholder"},
+        {"id": "middle-04", "lesson_no": 4, "status": "placeholder"},
+        {"id": "middle-05", "lesson_no": 5, "status": "placeholder"},
+        {"id": "middle-06", "lesson_no": 6, "status": "placeholder"},
+        {"id": "middle-07", "lesson_no": 7, "status": "placeholder"},
+        {"id": "middle-08", "lesson_no": 8, "status": "placeholder"},
+        {"id": "middle-09", "lesson_no": 9, "status": "placeholder"}
+      ]
+    },
+    {
+      "id": "high",
+      "label": "고등",
+      "lesson_count": 9,
+      "lessons": [
+        {"id": "high-01", "lesson_no": 1, "status": "placeholder"},
+        {"id": "high-02", "lesson_no": 2, "status": "placeholder"},
+        {"id": "high-03", "lesson_no": 3, "status": "placeholder"},
+        {"id": "high-04", "lesson_no": 4, "status": "placeholder"},
+        {"id": "high-05", "lesson_no": 5, "status": "placeholder"},
+        {"id": "high-06", "lesson_no": 6, "status": "placeholder"},
+        {"id": "high-07", "lesson_no": 7, "status": "placeholder"},
+        {"id": "high-08", "lesson_no": 8, "status": "placeholder"},
+        {"id": "high-09", "lesson_no": 9, "status": "placeholder"}
+      ]
+    }
+  ]
+}

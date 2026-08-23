@@ -1,0 +1,29 @@
+# 비밀값 — .env 는 서버/로컬 전용이며 저장소에 올리지 않는다.
+#   배포는 rsync 에서 .env 를 제외하고(deploy.yml), 없으면 최소본을 생성하므로
+#   저장소에 없어도 문제없다. 로컬 개발용 템플릿은 .env.example 참조.
+#   ⚠ 과거에 .env 가 추적돼 GEMINI_API_KEY·LANGFUSE_SECRET_KEY 가 히스토리에 남아 있다
+#     — 해당 키들은 회전(rotate) 필요. 이 파일은 앞으로의 재발만 막는다.
+.env
+.env.local
+.env.*.local
+
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.claude
+output/
+.build_cache/
+.DS_Store
+scripts/npm.env
+projects/
+deploy/*.env
+!deploy/.env.example
+
+# 생성물(임베딩·DB·등록 스토어) — 사용자/세션 파생 정보가 포함될 수 있으므로
+# reference/의 검수된 템플릿에서 build_ontology/build_embeddings/backfill 로 재생성한다.
+data/*
+!data/README.md
+# bkit 플러그인 상태
+.bkit/
+.claude/issue-loop/

@@ -1,0 +1,270 @@
+{
+  "session_id": "reference_constellation",
+  "title": "별자리 만들기",
+  "description": "마우스로 밤하늘의 별을 연결하며 나만의 별자리를 만드는 인터랙티브 파티클 애니메이션",
+  "phase": "implement",
+  "diagram": "(아직 다이어그램이 없습니다)",
+  "generated_code": {
+    "App.tsx": "import { useState } from 'react';\nimport ParticleNetwork from './components/ParticleNetwork';\nimport { Sparkles } from 'lucide-react';\n\nexport default function App() {\n  const [colorTheme, setColorTheme] = useState<'aurora' | 'sunset' | 'neon'>('aurora');\n\n  const themes = {\n    aurora: { label: 'Aurora', dot: 'bg-cyan-400' },\n    sunset: { label: 'Sunset', dot: 'bg-orange-400' },\n    neon: { label: 'Neon', dot: 'bg-fuchsia-400' },\n  } as const;\n\n  return (\n    <div className=\"h-screen flex flex-col bg-slate-950 text-white overflow-hidden\">\n      <header className=\"flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/5 backdrop-blur-sm z-10\">\n        <div className=\"flex items-center gap-2\">\n          <Sparkles className=\"w-5 h-5 text-cyan-400\" />\n          <span className=\"font-semibold tracking-tight\">별자리 만들기</span>\n        </div>\n        <div className=\"flex items-center gap-2\">\n          {(Object.keys(themes) as Array<keyof typeof themes>).map((key) => (\n            <button\n              key={key}\n              onClick={() => setColorTheme(key)}\n              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all ${\n                colorTheme === key\n                  ? 'bg-white/10 ring-1 ring-white/20'\n                  : 'hover:bg-white/5 text-white/60'\n              }`}\n            >\n              <span className={`w-2.5 h-2.5 rounded-full ${themes[key].dot}`} />\n              {themes[key].label}\n            </button>\n          ))}\n        </div>\n      </header>\n\n      <main className=\"flex-1 min-h-0 relative\">\n        <ParticleNetwork theme={colorTheme} />\n        <div className=\"absolute bottom-6 left-1/2 -translate-x-1/2 text-center pointer-events-none\">\n          <p className=\"text-white/40 text-sm\">마우스를 움직여 별자리를 만들어 보세요</p>\n        </div>\n      </main>\n    </div>\n  );\n}\n",
+    "components/ParticleNetwork.tsx": "import { useEffect, useRef } from 'react';\n\ntype Theme = 'aurora' | 'sunset' | 'neon';\n\ninterface Particle {\n  posX: number;\n  posY: number;\n  velX: number;\n  velY: number;\n  radius: number;\n  twinklePhase: number;\n  twinkleSpeed: number;\n}\n\ninterface Meteor {\n  x: number;\n  y: number;\n  vx: number;\n  vy: number;\n  life: number;\n  maxLife: number;\n  size: number;\n}\n\nconst THEME_COLORS: Record<Theme, { r: number; g: number; b: number }> = {\n  aurora: { r: 34, g: 211, b: 238 },\n  sunset: { r: 251, g: 146, b: 60 },\n  neon: { r: 232, g: 121, b: 249 },\n};\n\nexport default function ParticleNetwork({ theme }: { theme: Theme }) {\n  const canvasRef = useRef<HTMLCanvasElement>(null);\n  const particlesRef = useRef<Particle[]>([]);\n  const meteorsRef = useRef<Meteor[]>([]);\n  const mouseRef = useRef({ x: -9999, y: -9999 });\n  const themeRef = useRef(theme);\n\n  useEffect(() => {\n    themeRef.current = theme;\n  }, [theme]);\n\n  useEffect(() => {\n    const canvas = canvasRef.current;\n    if (!canvas) return;\n    const ctx = canvas.getContext('2d');\n    if (!ctx) return;\n\n    let frameId = 0;\n    let lastTime = 0;\n\n    const resize = () => {\n      const parent = canvas.parentElement;\n      if (!parent) return;\n      const dpr = window.devicePixelRatio || 1;\n      canvas.width = parent.clientWidth * dpr;\n      canvas.height = parent.clientHeight * dpr;\n      canvas.style.width = parent.clientWidth + 'px';\n      canvas.style.height = parent.clientHeight + 'px';\n      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);\n      initParticles(parent.clientWidth, parent.clientHeight);\n    };\n\n    const initParticles = (width: number, height: number) => {\n      const count = Math.min(110, Math.floor((width * height) / 11000));\n      const list: Particle[] = [];\n      for (let i = 0; i < count; i++) {\n        list.push({\n          posX: Math.random() * width,\n          posY: Math.random() * height,\n          velX: (Math.random() - 0.5) * 0.6,\n          velY: (Math.random() - 0.5) * 0.6,\n          radius: Math.random() * 1.8 + 0.8,\n          twinklePhase: Math.random() * Math.PI * 2,\n          twinkleSpeed: 0.02 + Math.random() * 0.03,\n        });\n      }\n      particlesRef.current = list;\n    };\n\n    const spawnMeteor = (width: number, height: number) => {\n      const startX = Math.random() * width * 0.8 + width * 0.1;\n      const angle = Math.PI * 0.2 + Math.random() * 0.2;\n      meteorsRef.current.push({\n        x: startX,\n        y: -10,\n        vx: Math.cos(angle) * 6,\n        vy: Math.sin(angle) * 6,\n        life: 0,\n        maxLife: 40 + Math.random() * 30,\n        size: 1.5 + Math.random() * 1.5,\n      });\n    };\n\n    const handleMove = (e: MouseEvent) => {\n      const rect = canvas.getBoundingClientRect();\n      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };\n    };\n    const handleLeave = () => {\n      mouseRef.current = { x: -9999, y: -9999 };\n    };\n\n    const draw = (now: number) => {\n      const dt = now - lastTime;\n      lastTime = now;\n\n      const width = canvas.clientWidth;\n      const height = canvas.clientHeight;\n      const color = THEME_COLORS[themeRef.current];\n      const particles = particlesRef.current;\n      const mouse = mouseRef.current;\n\n      ctx.clearRect(0, 0, width, height);\n\n      // 유성 생성 (평균 3초마다)\n      if (Math.random() < 0.006) {\n        spawnMeteor(width, height);\n      }\n\n      // 유성 업데이트 & 렌더링\n      const meteors = meteorsRef.current;\n      for (let i = meteors.length - 1; i >= 0; i--) {\n        const m = meteors[i];\n        m.x += m.vx;\n        m.y += m.vy;\n        m.life++;\n\n        if (m.life > m.maxLife || m.x > width + 50 || m.y > height + 50) {\n          meteors.splice(i, 1);\n          continue;\n        }\n\n        const progress = m.life / m.maxLife;\n        const tailLen = 8;\n        for (let t = 0; t < tailLen; t++) {\n          const ratio = t / tailLen;\n          const tx = m.x - m.vx * ratio * 4;\n          const ty = m.y - m.vy * ratio * 4;\n          const alpha = (1 - ratio) * (1 - progress * 0.5) * 0.9;\n          const r = m.size * (1 - ratio * 0.6);\n          ctx.beginPath();\n          ctx.arc(tx, ty, r, 0, Math.PI * 2);\n          ctx.fillStyle = `rgba(255,255,255,${alpha})`;\n          ctx.fill();\n        }\n      }\n\n      // 별 업데이트\n      for (let i = 0; i < particles.length; i++) {\n        const p = particles[i];\n        p.posX += p.velX;\n        p.posY += p.velY;\n        p.twinklePhase += p.twinkleSpeed;\n\n        if (p.posX < 0 || p.posX > width) p.velX *= -1;\n        if (p.posY < 0 || p.posY > height) p.velY *= -1;\n\n        const dxMouse = p.posX - mouse.x;\n        const dyMouse = p.posY - mouse.y;\n        const distMouse = Math.hypot(dxMouse, dyMouse);\n        if (distMouse < 140 && distMouse > 0) {\n          const force = (140 - distMouse) / 140;\n          p.posX += (dxMouse / distMouse) * force * 2.5;\n          p.posY += (dyMouse / distMouse) * force * 2.5;\n        }\n      }\n\n      // 연결선\n      for (let i = 0; i < particles.length; i++) {\n        for (let j = i + 1; j < particles.length; j++) {\n          const a = particles[i];\n          const b = particles[j];\n          const dist = Math.hypot(a.posX - b.posX, a.posY - b.posY);\n          if (dist < 120) {\n            const alpha = (1 - dist / 120) * 0.7;\n            ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;\n            ctx.lineWidth = 1.5;\n            ctx.beginPath();\n            ctx.moveTo(a.posX, a.posY);\n            ctx.lineTo(b.posX, b.posY);\n            ctx.stroke();\n          }\n        }\n      }\n\n      // 별 렌더링 (반짝임 적용)\n      for (let i = 0; i < particles.length; i++) {\n        const p = particles[i];\n        const twinkle = 0.5 + 0.5 * Math.sin(p.twinklePhase);\n        const drawRadius = p.radius * (0.8 + twinkle * 0.5);\n        const opacity = 0.6 + twinkle * 0.4;\n\n        ctx.beginPath();\n        ctx.arc(p.posX, p.posY, drawRadius, 0, Math.PI * 2);\n        ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${opacity})`;\n        ctx.shadowBlur = 10 + twinkle * 12;\n        ctx.shadowColor = `rgba(${color.r},${color.g},${color.b},${0.6 + twinkle * 0.4})`;\n        ctx.fill();\n        ctx.shadowBlur = 0;\n      }\n\n      frameId = requestAnimationFrame(draw);\n    };\n\n    resize();\n    window.addEventListener('resize', resize);\n    canvas.addEventListener('mousemove', handleMove);\n    canvas.addEventListener('mouseleave', handleLeave);\n    frameId = requestAnimationFrame(draw);\n\n    return () => {\n      cancelAnimationFrame(frameId);\n      window.removeEventListener('resize', resize);\n      canvas.removeEventListener('mousemove', handleMove);\n      canvas.removeEventListener('mouseleave', handleLeave);\n    };\n  }, []);\n\n  return (\n    <canvas\n      ref={canvasRef}\n      className=\"absolute inset-0 w-full h-full\"\n      style={{\n        background:\n          'radial-gradient(circle at 50% 40%, rgba(30,41,59,0.6), rgba(2,6,23,1))',\n      }}\n    />\n  );\n}\n"
+  },
+  "coding_type": "react",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": null,
+  "files": "- App.tsx (typescript): 테마 전환과 파티클 캔버스를 담는 메인 앱\n- components/ParticleNetwork.tsx (typescript): 별 반짝임·유성이 포함된 인터랙티브 캔버스 애니메이션",
+  "design_doc": {
+    "project_name": "별자리 만들기",
+    "description": "마우스로 밤하늘의 별을 연결하며 나만의 별자리를 만드는 인터랙티브 파티클 애니메이션. 입자들이 자유롭게 움직이며 서로 연결되는 동적 그래픽 환경을 제공합니다.",
+    "users": [
+      "시각적 인터랙션을 즐기는 사용자",
+      "데모/포트폴리오 참고용 개발자"
+    ],
+    "features": [
+      {
+        "name": "파티클 렌더링 및 물리 시뮬레이션",
+        "description": "Canvas 기반의 약 110개 입자가 속도와 방향을 가지고 지속적으로 이동",
+        "priority": "mvp"
+      },
+      {
+        "name": "파티클 간 연결선 표시",
+        "description": "일정 거리(120px) 이내의 파티클들을 선으로 연결하여 별자리 효과 표현",
+        "priority": "mvp"
+      },
+      {
+        "name": "마우스 인터랙션",
+        "description": "마우스 이동 시 140px 반경 내 입자를 밀어내는 힘 효과 적용",
+        "priority": "mvp"
+      },
+      {
+        "name": "테마 전환",
+        "description": "Aurora(시안), Sunset(주황), Neon(분홍) 3가지 색상 테마 선택 가능",
+        "priority": "mvp"
+      },
+      {
+        "name": "반응형 캔버스",
+        "description": "창 크기 변경 시 자동으로 캔버스 크기 및 입자 개수 조정",
+        "priority": "mvp"
+      },
+      {
+        "name": "별 반짝임",
+        "description": "별마다 고유한 주기로 크기와 밝기가 부드럽게 변하는 트윙클 효과",
+        "priority": "mvp"
+      },
+      {
+        "name": "유성 효과",
+        "description": "평균 3초 간격으로 꼬리 달린 별똥별이 대각선으로 지나가는 연출",
+        "priority": "mvp"
+      }
+    ],
+    "pages": [
+      {
+        "name": "메인 화면",
+        "description": "전체 화면을 차지하는 파티클 필드 인터랙티브 캔버스",
+        "components": [
+          "Header",
+          "ParticleNetwork Canvas",
+          "Instruction Text"
+        ]
+      },
+      {
+        "name": "Header",
+        "description": "앱 타이틀과 테마 선택 버튼이 있는 상단 바",
+        "components": [
+          "App Title",
+          "Theme Button - Aurora",
+          "Theme Button - Sunset",
+          "Theme Button - Neon"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Particle",
+        "fields": [
+          "posX: 수평 위치",
+          "posY: 수직 위치",
+          "velX: 수평 속도",
+          "velY: 수직 속도",
+          "radius: 입자 반경"
+        ],
+        "description": "캔버스 상의 개별 입자 객체"
+      },
+      {
+        "name": "Mouse",
+        "fields": [
+          "x: 수평 좌표",
+          "y: 수직 좌표"
+        ],
+        "description": "마우스 커서 위치"
+      },
+      {
+        "name": "Theme",
+        "fields": [
+          "r: RGB Red 값",
+          "g: RGB Green 값",
+          "b: RGB Blue 값"
+        ],
+        "description": "색상 테마 설정"
+      }
+    ],
+    "user_flows": [
+      "진입 → 파티클 필드 자동 렌더링 시작",
+      "마우스 이동 → 근처 입자들이 마우스에서 밀려남",
+      "입자 간 거리 < 120px → 자동으로 선 연결",
+      "테마 버튼 클릭 → 입자/선 색상 즉시 변경",
+      "창 크기 조정 → 캔버스 및 입자 재구성"
+    ],
+    "strengths": [
+      "마우스 인터랙션으로 사용자 참여도가 높음",
+      "3가지 테마로 시각적 선택지 제공",
+      "반응형 디자인으로 모든 화면 크기 대응",
+      "부드러운 애니메이션(requestAnimationFrame 기반)",
+      "높은 시각적 임팩트와 현대적 UI"
+    ],
+    "weaknesses": [
+      "마우스 인터랙션 외 추가 기능 부재",
+      "입자 색상·개수·속도 등 커스터마이징 옵션 없음",
+      "저사양 기기에서 성능 최적화 미흡 가능성",
+      "접근성(키보드/스크린리더) 미지원"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "별이 화면 밖으로 안 나가는 비밀 — 경계 충돌",
+      "what": "별(입자)이 화면 가장자리에 닿으면 속도의 부호를 반대로 바꿔요. 오른쪽으로 가던 별은 왼쪽으로, 아래로 가던 별은 위로 튕겨 나가죠. 딱 한 줄(velX *= -1)로 '벽에 부딪혀 튕기기'가 완성돼요.",
+      "why": "이 처리가 없으면 별들이 화면 밖으로 날아가 버려서 금세 텅 빈 캔버스만 남아요. 게임이든 시뮬레이션이든, 움직이는 물체가 있으면 경계를 정하고 그 안에 가두는 게 기본이에요.",
+      "where": "핀볼 게임에서 공이 벽에 튕기는 것, 화면 보호기에서 로고가 모서리에 닿으면 방향을 바꾸는 것이 모두 같은 원리예요."
+    },
+    {
+      "title": "가까운 별끼리 선이 이어지는 원리 — 거리 계산",
+      "what": "모든 별 쌍의 거리를 재서, 120픽셀보다 가까우면 선을 그어요. 거리가 가까울수록 선을 진하게, 멀수록 흐리게 그려서 자연스러운 별자리 느낌이 나요. 거리는 Math.hypot(가로 차이, 세로 차이)로 한 줄에 구할 수 있어요.",
+      "why": "거리에 따라 연결 여부와 투명도를 바꾸면, 단순한 점들이 '관계'를 가진 네트워크로 보여요. 고정된 선 대신 거리 기반으로 하면 별이 움직일 때마다 별자리가 실시간으로 변해서 훨씬 생동감이 있죠.",
+      "where": "지도 앱에서 '내 주변 500m 음식점'을 찾는 것, 와이파이가 가까운 기기에만 연결되는 것이 모두 '거리 계산 → 조건 판단'의 같은 패턴이에요."
+    },
+    {
+      "title": "마우스를 피하는 별들 — 힘과 방향",
+      "what": "마우스와 별 사이의 거리를 재고, 140픽셀 이내면 마우스 반대 방향으로 밀어내요. 가까울수록 더 세게 밀리고, 멀어지면 힘이 줄어들어요. 방향은 '별 위치 − 마우스 위치'로, 세기는 '(최대 거리 − 실제 거리) / 최대 거리'로 구해요.",
+      "why": "이 인터랙션이 없으면 별이 그냥 둥둥 떠다니기만 해서 금방 지루해져요. 마우스에 반응하는 순간 '내가 이 세계에 영향을 주고 있다'는 느낌이 생기고, 사용자가 계속 움직여보고 싶어져요.",
+      "where": "터치하면 물결이 퍼지는 스마트폰 배경화면, 마우스를 올리면 카드가 기울어지는 웹사이트, 게임에서 폭발 충격파에 밀려나는 캐릭터가 모두 '거리 기반 힘' 원리를 써요."
+    },
+    {
+      "title": "눈에 안 보이게 빠른 그림 교체 — 애니메이션 루프",
+      "what": "requestAnimationFrame이라는 함수가 화면을 초당 약 60번 지우고 다시 그려요. 매번 별 위치를 조금씩 바꾸고, 선을 다시 이어서, 눈에는 부드럽게 움직이는 것처럼 보이죠. 플립북(넘기면 움직이는 수첩)과 똑같은 원리예요.",
+      "why": "setInterval 같은 타이머를 쓰면 브라우저가 바쁠 때 버벅거려요. requestAnimationFrame은 브라우저가 '지금 그릴 준비 됐어!'라고 알려줄 때만 그리기 때문에 항상 매끄럽고 배터리도 아껴요.",
+      "where": "유튜브 영상도 초당 30~60장의 그림을 빠르게 보여주는 것이고, 게임 속 캐릭터 움직임, 카카오톡 이모티콘 애니메이션도 같은 원리로 돌아가요."
+    },
+    {
+      "title": "테마 하나 바꾸면 전체 분위기가 달라지는 이유 — 상태 끌어올리기",
+      "what": "색상 테마 정보를 App(부모)이 가지고 있고, ParticleNetwork(자식)에게 props로 내려줘요. 테마 버튼을 누르면 App의 상태만 바꾸면 되고, 캔버스는 전달받은 색을 그대로 쓰기만 하면 돼요.",
+      "why": "만약 캔버스가 자기만의 색 정보를 따로 갖고 있으면, 버튼과 캔버스가 서로 다른 색을 기억하는 '엇갈림'이 생겨요. 정보를 한 곳에 모아두면 항상 일치하고, 나중에 테마를 늘려도 한 곳만 고치면 돼요.",
+      "where": "쇼핑몰에서 다크모드를 켜면 모든 페이지가 한 번에 바뀌는 것, 게임에서 언어를 바꾸면 메뉴·대화·설명이 전부 바뀌는 것이 같은 패턴이에요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 6,
+      "title": "색상 테마 상태 관리",
+      "explanation": "useState 훅으로 현재 선택된 색상 테마를 저장하고, setColorTheme으로 변경할 수 있게 합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 8,
+      "title": "테마 설정 객체 정의",
+      "explanation": "각 테마마다 표시 이름과 색상 정보를 담은 객체로, 버튼을 생성할 때 반복해서 사용됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 22,
+      "title": "테마 버튼 목록 동적 생성",
+      "explanation": "themes 객체의 모든 키를 반복해서 각 테마마다 선택 버튼을 만들고, 클릭 시 colorTheme을 변경합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 26,
+      "title": "선택된 테마에 따른 버튼 스타일 변경",
+      "explanation": "현재 선택된 테마와 버튼의 테마가 같으면 활성화 스타일을, 다르면 비활성화 스타일을 적용합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 39,
+      "title": "자식 컴포넌트에 테마 전달",
+      "explanation": "App 컴포넌트의 colorTheme 상태를 ParticleNetwork 컴포넌트에 props로 넘겨줍니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 7,
+      "title": "입자 데이터 구조 정의",
+      "explanation": "각 입자가 가져야 할 위치, 속도, 크기 정보를 인터페이스로 정의합니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 15,
+      "title": "테마별 색상 값 저장",
+      "explanation": "RGB 형식으로 각 테마의 색상을 미리 정의해서, 캔버스에 그릴 때 사용합니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 26,
+      "title": "테마 변경 감지 및 반영",
+      "explanation": "props로 받은 theme이 변경되면 useRef를 통해 최신 테마 정보를 저장합니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 47,
+      "title": "입자 초기화 함수",
+      "explanation": "화면 크기에 맞게 적절한 개수의 입자를 생성하고 각각 위치, 속도, 크기를 랜덤하게 설정합니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 63,
+      "title": "마우스 위치 추적",
+      "explanation": "마우스가 움직일 때 현재 좌표를 저장해서, 입자들이 마우스를 따라오도록 합니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 86,
+      "title": "입자 경계 충돌 처리",
+      "explanation": "입자가 화면 가장자리에 도달하면 속도 방향을 반대로 바꿔서 화면 밖으로 나가지 않게 합니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 90,
+      "title": "마우스 근처 입자 반발 효과",
+      "explanation": "마우스와의 거리가 140 이내인 입자들을 마우스 반대 방향으로 밀어냅니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 100,
+      "title": "입자 간 연결선 그리기",
+      "explanation": "두 입자 사이의 거리가 120 이하면 반투명 선으로 연결하여 네트워크 효과를 만듭니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 114,
+      "title": "입자 원형 그리기",
+      "explanation": "canvas의 arc 함수로 각 입자를 발광 효과와 함께 원형으로 그립니다."
+    },
+    {
+      "file": "components/ParticleNetwork.tsx",
+      "line": 128,
+      "title": "애니메이션 루프 시작",
+      "explanation": "requestAnimationFrame으로 draw 함수를 반복 실행해서 초당 약 60번 화면을 업데이트합니다."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: 소프트웨어로 할게요\n튜터: 좋아요, 웹·앱을 만들어볼게요! 무엇이든 편하게 설명해 주세요.\n학습자: 밤하늘에 별이 떠다니고, 마우스로 가까이 가면 별들이 선으로 연결되면서 별자리처럼 보이는 걸 만들고 싶어\n튜터: 마우스로 밤하늘의 별을 연결하며 나만의 별자리를 만드는 인터랙티브 파티클 애니메이션을 만들게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "밤하늘에 별이 떠다니고 마우스로 가까이 가면 별들이 선으로 연결되면서 별자리처럼 보이는 인터랙티브 애니메이션을 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "마우스로 밤하늘의 별을 연결하며 나만의 별자리를 만드는 인터랙티브 파티클 애니메이션을 만들게요."
+    }
+  ]
+}

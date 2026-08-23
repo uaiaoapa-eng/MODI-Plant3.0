@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>edu-agent 비용절감·RAG·온톨로지 종합 보고서 v3 — 2026-07</title>
+<style>
+  :root{
+    --ink:#1a202c; --sub:#5a6472; --line:#dde3ea; --bg:#ffffff; --panel:#f6f8fa;
+    --accent:#1d4ed8; --accent-bg:#eff4ff;
+    --ok:#166534; --ok-bg:#f0fdf4;
+    --warn:#92400e; --warn-bg:#fffbeb;
+    --bad:#991b1b; --bad-bg:#fef2f2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+       color:var(--ink);background:#eef1f5;line-height:1.68;font-size:15px}
+  .page{max-width:1000px;margin:24px auto;background:var(--bg);padding:56px 64px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  @media(max-width:720px){.page{padding:28px 18px;margin:0}}
+
+  .doc-kicker{font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:700;text-transform:uppercase}
+  h1{font-size:27px;font-weight:800;margin:6px 0 4px;letter-spacing:-.01em}
+  .doc-meta{color:var(--sub);font-size:13px;margin-bottom:8px}
+  .doc-meta b{color:var(--ink)}
+
+  h2{font-size:19.5px;font-weight:800;margin:48px 0 6px;padding-top:22px;border-top:2px solid var(--ink);letter-spacing:-.01em}
+  h2 .no{color:var(--accent);margin-right:8px}
+  h3{font-size:15.5px;font-weight:700;margin:24px 0 8px}
+  h4{font-size:14px;font-weight:700;margin:16px 0 6px;color:var(--accent)}
+  p{margin:8px 0}
+  .lead{color:var(--sub);font-size:13.5px;margin-bottom:14px}
+
+  .verdict{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 6px}
+  @media(max-width:720px){.verdict{grid-template-columns:1fr}}
+  .verdict .card{border:1px solid var(--line);padding:14px 16px;background:var(--panel)}
+  .verdict .k{font-size:12px;color:var(--sub);font-weight:700}
+  .verdict .v{font-size:21px;font-weight:800;margin:2px 0}
+  .verdict .d{font-size:12.5px;color:var(--sub)}
+  .verdict .v .unit{font-size:13px;font-weight:600;color:var(--sub)}
+
+  .toc{border:1px solid var(--line);background:var(--panel);padding:18px 24px;margin:20px 0}
+  .toc .t{font-weight:800;font-size:14px;margin-bottom:8px}
+  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:36px;font-size:13.5px}
+  @media(max-width:720px){.toc ol{columns:1}}
+  .toc a{color:var(--ink);text-decoration:none}
+  .toc a:hover{color:var(--accent)}
+  .toc .part{font-weight:700}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th{background:var(--panel);text-align:left;font-weight:700;padding:8px 10px;border:1px solid var(--line)}
+  td{padding:8px 10px;border:1px solid var(--line);vertical-align:top}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .best{background:var(--ok-bg);color:var(--ok);font-weight:700}
+  .worst{background:var(--bad-bg);color:var(--bad);font-weight:700}
+  .tbl-scroll{overflow-x:auto}
+  td .term{font-weight:700;white-space:nowrap}
+
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:3px;white-space:nowrap}
+  .p-ok{background:var(--ok-bg);color:var(--ok)}
+  .p-warn{background:var(--warn-bg);color:var(--warn)}
+  .p-bad{background:var(--bad-bg);color:var(--bad)}
+  .p-info{background:var(--accent-bg);color:var(--accent)}
+
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12.5px;background:var(--panel);
+       border:1px solid var(--line);padding:0 4px;border-radius:3px;white-space:nowrap}
+  .src{font-size:11.5px;color:var(--sub);font-family:ui-monospace,Consolas,monospace}
+
+  .note{border-left:3px solid var(--accent);background:var(--accent-bg);padding:10px 14px;font-size:13.5px;margin:12px 0}
+  .note.warn{border-color:#d97706;background:var(--warn-bg)}
+  .note.good{border-color:#16a34a;background:var(--ok-bg)}
+
+  .formula{background:var(--panel);border:1px solid var(--line);padding:14px 18px;margin:12px 0;
+           font-family:"STIX Two Math","Cambria Math",Georgia,serif;font-size:16.5px;text-align:center;overflow-x:auto}
+  .formula .where{font-family:"Pretendard",system-ui,sans-serif;font-size:12.5px;color:var(--sub);
+                  text-align:left;margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+  .formula i{font-style:italic}
+  sub,sup{font-size:70%}
+
+  figure{margin:18px 0}
+  figcaption{font-size:12.5px;color:var(--sub);margin-top:6px;text-align:center}
+  svg{max-width:100%;height:auto;display:block;margin:0 auto}
+  .svg-scroll{overflow-x:auto}
+
+  ul,ol{padding-left:22px;margin:8px 0}
+  li{margin:3px 0}
+  .footer{margin-top:48px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--sub)}
+  .vhist{font-size:12px;color:var(--sub);margin-top:4px}
+  @media print{body{background:#fff}.page{box-shadow:none;margin:0;max-width:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-kicker">LUXROBO · edu-agent 기술 보고서 · v3</div>
+  <h1>비용절감·RAG·온톨로지 종합 보고서</h1>
+  <div class="doc-meta">
+    작성일 <b>2026-07-08</b> · 기준 master(a708abd) · 대상 독자: <b>RAG·온톨로지를 처음 접하는 의사결정자 포함</b><br>
+    모든 수치·수식은 실제 코드(<span class="src">scripts/search_lib.py, agent/direct_serve.py 등</span>)와 실측(이슈 #84)에서 검증한 값
+  </div>
+  <div class="vhist">개정 이력 — v1(2026-07-08): 절감 근거·AS-IS/TO-BE·테스트 · v2(2026-07-08): 용어집·왜 RAG/온톨로지·수식·축적 전략 · <b>v3(2026-07-08): 실전 미발동 진단(배포 서버 실측), 온톨로지 심화·확장, 비용 발생 예상 그래프 추가</b></div>
+
+  <div class="toc">
+    <div class="t">목차</div>
+    <ol>
+      <li class="part"><a href="#s1">요약 — 3가지 결론</a></li>
+      <li><a href="#s2">용어집 — 이 보고서의 모든 전문용어</a></li>
+      <li><a href="#s3">왜 RAG인가 — LLM만 쓰면 생기는 3가지 문제</a></li>
+      <li><a href="#s4">왜 온톨로지까지 필요한가 — RAG만으로 안 되는 이유</a></li>
+      <li><a href="#s5">검색 알고리즘 상세 — 3중 유사도 수식</a></li>
+      <li><a href="#s6">전체 프로세스 — 요청부터 저장까지</a></li>
+      <li><a href="#s7">비용절감 근거와 시점 (실측)</a></li>
+      <li><a href="#s8">AS-IS → TO-BE</a></li>
+      <li><a href="#s9">데이터 축적 전략 — 얼마나, 누가, 무엇을 저장하나</a></li>
+      <li><a href="#s10">안정성·테스트 현황</a></li>
+      <li><a href="#s11">로드맵</a></li>
+      <li class="part" style="color:#991b1b"><a href="#s13">진단 — "같은 질문인데 왜 그대로인가" (실측)</a></li>
+      <li><a href="#s14">온톨로지 심화 — 지금 들어있는 것과 확장</a></li>
+      <li><a href="#s15">비용 발생 예상 — 시나리오 그래프</a></li>
+      <li class="part"><a href="#s12">Summary — 전체 관계도와 핵심 숫자</a></li>
+    </ol>
+  </div>
+
+  <!-- ═══════════ 1. 요약 ═══════════ -->
+  <h2 id="s1"><span class="no">1</span>요약 — 3가지 결론</h2>
+  <div class="verdict">
+    <div class="card">
+      <div class="k">① 구축 상태</div>
+      <div class="v" style="color:var(--ok)">완료·배포</div>
+      <div class="d">RAG 검색 + 온톨로지 그래프 + 3단계 재사용 라우팅, 2026-07-07 배포</div>
+    </div>
+    <div class="card">
+      <div class="k">② 절감 가능성 (실측)</div>
+      <div class="v">턴당 ~100<span class="unit">%</span></div>
+      <div class="d">동일 요청 반복 시 생성 LLM 호출 0회. 전체 절감률은 적중률에 비례</div>
+    </div>
+    <div class="card">
+      <div class="k">③ 남은 과제</div>
+      <div class="v">데이터</div>
+      <div class="d">기술이 아니라 코퍼스(저장 자산) 축적이 병목 — §9의 전략으로 해소</div>
+    </div>
+  </div>
+  <p>이 시스템의 핵심 아이디어는 하나다: <b>"AI가 한 번 잘 만든 것을 자산으로 저장해 두고, 같은 요청이 오면 다시 만들지 않는다."</b>
+  이를 위해 ① 저장물을 잘 찾아내는 검색(RAG), ② 교육 맥락에 맞게 연결하는 개념 관계망(온톨로지),
+  ③ 다시 만들지 않아도 되는지 판정하는 게이트(3-tier)가 순서대로 구축되었다. 아래 장들이 이 순서 그대로 설명한다.</p>
+
+  <!-- ═══════════ 2. 용어집 ═══════════ -->
+  <h2 id="s2"><span class="no">2</span>용어집 — 이 보고서의 모든 전문용어</h2>
+  <p class="lead">사전 지식이 없어도 이 표만 읽으면 이후 장을 따라올 수 있도록, 등장 순서·의존 순서대로 정리했다.</p>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th style="width:150px">용어</th><th>쉬운 정의</th><th>이 시스템에서의 구체적 의미</th></tr>
+    <tr><td class="term">LLM</td><td>대형 언어모델. 글·코드를 생성하는 AI</td><td>Claude Haiku 4.5 단일 모델로 코드 생성·대화·검증 전부 수행</td></tr>
+    <tr><td class="term">토큰(token)</td><td>LLM이 글을 세는 단위(대략 한글 1~2자, 영단어 조각)</td><td>비용 청구 단위. <b>출력 토큰이 입력(비캐시)보다 5.6배 비싸다</b>는 것이 실측 결론</td></tr>
+    <tr><td class="term">임베딩(embedding)</td><td>문장을 숫자 배열(벡터)로 바꾼 것. 의미가 비슷하면 숫자도 비슷해짐</td><td>BGE-m3 모델이 모든 문장을 1,024개 숫자로 변환. "신호등"과 "빨강초록 번갈아"가 가까운 벡터가 됨</td></tr>
+    <tr><td class="term">벡터 유사도</td><td>두 임베딩이 얼마나 같은 방향을 보는지(0~1)</td><td>코사인 유사도 사용 — §5.1에서 수식으로 설명</td></tr>
+    <tr><td class="term">청크(chunk)</td><td>저장의 최소 단위. 문서 한 조각</td><td>학습노트·코드·설계문서 등 8종. 각 청크에 개념키·난이도·도메인·MODI모듈 태그가 붙음</td></tr>
+    <tr><td class="term">코퍼스(corpus)</td><td>청크들이 쌓인 전체 저장소 = "자산 창고"</td><td>MySQL(원문) + Redis(벡터 색인). 현재 기존 세션 165건 백필 + 매 빌드 자동 적재</td></tr>
+    <tr><td class="term">RAG</td><td>Retrieval-Augmented Generation. <b>"생성 전에 창고를 먼저 검색"</b>하는 기법</td><td>요청이 오면 코퍼스에서 비슷한 자산을 찾아 ① 재사용하거나 ② 참고자료로 붙여 생성</td></tr>
+    <tr><td class="term">온톨로지(ontology)</td><td>개념들과 그 <b>관계</b>를 정의한 지식 지도. "무엇이 무엇의 기초인가"</td><td>51개 교육 개념(변수·반복·조건…) + 5종 관계(선수학습 등). §4에서 상세</td></tr>
+    <tr><td class="term">concept_key</td><td>청크가 속한 개념의 ID</td><td>예: <code>loop</code>(반복), <code>button_input</code>(버튼 입력). 검색·온톨로지·저장을 잇는 공통 열쇠</td></tr>
+    <tr><td class="term">centroid(중심점)</td><td>같은 개념 청크들의 임베딩 <b>평균</b> = 그 개념의 "대표 좌표"</td><td>개별 문서가 아니라 개념 단위로 매칭하기 위한 장치. §5.3 수식</td></tr>
+    <tr><td class="term">alias(별칭)</td><td>같은 개념을 부르는 다른 말들</td><td>초등학생 표현 흡수용. 실례: "변수" 개념의 별칭 = <b>메모지, 마법 상자, 비밀 상자, 담아두는…</b> (시드에 정의)</td></tr>
+    <tr><td class="term">intent(의도)</td><td>요청이 무엇을 원하는지의 분류</td><td>새 빌드/수정/질문/대화 등을 먼저 분류해 코드 턴만 재사용 게이트로 보냄</td></tr>
+    <tr><td class="term">프라임(prime)</td><td>생성 직전에 프롬프트 앞에 붙이는 참고 컨텍스트</td><td>온톨로지가 고른 선수학습·관련개념·MODI모듈·학습노트 + 재사용 후보 코드</td></tr>
+    <tr><td class="term" style="background:var(--warn-bg)">델타(delta)</td><td><b>저장물과 새 요청 사이의 "요구 차이"</b>. 없으면 그대로 써도 되고, 있으면 고쳐야 함</td><td>실측 예 — 저장물 "하트 좋아요 버튼"에 대해: "좋아요 버튼"(델타 없음→그대로 OK), "<b>파란</b> 하트"(색상 델타), "<b>커지는 애니메이션</b>"(기능 델타). 유사도 점수로는 구분 불가해 별도 검증이 필요한 것이 핵심 발견</td></tr>
+    <tr><td class="term">직접서브(direct-serve)</td><td>저장물을 <b>LLM 없이 그대로 응답</b>으로 내보내는 것</td><td>델타 없음이 검증된 경우에만. 생성 비용 0, 즉시 응답</td></tr>
+    <tr><td class="term">tier(단계)</td><td>요청을 처리하는 3가지 경로</td><td>직접서브(비용 0) / near(참고+생성) / cold(신규 생성)</td></tr>
+    <tr><td class="term">TAU(τ, 임계값)</td><td>"얼마나 비슷해야 재사용 후보인가"의 기준 점수</td><td>τ_reuse=0.62(재사용 후보), τ_near=0.48(참고 후보). 이 밑이면 신규 등록 대상</td></tr>
+    <tr><td class="term">near-miss</td><td>아깝게 임계값에 못 미친 경우(0.48~0.62 구간)</td><td>"수요는 있는데 자산이 없다"는 신호 — 매 턴 기록되어 §9의 제작 우선순위 데이터가 됨</td></tr>
+    <tr><td class="term">write-back / 폐루프</td><td>생성 결과를 다시 창고에 저장해 다음에 재사용하는 순환</td><td>매 빌드의 학습노트·설계·코드가 concept_key와 함께 자동 등록됨</td></tr>
+    <tr><td class="term">HNSW</td><td>수백만 벡터 중 가까운 것을 빠르게 찾는 색인 자료구조(근사 최근접 탐색)</td><td>Redis Stack에 내장. 전수 비교 없이 밀리초 단위 검색</td></tr>
+    <tr><td class="term">Langfuse</td><td>LLM 호출을 기록·분석하는 관측 도구</td><td>매 턴의 tier·점수·토큰이 기록됨 — 절감률 실측과 임계 튜닝의 데이터 원천</td></tr>
+  </table>
+  </div>
+
+  <!-- ═══════════ 3. 왜 RAG인가 ═══════════ -->
+  <h2 id="s3"><span class="no">3</span>왜 RAG인가 — LLM만 쓰면 생기는 3가지 문제</h2>
+
+  <div class="tbl-scroll">
+  <table>
+    <tr><th style="width:170px">문제</th><th>LLM 단독일 때 벌어지는 일</th><th>RAG가 해결하는 방식</th></tr>
+    <tr>
+      <td><b>① 비용 — 같은 것을 매번 다시 만든다</b></td>
+      <td>"신호등 만들어줘"가 100번 오면 100번 전부 생성. 실측상 1회 생성 = 출력 ~1,199토큰·~47초이고, <b>출력 토큰은 비캐시 입력의 5.6배 비용</b>이라 이 낭비가 비용의 본체</td>
+      <td>한 번 잘 만든 결과를 저장 → 두 번째부터는 검색해서 재사용. 델타 없으면 생성 0회(§7)</td>
+    </tr>
+    <tr>
+      <td><b>② 정확성 — 우리 도메인을 모른다</b></td>
+      <td>범용 LLM은 MODI 하드웨어 모듈 스펙, 초등 교육과정, 학생 눈높이 표현을 모름 → 존재하지 않는 API를 지어내거나(환각) 수준에 안 맞는 설명</td>
+      <td>검증된 사내 자산(학습노트·모듈 스펙·기존 코드)을 검색해 프롬프트에 붙임 → 생성이 사실에 접지됨</td>
+    </tr>
+    <tr>
+      <td><b>③ 휘발 — 산출물이 자산이 안 된다</b></td>
+      <td>좋은 결과물도 세션이 끝나면 사라짐. 조직 지식이 쌓이지 않음</td>
+      <td>write-back 폐루프: 모든 빌드 산출물이 코퍼스에 적재 → 쓸수록 창고가 두꺼워지고 적중률이 올라감</td>
+    </tr>
+  </table>
+  </div>
+  <div class="note">
+    요컨대 RAG는 "검색 기능 추가"가 아니라 <b>비용 구조를 바꾸는 장치</b>다. LLM 단독 비용은 요청 수에 정비례해 늘지만(100요청 = 100생성),
+    RAG+재사용 비용은 <b>새로운 요청에만</b> 비례한다(100요청 중 60이 반복이면 40생성). 교육 도메인은 표준 예제 반복이 많아 이 구조의 이득이 특히 크다.
+  </div>
+
+  <!-- ═══════════ 4. 왜 온톨로지 ═══════════ -->
+  <h2 id="s4"><span class="no">4</span>왜 온톨로지까지 필요한가 — RAG만으로 안 되는 이유</h2>
+
+  <h3>4.1 유사도 검색의 태생적 한계: "비슷함"은 알지만 "관계"는 모른다</h3>
+  <p>RAG의 검색은 결국 유사도 점수다. 유사도는 다음 질문에 답하지 못한다:</p>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>교육 서비스가 답해야 하는 질문</th><th>유사도(RAG)만으로</th><th>온톨로지가 있으면</th></tr>
+    <tr><td>"조건까지 반복"을 배우려면 <b>먼저</b> 뭘 알아야 하나?</td><td>✕ — 비슷한 문서는 찾아도 학습 순서는 모름</td><td>○ — <code>while_until → loop, conditional → variable</code> 선수학습 사슬을 그래프로 즉답 (실제 시드 데이터)</td></tr>
+    <tr><td>이 예제에 어떤 <b>하드웨어(MODI 모듈)</b>가 필요한가?</td><td>✕ — 본문에 우연히 적혀 있어야만 앎</td><td>○ — 개념→모듈 <code>uses</code> 관계로 명시적 연결</td></tr>
+    <tr><td>초등학생이 "<b>마법 상자</b>"라고 말하면?</td><td>△ — 임베딩이 "변수"와 이어줄 수도, 아닐 수도</td><td>○ — "변수" 개념의 alias로 등록되어 있어 확정 매칭 (실제 시드: 메모지·마법 상자·비밀 상자…)</td></tr>
+    <tr><td>이 개념과 <b>함께 배우면 좋은</b> 개념은?</td><td>✕</td><td>○ — 실제 세션에서 함께 등장한 개념 쌍(<code>relates_to</code>)이 데이터로 축적됨</td></tr>
+  </table>
+  </div>
+  <p>즉 RAG는 "<b>무엇이 비슷한가</b>"를, 온톨로지는 "<b>무엇이 무엇과 어떤 관계인가</b>"를 담당한다.
+  교육 서비스는 정답 코드만이 아니라 <b>학습 경로</b>(먼저 배울 것 → 지금 것 → 다음 것)를 제공해야 하므로 둘 다 필요하다.</p>
+
+  <h3>4.2 온톨로지에 저장되는 것 — 노드와 관계 5종 (실제 스키마)</h3>
+  <p>온톨로지는 두 테이블이 전부다: 개념 노드(<code>ontology_nodes</code>)와 관계 엣지(<code>ontology_edges</code>).
+  현재 <b>시드 개념 51개</b>(변수·반복·조건·순차실행·임계값·타이밍·버튼입력·다이얼입력…)가 정의되어 있고, 관계는 다음 5종이다.</p>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th style="width:150px">관계 (rel)</th><th>뜻</th><th>실제 예 (시드/빌드 데이터)</th><th>어디서 오나</th></tr>
+    <tr><td><code>prerequisite</code><br>선수학습</td><td>A를 배우기 전에 B를 먼저 알아야 한다</td><td>반복(loop) → 변수(variable) · 조건까지반복(while_until) → 반복+조건 · 우선순위(priority) → 조건+순차</td><td>교육 설계자가 시드로 정의 (사람의 교육학 지식)</td></tr>
+    <tr><td><code>contains</code><br>포함</td><td>코딩 유형이 이 개념을 다룬다</td><td>blockly → 변수, 반복 … (개념의 적용 축: blockly/hybrid/react)</td><td>시드의 axes 정의</td></tr>
+    <tr><td><code>realized_by</code><br>구현</td><td>이 개념을 실제로 구현한 자산(청크)</td><td>신호등 개념 → 학습노트 #123, 코드 청크 #124</td><td><b>자동</b> — 빌드 산출물이 등록될 때 concept_key로 연결</td></tr>
+    <tr><td><code>uses</code><br>모듈 사용</td><td>이 개념/예제가 쓰는 MODI 하드웨어</td><td>버튼입력 → Button 모듈 · 신호등 → LED 모듈</td><td><b>자동</b> — 청크의 modi_keys에서 추출</td></tr>
+    <tr><td><code>relates_to</code><br>관련 (양방향)</td><td>실제로 함께 다뤄진 개념 쌍</td><td>같은 세션에서 공출현한 개념끼리 가중치와 함께 연결</td><td><b>자동</b> — 세션 데이터에서 통계적으로 축적</td></tr>
+  </table>
+  </div>
+  <div class="note good">
+    주목할 설계 — 5종 중 <b>3종(realized_by·uses·relates_to)은 사람이 관리하지 않는다</b>. 시스템이 쓰일수록 자동으로 자라는 관계다.
+    사람이 유지하는 것은 교육학적 판단이 필요한 선수학습(prerequisite)과 개념 정의뿐이므로 유지비가 낮다.
+    <span class="src">scripts/build_ontology.py:4-5,141-222 · scripts/ontology_seed.json(51개) · scripts/ontology_lib.py</span>
+  </div>
+
+  <figure>
+  <div class="svg-scroll">
+  <svg viewBox="0 0 900 320" font-family="Pretendard,system-ui,sans-serif">
+    <text x="450" y="24" text-anchor="middle" font-size="13.5" font-weight="800" fill="#1a202c">실제 시드 데이터로 그린 온톨로지 일부 — "조건까지 반복(while_until)" 주변</text>
+    <circle cx="120" cy="120" r="36" fill="#eff4ff" stroke="#93b4f5" stroke-width="1.5"/>
+    <text x="120" y="116" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d4ed8">변수</text>
+    <text x="120" y="130" text-anchor="middle" font-size="9.5" fill="#1d4ed8">variable</text>
+    <circle cx="300" cy="70" r="36" fill="#eff4ff" stroke="#93b4f5" stroke-width="1.5"/>
+    <text x="300" y="66" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d4ed8">반복</text>
+    <text x="300" y="80" text-anchor="middle" font-size="9.5" fill="#1d4ed8">loop</text>
+    <circle cx="300" cy="180" r="36" fill="#eff4ff" stroke="#93b4f5" stroke-width="1.5"/>
+    <text x="300" y="176" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d4ed8">조건</text>
+    <text x="300" y="190" text-anchor="middle" font-size="9.5" fill="#1d4ed8">conditional</text>
+    <circle cx="490" cy="120" r="40" fill="#dbe7fd" stroke="#1d4ed8" stroke-width="2"/>
+    <text x="490" y="112" text-anchor="middle" font-size="11.5" font-weight="800" fill="#1d4ed8">조건까지</text>
+    <text x="490" y="126" text-anchor="middle" font-size="11.5" font-weight="800" fill="#1d4ed8">반복</text>
+    <text x="490" y="140" text-anchor="middle" font-size="9.5" fill="#1d4ed8">while_until</text>
+
+    <line x1="264" y1="80" x2="158" y2="108" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ap)"/>
+    <text x="210" y="84" text-anchor="middle" font-size="10" fill="#1d4ed8">선수학습</text>
+    <line x1="264" y1="170" x2="158" y2="132" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ap)"/>
+    <text x="207" y="164" text-anchor="middle" font-size="10" fill="#1d4ed8">선수학습</text>
+    <line x1="452" y1="103" x2="338" y2="80" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ap)"/>
+    <text x="396" y="80" text-anchor="middle" font-size="10" fill="#1d4ed8">선수학습</text>
+    <line x1="452" y1="137" x2="338" y2="170" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ap)"/>
+    <text x="398" y="166" text-anchor="middle" font-size="10" fill="#1d4ed8">선수학습</text>
+
+    <rect x="640" y="40" width="180" height="52" rx="4" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="730" y="61" text-anchor="middle" font-size="11" font-weight="700" fill="#166534">학습노트·코드 청크</text>
+    <text x="730" y="77" text-anchor="middle" font-size="9.5" fill="#166534">"버튼 누를 때까지 반복" 예제</text>
+    <line x1="527" y1="106" x2="640" y2="76" stroke="#166534" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ag)"/>
+    <text x="586" y="80" text-anchor="middle" font-size="10" fill="#166534">realized_by (자동)</text>
+
+    <rect x="640" y="150" width="180" height="52" rx="4" fill="#f6f8fa" stroke="#a9b4c0"/>
+    <text x="730" y="171" text-anchor="middle" font-size="11" font-weight="700" fill="#5a6472">MODI Button·LED 모듈</text>
+    <text x="730" y="187" text-anchor="middle" font-size="9.5" fill="#5a6472">하드웨어 노드</text>
+    <line x1="527" y1="134" x2="640" y2="166" stroke="#5a6472" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a5)"/>
+    <text x="588" y="163" text-anchor="middle" font-size="10" fill="#5a6472">uses (자동)</text>
+
+    <rect x="40" y="220" width="290" height="66" rx="4" fill="#fffbeb" stroke="#e5c469"/>
+    <text x="185" y="241" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e">alias(별칭) — 학생 말투 흡수 (실제 시드)</text>
+    <text x="185" y="258" text-anchor="middle" font-size="10" fill="#92400e">"변수" = 메모지 · 마법 상자 · 비밀 상자 ·</text>
+    <text x="185" y="272" text-anchor="middle" font-size="10" fill="#92400e">담아두는 · 적어두는 · 값을 잠깐 …</text>
+    <line x1="130" y1="220" x2="122" y2="158" stroke="#92400e" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+    <path d="M 335 190 Q 420 250 480 162" fill="none" stroke="#a9b4c0" stroke-width="1.2" stroke-dasharray="2 3"/>
+    <text x="430" y="238" text-anchor="middle" font-size="10" fill="#5a6472">relates_to — 세션 공출현으로 자동 축적 (양방향·가중치)</text>
+
+    <defs>
+      <marker id="ap" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1d4ed8"/></marker>
+      <marker id="ag" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#166534"/></marker>
+      <marker id="a5" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5a6472"/></marker>
+    </defs>
+  </svg>
+  </div>
+  <figcaption>그림 1 — 온톨로지 관계 실례. "조건까지 반복"을 요청하면 그래프가 선수학습 사슬(반복·조건 → 변수), 구현 자산, 필요한 하드웨어를 한 번에 알려준다.</figcaption>
+  </figure>
+
+  <h3>4.3 온톨로지가 실제로 개입하는 두 지점</h3>
+  <ul>
+    <li><b>검색 정확도 (§5.3)</b>: 개념 centroid + alias가 융합 점수의 최대 가중치(0.45) — "마법 상자에 숫자 담아줘" 같은 아이 말투도 "변수" 개념으로 잡는다.</li>
+    <li><b>생성 품질 (프라임)</b>: 생성 직전에 "이 개념의 선수학습 경로 → 관련 개념 → 필요한 MODI 모듈 → 검증된 학습노트"를 프롬프트에 주입 — 생성물이 교육 맥락에 맞게 나온다. <span class="src">agent/reuse.py:150-234 (ontology_suggest)</span></li>
+  </ul>
+
+  <!-- ═══════════ 5. 알고리즘 수식 ═══════════ -->
+  <h2 id="s5"><span class="no">5</span>검색 알고리즘 상세 — 3중 유사도 수식</h2>
+  <p class="lead">아래 수식은 전부 실제 구현(<span class="src">scripts/search_lib.py</span>)을 그대로 옮긴 것이다. 각 수식 뒤에 "왜 이렇게 했는가"를 붙였다.</p>
+
+  <h3>5.1 벡터 유사도 v — "의미가 비슷한가" (가중치 0.40)</h3>
+  <p>질문 <i>q</i>와 청크 <i>c</i>를 각각 BGE-m3 임베딩으로 1,024차원 벡터로 바꾼 뒤, 두 벡터 사이 각도의 코사인을 잰다:</p>
+  <div class="formula">
+    <i>v</i>(<i>q</i>, <i>c</i>) = cos(<b>q</b>, <b>c</b>) =
+    ( <b>q</b> · <b>c</b> ) / ( ‖<b>q</b>‖ ‖<b>c</b>‖ )
+    &nbsp;&nbsp;∈ [0, 1]
+    <div class="where">
+      <b>q</b>·<b>c</b> = 두 벡터의 내적(각 자리 숫자를 곱해 모두 더한 값), ‖·‖ = 벡터 길이.
+      완전히 같은 의미면 1, 무관하면 0에 가깝다. 같은 방향(의미)인지 보므로 문장 길이에 영향받지 않는다.
+    </div>
+  </div>
+  <ul>
+    <li><b>왜 코사인인가</b>: "신호등 만들어줘"와 "빨강 초록이 번갈아 켜지게 해줘"는 단어가 하나도 안 겹치지만 의미가 같다 — 단어가 아닌 의미 좌표로 비교해야 잡힌다.</li>
+    <li><b>속도</b>: 코퍼스 전수 비교 대신 Redis의 HNSW 색인(가까운 이웃끼리 미리 연결해 둔 다층 그래프)으로 근사 최근접 탐색 — 밀리초 단위. 상위 후보를 넉넉히(top×10, <code>REDIS_FANOUT</code>) 받아 아래 5.4에서 재정렬한다.</li>
+  </ul>
+
+  <h3>5.2 어휘 일치 l — "정확한 단어가 있는가" (가중치 0.15)</h3>
+  <p>질문을 토큰(단어 조각) 집합으로 쪼갠 뒤, 청크(제목+본문)에 그중 몇 개가 나타나는지 비율을 잰다:</p>
+  <div class="formula">
+    <i>l</i>(<i>q</i>, <i>c</i>) = | T(<i>q</i>) ∩ T(<i>c</i>) | / | T(<i>q</i>) | &nbsp;&nbsp;∈ [0, 1]
+    <div class="where">
+      T(x) = x에서 한글·영문·숫자 연속열을 뽑아(정규식 <code>[0-9A-Za-z가-힣]+</code>) 소문자화하고,
+      불용어("해줘"·"만들"·"그리고" 등)와 1글자 토큰을 제거한 집합. |·| = 집합 크기, ∩ = 공통 원소.
+      <span class="src">search_lib.py:228-241</span>
+    </div>
+  </div>
+  <ul>
+    <li><b>왜 필요한가</b>: 벡터가 뭉개기 쉬운 <b>고유명사·모듈명</b>("IMU", "ToF", "다이얼")의 정확 일치를 보증하는 안전핀. 반대로 동의어에는 약해서 가중치를 낮게(0.15) 둔다.</li>
+    <li><b>예시</b>: 질문 "버튼 누르면 LED 켜줘" → T(q) = {버튼, 누르면, led, 켜줘}. 청크 제목 "버튼으로 LED 제어" → 공통 {버튼, led} → l = 2/4 = 0.50.</li>
+  </ul>
+
+  <h3>5.3 개념 유사도 con — "같은 개념 계열인가" (가중치 0.45, 최대) ★ 온톨로지가 검색에 개입하는 수식</h3>
+  <p>먼저 개념 <i>k</i>마다 대표 좌표(centroid)를 만든다 — 그 개념에 속한 <b>학습노트</b> 청크들의 임베딩 평균:</p>
+  <div class="formula">
+    <b>μ</b><sub>k</sub> = normalize( (1/n<sub>k</sub>) Σ<sub>i∈k</sub> <b>e</b><sub>i</sub> )
+    <div class="where">
+      <b>e</b><sub>i</sub> = 개념 k에 속한 i번째 학습노트 청크의 임베딩, n<sub>k</sub> = 그 개수.
+      <b>학습노트만 쓰는 이유(실전 교훈)</b>: 코드·설계 청크를 섞으면 centroid가 파일명·목표 문구 쪽으로 끌려가
+      개념 매칭이 틀어지는 회귀가 실제로 발생해 수정했다. <span class="src">search_lib.py:109-121 (#3 회귀 수정 주석)</span>
+    </div>
+  </div>
+  <p>그다음 질문과 centroid의 코사인에, 별칭(alias) 등장 보너스를 더한다:</p>
+  <div class="formula">
+    con<sub>k</sub>(<i>q</i>) = clip( cos(<b>q̂</b>, <b>μ</b><sub>k</sub>), 0, 1 ) + <i>W</i><sub>clex</sub> · min(hits<sub>k</sub>, 3) / 3
+    <div class="where">
+      <b>q̂</b> = 정규화된 질문 벡터 · <i>W</i><sub>clex</sub> = 0.2 ·
+      hits<sub>k</sub> = 질문 문자열에 개념 k의 alias가 나타난 개수(최대 3개까지 반영).
+      예: "마법 상자에 숫자 담아줘"에는 변수 개념의 alias "마법 상자"·"숫자를 담"이 나타나 hits=2 → 보너스 0.2×⅔ ≈ 0.133.
+      <span class="src">search_lib.py:103-106, 300-305</span>
+    </div>
+  </div>
+  <ul>
+    <li><b>왜 개별 문서가 아닌 centroid인가</b>: 개별 청크와의 유사도는 표현 하나에 흔들리지만, 개념 청크들의 평균 좌표는 <b>말바꿈(패러프레이즈)에 강하다</b>. 실측에서 gold 질의 6/8을 centroid가 맞춰 개별 청크 top1보다 우수 → 최대 가중치 0.45의 근거. <span class="src">search_lib.py:33-34 주석</span></li>
+    <li><b>왜 alias 보너스인가</b>: 의미 좌표가 놓치는 판별어("장애물", "깜깜" 같은 도메인 단어와 아이 말투)를 시드 지식으로 보강.</li>
+  </ul>
+
+  <h3>5.4 융합과 판정 — 최종 점수와 3단계 결정</h3>
+  <div class="formula">
+    S(<i>q</i>, <i>c</i>) = 0.40·<i>v</i> + 0.15·<i>l</i> + 0.45·con<sub>k(c)</sub>
+    &nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;&nbsp;
+    결정 = reuse (S ≥ 0.62) · review (S ≥ 0.48) · register (그 외)
+    <div class="where">
+      k(c) = 청크 c의 concept_key. 가중치·임계값은 환경변수로 조정 가능(운영 중 튜닝 대비).
+      후보는 점수순 정렬 후 중복 제거(같은 노트가 여러 세션에 복제된 경우 최고점 1건만),
+      사용자 가시성 필터(전역 base 자산은 모두에게, 등록물은 본인 것만) 적용.
+      <span class="src">search_lib.py:249-254, 307-346, 356-361</span>
+    </div>
+  </div>
+
+  <h4>계산 시연 (가상의 수치로 전 과정 재현)</h4>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>단계</th><th>값</th><th>계산</th></tr>
+    <tr><td>질문</td><td colspan="2">"버튼 누르면 LED 켜줘" — 저장물 후보: "버튼으로 LED 제어" (concept_key=button_input)</td></tr>
+    <tr><td>① 벡터 v</td><td class="num">0.71</td><td>BGE-m3 임베딩 코사인 (표현은 달라도 의미 유사)</td></tr>
+    <tr><td>② 어휘 l</td><td class="num">0.50</td><td>공통 토큰 {버튼, led} ÷ 질문 토큰 4개</td></tr>
+    <tr><td>③ 개념 con</td><td class="num">0.79</td><td>centroid 코사인 0.66 + alias 보너스(버튼·누르면 2개 적중) 0.2×⅔ = 0.133</td></tr>
+    <tr><td><b>④ 융합 S</b></td><td class="num"><b>0.716</b></td><td>0.40×0.71 + 0.15×0.50 + 0.45×0.79 = 0.284 + 0.075 + 0.357</td></tr>
+    <tr><td>⑤ 게이트 판정</td><td colspan="2">0.716 ≥ τ_reuse(0.62) → <span class="pill p-ok">reuse — 직접서브 후보</span></td></tr>
+    <tr><td>⑥ 만족도 검증</td><td colspan="2">Haiku가 저장물 vs 요청을 대조 (입력 ~1k 토큰): 델타 없음 + score ≥ 90이면 <b>직접서브(생성 0)</b>, 아니면 near(참고+생성)로 강등</td></tr>
+  </table>
+  </div>
+  <div class="note warn">
+    ⑥이 중요한 이유(§2 "델타" 참조) — S=0.716이어도 요청이 "버튼 누르면 LED <b>파랗게</b> 켜줘"라면 색상 델타가 있어 저장물을 그대로 주면 틀린 답이 된다.
+    실측에서 델타 있는 요청의 만족도는 15~20점에 그쳐 확실히 걸러졌다. <b>유사도(찾기)와 만족도(그대로 줘도 되는가)는 다른 질문</b>이며, 이 이중 구조가 시스템의 안전장치다.
+  </div>
+
+  <!-- ═══════════ 6. 전체 프로세스 ═══════════ -->
+  <h2 id="s6"><span class="no">6</span>전체 프로세스 — 요청부터 저장까지</h2>
+
+  <figure>
+  <div class="svg-scroll">
+  <svg viewBox="0 0 920 560" font-family="Pretendard,system-ui,sans-serif">
+    <rect x="20" y="30" width="130" height="46" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="85" y="50" text-anchor="middle" font-size="12" font-weight="700">사용자 요청</text>
+    <text x="85" y="65" text-anchor="middle" font-size="10" fill="#5a6472">/chat API</text>
+    <line x1="150" y1="53" x2="205" y2="53" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+
+    <rect x="205" y="30" width="130" height="46" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="270" y="50" text-anchor="middle" font-size="12" font-weight="700">intent 분류</text>
+    <text x="270" y="65" text-anchor="middle" font-size="10" fill="#5a6472">빌드/수정/질문/대화</text>
+    <line x1="335" y1="53" x2="390" y2="53" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+    <text x="362" y="46" text-anchor="middle" font-size="9.5" fill="#5a6472">코드 턴만</text>
+
+    <rect x="390" y="18" width="210" height="70" rx="4" fill="#eff4ff" stroke="#93b4f5" stroke-width="1.5"/>
+    <text x="495" y="40" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1d4ed8">재사용 게이트 (RAG 검색)</text>
+    <text x="495" y="57" text-anchor="middle" font-size="10.5" fill="#1d4ed8">3중 유사도 융합 S = .40v + .15l + .45con</text>
+    <text x="495" y="72" text-anchor="middle" font-size="10.5" fill="#1d4ed8">판정: reuse ≥ .62 · review ≥ .48 · register</text>
+
+    <rect x="660" y="10" width="240" height="88" rx="4" fill="#fff" stroke="#a9b4c0"/>
+    <text x="780" y="30" text-anchor="middle" font-size="11.5" font-weight="800" fill="#5a6472">지식 저장소 (코퍼스)</text>
+    <rect x="672" y="40" width="102" height="24" rx="3" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="723" y="56" text-anchor="middle" font-size="9.5" fill="#5a6472">MySQL 원문·메타</text>
+    <rect x="786" y="40" width="102" height="24" rx="3" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="837" y="56" text-anchor="middle" font-size="9.5" fill="#5a6472">Redis 벡터(HNSW)</text>
+    <rect x="672" y="68" width="216" height="24" rx="3" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="780" y="84" text-anchor="middle" font-size="9.5" fill="#166534">온톨로지 그래프 (51개념 × 관계 5종)</text>
+    <line x1="660" y1="53" x2="600" y2="53" stroke="#5a6472" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+    <line x1="495" y1="88" x2="230" y2="140" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+    <line x1="495" y1="88" x2="495" y2="140" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+    <line x1="495" y1="88" x2="750" y2="140" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+
+    <rect x="110" y="140" width="240" height="86" rx="4" fill="#f0fdf4" stroke="#4d9e66" stroke-width="1.5"/>
+    <text x="230" y="162" text-anchor="middle" font-size="12" font-weight="800" fill="#166534">tier 1 · 직접서브</text>
+    <text x="230" y="180" text-anchor="middle" font-size="10.5" fill="#166534">만족도 검증 통과(≥90 + 델타無) 시</text>
+    <text x="230" y="196" text-anchor="middle" font-size="10.5" fill="#166534">저장물 그대로 반환</text>
+    <text x="230" y="214" text-anchor="middle" font-size="11" font-weight="800" fill="#166534">생성 비용 0 · 즉시</text>
+
+    <rect x="375" y="140" width="240" height="86" rx="4" fill="#fffbeb" stroke="#e5c469" stroke-width="1.5"/>
+    <text x="495" y="162" text-anchor="middle" font-size="12" font-weight="800" fill="#92400e">tier 2 · near</text>
+    <text x="495" y="180" text-anchor="middle" font-size="10.5" fill="#92400e">후보를 참고자료로 프라임</text>
+    <text x="495" y="196" text-anchor="middle" font-size="10.5" fill="#92400e">+ 온톨로지 프라임 → LLM 생성</text>
+    <text x="495" y="214" text-anchor="middle" font-size="11" font-weight="800" fill="#92400e">출력 −19% · 품질 양호</text>
+
+    <rect x="640" y="140" width="240" height="86" rx="4" fill="#f6f8fa" stroke="#a9b4c0" stroke-width="1.5"/>
+    <text x="760" y="162" text-anchor="middle" font-size="12" font-weight="800" fill="#5a6472">tier 3 · cold</text>
+    <text x="760" y="180" text-anchor="middle" font-size="10.5" fill="#5a6472">유사 자산 없음 (register 판정)</text>
+    <text x="760" y="196" text-anchor="middle" font-size="10.5" fill="#5a6472">온톨로지 프라임 → LLM 신규 생성</text>
+    <text x="760" y="214" text-anchor="middle" font-size="11" font-weight="800" fill="#5a6472">기준 비용 (1,199 tok)</text>
+
+    <line x1="230" y1="226" x2="418" y2="272" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+    <line x1="495" y1="226" x2="475" y2="272" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+    <line x1="760" y1="226" x2="545" y2="272" stroke="#5a6472" stroke-width="1.5" marker-end="url(#b1)"/>
+    <rect x="330" y="272" width="330" height="64" rx="4" fill="#fff" stroke="#dde3ea" stroke-width="1.5"/>
+    <text x="495" y="294" text-anchor="middle" font-size="12" font-weight="800">응답 + 후처리(생성 tier만)</text>
+    <text x="495" y="312" text-anchor="middle" font-size="10.5" fill="#5a6472">학습노트·설계문서·주석 — 이미 있으면 스킵(게이팅)·병렬 샤딩</text>
+    <text x="495" y="327" text-anchor="middle" font-size="10.5" fill="#5a6472">매 턴 Langfuse에 tier·점수·토큰 기록</text>
+
+    <line x1="495" y1="336" x2="495" y2="378" stroke="#1d4ed8" stroke-width="1.8" marker-end="url(#b2)"/>
+    <rect x="270" y="378" width="450" height="96" rx="4" fill="#eff4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="495" y="400" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1d4ed8">write-back — 무엇이 저장되나</text>
+    <text x="495" y="419" text-anchor="middle" font-size="10.5" fill="#1d4ed8">학습노트 · 설계문서 · 코드(파일) · 목표(goal) · MODI 모듈키</text>
+    <text x="495" y="435" text-anchor="middle" font-size="10.5" fill="#1d4ed8">각 청크에 concept_key + domain + difficulty + intent 태그 자동 부여</text>
+    <text x="495" y="451" text-anchor="middle" font-size="10.5" fill="#1d4ed8">source="registered" 표시 — 등록물은 본인에게만 노출, 검수 승격 전까지 전역 미노출</text>
+    <text x="495" y="467" text-anchor="middle" font-size="10" fill="#1d4ed8">온톨로지에도 realized_by·uses 엣지 자동 추가</text>
+
+    <path d="M 720 426 L 880 426 L 880 108" fill="none" stroke="#1d4ed8" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#b2)"/>
+    <text x="866" y="250" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d4ed8" transform="rotate(90 866 250)">코퍼스로 환류 — 다음 요청의 적중률 상승</text>
+
+    <text x="460" y="520" text-anchor="middle" font-size="10.5" fill="#5a6472">한 번의 cold 생성 = 이후 여러 번의 직접서브 재료. 시스템이 쓰일수록 tier 1·2 비중이 커지는 구조.</text>
+    <text x="460" y="542" text-anchor="middle" font-size="10" fill="#5a6472">근거: server.py:185-233,520-559 · agent/orchestrator_stream.py:746-762 · agent/prime_service.py · agent/direct_serve.py</text>
+
+    <defs>
+      <marker id="b1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5a6472"/></marker>
+      <marker id="b2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1d4ed8"/></marker>
+    </defs>
+  </svg>
+  </div>
+  <figcaption>그림 2 — 전체 프로세스. 요청 → intent → 게이트(§5 수식) → 3-tier → 응답 → write-back 환류.</figcaption>
+  </figure>
+
+  <!-- ═══════════ 7. 비용절감 근거 ═══════════ -->
+  <h2 id="s7"><span class="no">7</span>비용절감 근거와 시점 (실측)</h2>
+  <p class="lead">이슈 #84에서 프로덕션 동일 경로(CLI 모드)로 수행한 통제 실험. 동일 요청("파란 하트 좋아요 버튼")으로 전략별 격리 비교.</p>
+
+  <h3>7.1 재사용 전략별 실측 — "편집시키기"는 손해, "그대로 주기"만 이득</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>전략</th><th>출력 토큰(평균)</th><th>소요</th><th>빌드 품질</th><th>판정</th></tr>
+    <tr><td>COLD — 신규 생성 (기준선)</td><td class="num">1,199</td><td class="num">~47초</td><td>최고 (성공)</td><td>tier 3</td></tr>
+    <tr><td>참고 프라임 + 자유 생성</td><td class="num best">973 (−19%)</td><td class="num">~55초</td><td>양호 (성공)</td><td><span class="pill p-ok">채택 → tier 2 (near)</span></td></tr>
+    <tr><td>저장물 시드 + 편집 강제 (구 PR#79)</td><td class="num worst">2,408 (+101%)</td><td class="num worst">~84초</td><td>최저 (실패)</td><td><span class="pill p-bad">실측 후 폐기 (기본 OFF)</span></td></tr>
+    <tr><td><b>저장물 직접서브 (델타 없음 검증 후)</b></td><td class="num best"><b>0</b> (검증 ~1k 입력만)</td><td class="num best">즉시</td><td>저장물 품질 그대로</td><td><span class="pill p-ok">채택 → tier 1</span></td></tr>
+  </table>
+  </div>
+
+  <h3>7.2 언제 줄어드는가</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>시점</th><th>절감 형태</th><th>조건</th></tr>
+    <tr><td><b>지금 즉시</b> (07-07 배포~)</td><td>직접서브 적중 턴마다 생성 1,199 tok → 0 · near 적중 턴 −19%</td><td>코퍼스에 유사 자산 존재 (기능은 이미 ON)</td></tr>
+    <tr><td><b>단기 (수주)</b></td><td>write-back으로 코퍼스 자연 증가 → 적중률·절감률 동반 상승</td><td>실트래픽 + TAU 튜닝 (§11 P1)</td></tr>
+    <tr><td><b>중기 (1~2개월)</b></td><td>사전제작으로 적중률을 구조적으로 견인 (최대 지렛대)</td><td>§9 데이터 축적 전략 실행 (§11 P2)</td></tr>
+    <tr><td><b>과금 형태</b></td><td>CLI 구독 모드: 세션리밋(429) 헤드룸 + 속도로 나타남 · API 전환 시: 청구액 직접 절감 + 캐시·상한 실효</td><td>API 전환은 실측 데이터로 결정 (§11 P3)</td></tr>
+  </table>
+  </div>
+  <div class="note">
+    <b>절감률 추정식</b>: 절감률 ≈ 직접서브 적중률 × 95% + near 적중률 × 19% (코드턴 생성비 기준).
+    예) 직접서브 20% + near 30% 적중 → 생성비 약 <b>25% 절감</b>. §9의 사전제작이 적중률을 끌어올리는 수단이다.
+  </div>
+
+  <!-- ═══════════ 8. AS-IS/TO-BE ═══════════ -->
+  <h2 id="s8"><span class="no">8</span>AS-IS → TO-BE</h2>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>항목</th><th>AS-IS (개선 전)</th><th>TO-BE (현재 배포)</th><th>NEXT (로드맵 목표)</th></tr>
+    <tr><td>코드 생성</td><td>매 턴 전체 생성 (요청 수 = 생성 수)</td><td>3-tier: 직접서브(0) / near(−19%) / cold</td><td>사전제작으로 직접서브 적중률 30%+</td></tr>
+    <tr><td>생성 결과물</td><td>1회용, 세션 종료 시 휘발</td><td>write-back으로 자산화 (165건 백필 + 자동 적재)</td><td>품질 게이트 통과분만 전역 승격</td></tr>
+    <tr><td>검색</td><td>단순 어휘 매칭 수준</td><td>3중 유사도 융합(§5), 표준 질의 8/8</td><td>TAU 실분포 재튜닝</td></tr>
+    <tr><td>온톨로지</td><td>없음</td><td>51개념 × 관계 5종, 검색·프라임 양쪽 개입</td><td>커버리지 갭 영역 확충</td></tr>
+    <tr><td>수정 턴</td><td>전체 재작성 빈발</td><td>edit 유도 + 재출력 가드</td><td>—</td></tr>
+    <tr><td>후처리</td><td>매번 재생성</td><td>게이팅(있으면 스킵) + 병렬 샤딩</td><td>—</td></tr>
+    <tr><td>관측</td><td>감으로 판단</td><td>Langfuse 전량 계측 + LLM 비용 0 시뮬레이터</td><td>주간 코호트 리포트 자동화 + CI 회귀</td></tr>
+  </table>
+  </div>
+
+  <!-- ═══════════ 9. 데이터 축적 전략 ═══════════ -->
+  <h2 id="s9"><span class="no">9</span>데이터 축적 전략 — 얼마나, 누가, 무엇을 저장하나</h2>
+  <p class="lead">절감률 = 적중률의 함수이므로(§7), 코퍼스를 어떻게 채우느냐가 곧 절감 전략이다. 세 가지 질문에 답한다.</p>
+
+  <h3>9.1 얼마나 모아야 하나 — 목표량 산정</h3>
+  <div class="formula">
+    1차 목표 자산량 ≈ 개념 수(51) × 개념당 검증 예제 3종 ≈ <b>150 ~ 200개 검증 자산</b>
+    <div class="where">
+      "검증 자산" = 빌드 성공 + 만족도 검증 통과가 확인된 code/learning_note 청크.
+      개념당 3종 = 대표 예제 1 + 주요 변형 2 (예: 신호등 기본 / 버튼으로 시작 / 속도 조절).
+      현재 백필 165건은 <b>수량으로는 목표 규모지만 품질 미검수</b> — 검수 승격이 필요한 상태.
+    </div>
+  </div>
+  <ul>
+    <li><b>진행률 측정 방법 (이미 구축됨)</b>: <code>simulate_batch.py</code>가 표준 질의 묶음의 reuse+review 비율(=커버리지)을 LLM 비용 0으로 측정. 목표 단계: 커버리지 30% → 60% → 80%.</li>
+    <li><b>어디부터 채울지의 데이터 (이미 쌓이는 중)</b>: near-miss 계측(0.48~0.62 구간에서 아깝게 미달한 요청)이 "수요는 있는데 자산이 없는" 지점을 매 턴 기록 — 제작 우선순위가 감이 아닌 로그에서 나온다.</li>
+  </ul>
+
+  <h3>9.2 누가 만드나 — 관리자 사전제작 vs 사용자 축적 (질문에 대한 답)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th style="width:120px"></th><th>A. 관리자 사전제작 (curated)</th><th>B. 사용자 생성 축적 (organic)</th><th style="background:var(--ok-bg)">C. 하이브리드 (권장)</th></tr>
+    <tr><td><b>방식</b></td><td>관리자 모드에서 표준 커리큘럼 예제를 미리 생성·검수·등록</td><td>실사용자 요청의 write-back만으로 자연 축적</td><td>시드는 A로, 롱테일은 B로, near-miss 로그가 A의 제작 큐를 채움</td></tr>
+    <tr><td><b>품질</b></td><td>통제됨 — 1회 검수로 N회 서브</td><td>편차 큼 — 미검수 등록물</td><td>전역 노출은 검수 통과분만 (현 구조 그대로: 등록물은 기본 본인만 노출)</td></tr>
+    <tr><td><b>커버리지 속도</b></td><td>즉시 (배치로 하루면 51개념 커버 가능)</td><td>느림 — 콜드스타트 문제</td><td>즉시 시드 + 지속 성장</td></tr>
+    <tr><td><b>실수요 정합</b></td><td>어긋날 위험 — 안 쓰는 예제 제작 가능</td><td>100% 정합 — 실제 요청에서만 나옴</td><td>near-miss가 실수요를 알려주므로 A의 낭비 제거</td></tr>
+    <tr><td><b>비용</b></td><td>1회 선투자. <b>구독 CLI로 야간·유휴 시간 배치 생성하면 한계비용이 낮고</b>, 이후 서브는 0</td><td>추가 비용 0 (어차피 생성하는 것의 부산물)</td><td>A의 선투자 + B는 무료</td></tr>
+    <tr><td><b>판정</b></td><td><span class="pill p-warn">단독으론 낭비 위험</span></td><td><span class="pill p-warn">단독으론 너무 느림</span></td><td><span class="pill p-ok">채택 권장</span></td></tr>
+  </table>
+  </div>
+  <div class="note good">
+    <b>권장안의 근거</b> — 질문하신 "관리자가 미리 만들어두면 비용절감이 가능하다"는 직관은 옳다. 사전제작 1건의 생성비는 cold 1회와 같지만
+    그 자산이 k번 직접서브되면 절감은 k×1,199토큰이므로 <b>k≥1이면 이미 본전</b>이다. 단, 아무거나 미리 만들면 k=0(안 쓰임)이 되므로
+    ① 교육과정상 반드시 나오는 표준 예제(개념 51 × 3)는 선제작하고, ② 그 외는 near-miss 로그가 "실제로 2번 이상 아깝게 미달한 요청"을
+    제작 큐에 올리는 방식으로 k가 보장된 것만 만든다. 이것이 §11 로드맵 P2(콘텐츠 팩토리)의 설계다.
+  </div>
+
+  <h3>9.3 무엇을·어떤 비율로 저장하나 — 카테고리 전략</h3>
+  <ul>
+    <li><b>전량 저장하되, 노출은 게이트</b>: write-back은 모든 빌드 산출물을 저장하지만(비용 0의 부산물), <code>source="registered"</code>로 표시되어 <b>본인에게만</b> 검색 노출된다. 전역(모든 사용자) 노출은 검수 승격분만 — 저장 비율보다 <b>승격 비율</b>이 품질 관리 지점.</li>
+    <li><b>카테고리는 이미 자동</b>: 질문하신 "카테고리 기반 자동화"는 이미 구조에 있다 — 모든 청크에 concept_key(51개념) × domain × difficulty × intent가 자동 태깅되므로, 커버리지를 <b>개념×난이도 매트릭스</b>로 보면 빈 칸이 곧 제작 대상이다.</li>
+    <li><b>중복은 검색단에서 해소</b>: 같은 개념 자산이 여러 개면 검색이 최고점 1건만 서브(dedup)하므로 저장 중복은 해가 아니나, 승격 검수 시 개념당 대표 1~3건을 지정하는 것이 관리상 깔끔하다.</li>
+    <li><b>저장 안 하는 것</b>: 빌드 실패물·가드레일 차단 턴은 등록되지 않음. 향후 만족도 검증 점수를 승격 기준에 재사용 가능(이미 같은 검증기가 있음).</li>
+  </ul>
+
+  <figure>
+  <div class="svg-scroll">
+  <svg viewBox="0 0 900 240" font-family="Pretendard,system-ui,sans-serif">
+    <text x="450" y="24" text-anchor="middle" font-size="13.5" font-weight="800">하이브리드 축적 루프 — 두 공급원이 하나의 검수 게이트로 합류</text>
+    <rect x="30" y="60" width="240" height="64" rx="4" fill="#eff4ff" stroke="#93b4f5" stroke-width="1.5"/>
+    <text x="150" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">A. 관리자 사전제작</text>
+    <text x="150" y="101" text-anchor="middle" font-size="10" fill="#1d4ed8">표준 커리큘럼 51개념 × 3 (선제)</text>
+    <text x="150" y="115" text-anchor="middle" font-size="10" fill="#1d4ed8">+ near-miss 큐가 알려주는 실수요분</text>
+    <rect x="30" y="150" width="240" height="64" rx="4" fill="#fffbeb" stroke="#e5c469" stroke-width="1.5"/>
+    <text x="150" y="174" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">B. 사용자 write-back</text>
+    <text x="150" y="191" text-anchor="middle" font-size="10" fill="#92400e">모든 빌드 산출물 자동 저장 (비용 0)</text>
+    <text x="150" y="205" text-anchor="middle" font-size="10" fill="#92400e">본인에게만 노출 (미검수 상태)</text>
+
+    <line x1="270" y1="92" x2="360" y2="120" stroke="#5a6472" stroke-width="1.5" marker-end="url(#c1)"/>
+    <line x1="270" y1="182" x2="360" y2="150" stroke="#5a6472" stroke-width="1.5" marker-end="url(#c1)"/>
+
+    <rect x="360" y="105" width="200" height="62" rx="4" fill="#f0fdf4" stroke="#4d9e66" stroke-width="1.5"/>
+    <text x="460" y="128" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">품질 검수 게이트</text>
+    <text x="460" y="145" text-anchor="middle" font-size="10" fill="#166534">빌드 성공 + 만족도 ≥ 90</text>
+    <text x="460" y="159" text-anchor="middle" font-size="10" fill="#166534">통과분만 전역 승격</text>
+
+    <line x1="560" y1="136" x2="640" y2="136" stroke="#5a6472" stroke-width="1.5" marker-end="url(#c1)"/>
+    <rect x="640" y="105" width="230" height="62" rx="4" fill="#fff" stroke="#a9b4c0" stroke-width="1.5"/>
+    <text x="755" y="128" text-anchor="middle" font-size="12" font-weight="700" fill="#5a6472">전역 코퍼스 (모두에게 서브)</text>
+    <text x="755" y="145" text-anchor="middle" font-size="10" fill="#5a6472">개념×난이도 매트릭스로 갭 관리</text>
+    <text x="755" y="159" text-anchor="middle" font-size="10" fill="#5a6472">목표: 검증 자산 150~200 → 커버리지 80%</text>
+
+    <path d="M 755 167 L 755 200 L 150 200 L 150 214" fill="none" stroke="#1d4ed8" stroke-width="1.4" stroke-dasharray="5 4"/>
+    <text x="500" y="193" text-anchor="middle" font-size="10" font-weight="700" fill="#1d4ed8">near-miss 로그 (아깝게 미달한 실수요) → 관리자 제작 큐로 환류</text>
+    <defs><marker id="c1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5a6472"/></marker></defs>
+  </svg>
+  </div>
+  <figcaption>그림 3 — 데이터 축적 하이브리드 루프. 공급 2원화 + 검수 게이트 1원화 + 실수요 환류.</figcaption>
+  </figure>
+
+  <!-- ═══════════ 10. 안정성·테스트 ═══════════ -->
+  <h2 id="s10"><span class="no">10</span>안정성·테스트 현황</h2>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>검증 계층</th><th>내용</th><th>상태</th></tr>
+    <tr><td>자동 테스트</td><td>전체 스위트 <b>427 passed / 3 skipped</b> (10.5초, 36개 파일) — 본 보고서 작성 시 직접 실행. 재사용·직접서브·검색품질·온톨로지·write-back·동시성 전 영역 커버</td><td><span class="pill p-ok">green</span> (간헐 실패 1건: <code>test_code_retry</code> — 재실행 통과, 추적 필요)</td></tr>
+    <tr><td>LLM 비용 0 회귀</td><td><code>/api/simulate</code> + <code>simulate_batch.py</code> — 실서비스와 동일한 게이트·프라임 코드를 LLM 없이 태워 정확성(PASS/FAIL)·지연·커버리지 배치 측정</td><td><span class="pill p-ok">구축·배포</span> (CI 상시화는 P0)</td></tr>
+    <tr><td>검색 품질</td><td>표준 질의 8/8 (#38에서 centroid+alias 재랭킹으로 달성), <code>test_search_quality.py</code>가 회귀 방지</td><td><span class="pill p-ok">green</span></td></tr>
+    <tr><td>운영 관측</td><td>Langfuse(매 턴 tier·점수·토큰) + Sentry(예외 자동 이슈화)</td><td><span class="pill p-warn">열린 버그 3건</span> #73·#80·#81 → P0 처리</td></tr>
+    <tr><td>롤백 수단</td><td>신규 동작 전부 env 킬스위치: <code>DIRECT_SERVE</code>·<code>REUSE_SEED_EDIT</code>·<code>REUSE_ON_MODIFY</code> 등 — 재배포 없이 즉시 차단</td><td><span class="pill p-ok">완비</span></td></tr>
+  </table>
+  </div>
+  <div class="note warn">
+    <b>정직한 평가</b> — 직접서브의 실트래픽 검증은 아직 없다(통제 실험 n=1~2, 방향성은 3개 실측 일치).
+    "구축은 완료, 실증은 진행 중"이 정확한 표현이며, 실증 계획이 §11의 P1이다.
+  </div>
+
+  <!-- ═══════════ 11. 로드맵 ═══════════ -->
+  <h2 id="s11"><span class="no">11</span>로드맵</h2>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>단계</th><th>기간</th><th>내용</th><th>완료 기준</th></tr>
+    <tr><td><b>P0 안정화</b></td><td>~1주</td><td>버그 3건(#73·#80·#81) 수정 · simulate_batch CI 상시화 · flaky 테스트 추적</td><td>Sentry 신규 0 · CI green</td></tr>
+    <tr><td><b>P1 실측·튜닝</b></td><td>2~4주</td><td>tier별 비용·지연 코호트 주간 자동화 · near-miss 분포로 TAU(0.62/0.48)·컷오프(90) 재튜닝 · 직접서브 오판 프록시(후속 수정률) 계측</td><td><b>실측 절감률 첫 확정</b> · 직접서브 적중 10%+ · 오판 &lt;10%</td></tr>
+    <tr><td><b>P2 콘텐츠 팩토리</b></td><td>1~2개월</td><td>§9 하이브리드 전략 실행 — 51개념×3 선제작 + near-miss 큐 + 검수 승격 파이프라인</td><td>커버리지 80% · 직접서브 적중 30%+ · 코드턴 출력 −20%+</td></tr>
+    <tr><td><b>P3 모델·과금</b></td><td>P1 후 결정</td><td>API 전환 평가(청구액 가시화 + 캐시·상한 실효) · 생성만 Sonnet 승격 검토(품질↑ 비용을 직접서브 절감으로 상쇄)</td><td>데이터 기반 의사결정 문서</td></tr>
+  </table>
+  </div>
+  <p>실행 단위 업무지시는 <code>docs/design/sonnet-work-orders-2026-07.md</code>(W1~W8)에 세션 단위로 분해되어 있다.</p>
+
+  <!-- ═══════════ 13. 진단 (v3 신규) ═══════════ -->
+  <h2 id="s13"><span class="no">13</span>진단 — "같은 질문인데 시간·비용이 그대로"의 원인 (배포 서버 실측)</h2>
+  <p class="lead">2026-07-08, 실제 배포 서버(.95:18080 + rag-search :8100)에 직접 질의해 원인을 확정했다. 결론부터: <b>배포·기능은 정상 적용되어 있고, 데이터 양의 문제도 아니다. 코드 자산이 검색 상위에 오르지 못해 게이트의 마지막 조건에서 항상 탈락하는 구조적 문제</b>다.</p>
+
+  <h3>13.1 실측 증거 사슬 (재현 가능)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th style="width:40px">#</th><th>확인</th><th>결과</th><th>해석</th></tr>
+    <tr><td>①</td><td>서비스 상태 (<code>/health</code>)</td><td>앱 정상(CLI 모드·세션 5) · rag-search 정상(벡터 ON · <b>등록 청크 2,727건</b>)</td><td>배포 적용됨, 코퍼스도 큼</td></tr>
+    <tr><td>②</td><td>게이트 시뮬레이션 (<code>/api/simulate</code>, "버튼 누르면 LED 켜지게 해줘")</td><td>top1 = <b>0.623</b> (임계 0.62 통과) — 그런데 판정 = <b>none</b></td><td>점수는 넘는데 재사용 분기를 안 탐 → 마지막 조건에서 탈락</td></tr>
+    <tr><td>③</td><td>검색 상위 실물 (<code>/api/search</code> top5·top8, 질의 3종)</td><td>상위가 <b>전부 학습노트·설계문서</b> (kind=code <b>0건</b>, files 보유 0건)</td><td>게이트는 top5에서 <code>kind=="code"</code>만 후보로 인정(<span class="src">agent/reuse.py:38-46</span>) → 항상 none</td></tr>
+    <tr><td>④</td><td>코드 자산 존재 여부 (질의 "코드")</td><td>code 청크 <b>7건 검색됨, 전부 files 보유</b></td><td>자산은 있다 — 자연어 질의에서 상위에 못 오를 뿐</td></tr>
+    <tr><td>⑤</td><td>커버리지 지표 (<code>/api/coverage</code>, 표준질의 10건)</td><td>reuse 70% + review 30% = <b>재사용가능 100%</b></td><td><b>착시</b> — 이 지표는 점수 기준이라 kind 조건을 반영하지 않음</td></tr>
+  </table>
+  </div>
+
+  <figure>
+  <svg viewBox="0 0 760 190" font-family="Pretendard,system-ui,sans-serif" role="img" aria-label="재사용 깔때기: 점수 기준 100%가 게이트 kind 조건에서 0%로 떨어짐">
+    <text x="20" y="24" font-size="13" font-weight="800" fill="#1a202c">재사용 깔때기 — 어디서 새는가 (표준질의 10건 기준, 2026-07-08 실측)</text>
+    <text x="20" y="62" font-size="12" fill="#1a202c">① 검색 점수 기준 재사용가능</text><text x="20" y="77" font-size="10.5" fill="#5a6472">S ≥ 0.48 (reuse+review)</text>
+    <rect x="250" y="50" width="440" height="18" rx="4" fill="#1d4ed8"><title>10건 중 10건 (100%)</title></rect>
+    <text x="700" y="64" font-size="12" font-weight="700" fill="#1a202c">10/10</text>
+    <text x="20" y="107" font-size="12" fill="#1a202c">② 게이트: top5에 code 후보</text><text x="20" y="122" font-size="10.5" fill="#5a6472">payload.kind == "code"</text>
+    <rect x="250" y="95" width="440" height="18" rx="4" fill="none" stroke="#991b1b" stroke-dasharray="4 3"/>
+    <text x="700" y="109" font-size="12" font-weight="800" fill="#991b1b">0건 ← 병목</text>
+    <text x="20" y="152" font-size="12" fill="#1a202c">③ 직접서브 발동</text><text x="20" y="167" font-size="10.5" fill="#5a6472">만족도 ≥90 + 델타 없음</text>
+    <rect x="250" y="140" width="440" height="18" rx="4" fill="none" stroke="#dde3ea"/>
+    <text x="700" y="154" font-size="12" font-weight="700" fill="#5a6472">0건 (도달 못 함)</text>
+  </svg>
+  <figcaption>그림 5 — 점수 단계(①)는 100%인데 게이트의 kind 조건(②)에서 전량 탈락 → 사용자 체감 "매번 새로 생성"은 정확한 관찰이다.</figcaption>
+  </figure>
+
+  <h3>13.2 왜 code 청크가 상위에 못 오르나 (구조적 편향 2가지)</h3>
+  <ul>
+    <li><b>콘텐츠 빈약</b>: write-back 시 code 청크의 검색 대상 텍스트는 "요청 목표 + 파일명"뿐(<span class="src">scripts/registry_lib.py:324-331</span>). 반면 학습노트는 풍부한 설명문 — 벡터·어휘 점수 모두 노트가 유리.</li>
+    <li><b>개념 점수의 노트 편향</b>: 개념 centroid는 의도적으로 <b>학습노트만으로</b> 구성된다(§5.3의 드리프트 방지 설계). 융합 가중치 최대(0.45)인 개념 점수가 노트를 밀어올려 top5를 독점.</li>
+  </ul>
+  <div class="note">
+    즉 §5의 검색 설계는 "개념을 잘 찾기"에는 성공했지만(커버리지 100%), "재사용할 <b>코드 실물</b>을 상위에 올리기"와는 목표가 어긋나 있었다.
+    두 목표는 같은 랭킹 하나로 만족될 수 없다 — <b>용도별 검색(개념용 vs 재사용용)의 분리</b>가 필요하다.
+  </div>
+
+  <h3>13.3 질문에 대한 직접 답변</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>질문</th><th>답</th></tr>
+    <tr><td>"배포가 아직 적용 안 된 건지?"</td><td><b>적용됨.</b> 게이트가 실제로 돌고 near-miss 계측(top1 0.623)까지 남기고 있다. 기능 스위치(DIRECT_SERVE)도 ON.</td></tr>
+    <tr><td>"더 많은 데이터가 필요한 건지?"</td><td><b>아니다.</b> 등록 2,727건·code 자산(files 포함)이 이미 있다. 문제는 양이 아니라 code 청크의 <b>검색 노출</b>. 데이터를 더 부어도 노트가 함께 늘어 같은 편향이 유지된다.</td></tr>
+    <tr><td>"시나리오 테스트가 더 필요한 건지?"</td><td><b>테스트보다 지표 보정이 먼저.</b> 현행 커버리지는 점수 기준이라 100%로 낙관 보고했다 — 게이트와 동일한 조건(kind 반영)으로 재정의해야 "보고서와 실전의 괴리"가 지표에서 바로 보인다.</td></tr>
+  </table>
+  </div>
+
+  <h3>13.4 조치안 (신규 업무지시 W9 — 우선순위 최상)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th style="width:60px">순서</th><th>조치</th><th>내용</th><th>기대 효과</th></tr>
+    <tr><td>W9-a</td><td><b>재사용 전용 검색 경로</b></td><td>게이트가 검색할 때 kind/chunk_type 필터(code만) 또는 kind별 top-k를 요청 — top5 안에서 우연히 code가 걸리길 기대하지 않음</td><td>병목(그림 5의 ②) 직접 제거</td></tr>
+    <tr><td>W9-b</td><td>code 청크 검색성 보강</td><td>write-back 시 code 청크 content에 설계 설명·기능명 포함 (현재: 목표+파일명뿐)</td><td>자연어 질의 매칭률 상승</td></tr>
+    <tr><td>W9-c</td><td>세션 조인 폴백</td><td>top1이 같은 세션의 노트/설계면 그 세션의 형제 code 청크를 후보로 승격</td><td>기존 자산 재활용 (재등록 불필요)</td></tr>
+    <tr><td>W9-d</td><td>커버리지 지표 보정</td><td>/api/coverage를 게이트 동형(kind 조건 포함)으로 재정의 + simulate_batch에 "직접서브 도달률" 추가</td><td>보고서=실전 정합, 재발 감지</td></tr>
+  </table>
+  </div>
+
+  <!-- ═══════════ 14. 온톨로지 심화 (v3 신규) ═══════════ -->
+  <h2 id="s14"><span class="no">14</span>온톨로지 심화 — 지금 실제로 들어있는 것과 확장 방향</h2>
+  <p class="lead">배포 서버의 온톨로지 DB(<code>data/ontology.db</code>)를 직접 열어 집계했다 (2026-07-08).</p>
+
+  <h3>14.1 현재 내용물 (실측)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>구성</th><th>실측값</th><th>내용</th></tr>
+    <tr><td>노드 70개</td><td class="num">concept 51 · modi_module 16 · axis 3</td><td>교육 개념 51 + MODI 하드웨어 모듈 16 + 코딩 유형 축 3(blockly/hybrid/react)</td></tr>
+    <tr><td>난이도 레벨</td><td class="num">L0:20 · L1:10 · L2:26 · L3:11 · L4:3</td><td>노드마다 level 0~4 부여 — 학습 단계 계층이 이미 존재</td></tr>
+    <tr><td>관계(엣지) 1,958개</td><td class="num">아래 그래프</td><td>자동 축적 3종이 전체의 92% — 시스템이 쓰일수록 스스로 자라는 구조가 실데이터로 확인됨</td></tr>
+  </table>
+  </div>
+
+  <figure>
+  <svg viewBox="0 0 760 230" font-family="Pretendard,system-ui,sans-serif" role="img" aria-label="온톨로지 관계 유형별 엣지 수 막대그래프">
+    <text x="20" y="24" font-size="13" font-weight="800" fill="#1a202c">관계 유형별 엣지 수 (총 1,958 — 2026-07-08 ontology.db 실측)</text>
+    <text x="20" y="60" font-size="12" fill="#1a202c">realized_by (개념→구현 자산)</text>
+    <rect x="235" y="48" width="460" height="16" rx="4" fill="#1d4ed8"><title>realized_by: 821</title></rect>
+    <text x="700" y="61" font-size="12" font-weight="700" fill="#1a202c">821 · 자동</text>
+    <text x="20" y="94" font-size="12" fill="#1a202c">relates_to (세션 공출현)</text>
+    <rect x="235" y="82" width="335" height="16" rx="4" fill="#1d4ed8"><title>relates_to: 598</title></rect>
+    <text x="578" y="95" font-size="12" font-weight="700" fill="#1a202c">598 · 자동</text>
+    <text x="20" y="128" font-size="12" fill="#1a202c">uses (개념→MODI 모듈)</text>
+    <rect x="235" y="116" width="220" height="16" rx="4" fill="#1d4ed8"><title>uses: 392</title></rect>
+    <text x="463" y="129" font-size="12" font-weight="700" fill="#1a202c">392 · 자동</text>
+    <text x="20" y="162" font-size="12" fill="#1a202c">contains (유형→개념)</text>
+    <rect x="235" y="150" width="47" height="16" rx="4" fill="#93b4f5"><title>contains: 84</title></rect>
+    <text x="290" y="163" font-size="12" font-weight="700" fill="#1a202c">84 · 시드</text>
+    <text x="20" y="196" font-size="12" fill="#1a202c">prerequisite (선수학습)</text>
+    <rect x="235" y="184" width="35" height="16" rx="4" fill="#93b4f5"><title>prerequisite: 63</title></rect>
+    <text x="278" y="197" font-size="12" font-weight="700" fill="#1a202c">63 · 시드(사람 정의)</text>
+  </svg>
+  <figcaption>그림 6 — 진한 막대(자동 축적) 3종이 1,811개(92%), 연한 막대(사람 시드) 2종이 147개. 유지비가 낮은 이유.</figcaption>
+  </figure>
+
+  <h3>14.2 "행동(action)도 들어있나?" — 현재는 없다, 간접 표현뿐</h3>
+  <p>정확한 관찰이다. 일반적인 온톨로지는 <b>개체(entity) · 관계(relation) · 행동/이벤트(action)</b>를 가질 수 있는데, 현재 우리 온톨로지에는
+  개체(개념·모듈·축)와 관계 5종만 있고 <b>행동 노드는 없다</b>. 행동은 두 곳에 간접적으로만 존재한다:
+  ① 개념 alias 속 표현("누르면", "돌리면") ② 청크의 intent 태그. 즉 "버튼을 <b>누르면</b>"과 "버튼을 <b>길게 누르면</b>"을 지금은 구분하지 못한다.</p>
+
+  <h3>14.3 확장 로드맵 — 무엇을 더 담을 수 있고, 각각 무엇이 좋아지나</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>확장</th><th>추가되는 노드/관계</th><th>효과</th><th>난이도</th></tr>
+    <tr><td><b>① 행동/이벤트 온톨로지</b></td><td>event 노드(누름·길게누름·회전·기울임·근접…) + <code>triggered_by</code>(개념→이벤트) 관계. MODI 모듈 16종의 이벤트 목록에서 시드 가능</td><td>델타 판정 정밀화("누르면" vs "길게 누르면"을 검색 단계에서 구분) → 직접서브 오판 감소·적중 증가</td><td>중 — 모듈 스펙에서 반자동 추출</td></tr>
+    <tr><td><b>② 커리큘럼 단원</b></td><td>curriculum_unit 노드(학년·단원) + <code>covers</code>(단원→개념)</td><td>교사용 "이번 단원 예제" 즉답 · §9 사전제작을 단원 순서로 우선순위화</td><td>하 — 교육과정표 입력</td></tr>
+    <tr><td><b>③ 오류 패턴</b></td><td>mistake 노드(자주 하는 실수) + <code>common_mistake</code>(개념→실수)·<code>remediated_by</code>(실수→자산)</td><td>수정 턴 품질 향상 — "왜 안 돼요"에 검증된 처방 프라임</td><td>중 — 수정 턴 로그에서 자동 채굴 가능</td></tr>
+    <tr><td><b>④ 수준별 학습 경로</b></td><td>신규 노드 불필요 — 이미 있는 level(0~4)과 prerequisite로 경로 생성</td><td>페르소나 필터(난이도)와 결합해 "다음에 배울 것" 추천</td><td>하 — 조회 함수만 추가</td></tr>
+    <tr><td><b>⑤ 프로젝트 유형</b></td><td>project_type 노드(게임·악기·측정기…) + <code>instance_of</code>(자산→유형)</td><td>재사용 검색을 유형으로 좁혀 정밀도 상승 — W9-a의 kind 필터와 같은 계열</td><td>하 — 기존 goal 텍스트에서 분류</td></tr>
+  </table>
+  </div>
+  <div class="note good">
+    확장 우선 추천: <b>①(행동)과 ⑤(유형)</b> — 둘 다 §13에서 확인한 재사용 정밀도 문제를 직접 돕는다.
+    ②~④는 교육 가치 확장이므로 P2(콘텐츠 팩토리)와 함께 가는 것이 자연스럽다.
+  </div>
+
+  <!-- ═══════════ 15. 비용 발생 예상 (v3 신규) ═══════════ -->
+  <h2 id="s15"><span class="no">15</span>비용 발생 예상 — 시나리오 그래프</h2>
+  <p class="lead">비용 파라미터는 저장소에서 검증 테스트로 관리되는 계산기 모델(<span class="src">docs/design/test_cost_model.py · cost-calculator.html</span>)의 값이다: cold 생성 $0.029/턴 · near 적응 $0.004 · 검색조회 $0.0005 · 사전제작물 서브 $0.0015. 달러 수치는 API 과금 기준 모델이며, CLI 구독에서는 같은 절감이 세션리밋 헤드룸·속도로 나타난다(§7.2).</p>
+
+  <h3>15.1 실측 기반 — 전략별 출력 토큰 (이슈 #84)</h3>
+  <figure>
+  <svg viewBox="0 0 760 210" font-family="Pretendard,system-ui,sans-serif" role="img" aria-label="전략별 출력 토큰 막대그래프">
+    <text x="20" y="24" font-size="13" font-weight="800" fill="#1a202c">전략별 출력 토큰 (동일 요청 실측, 낮을수록 좋음)</text>
+    <text x="20" y="60" font-size="12" fill="#1a202c">직접서브 (tier 1)</text>
+    <rect x="200" y="49" width="3" height="16" fill="#1d4ed8"/>
+    <text x="212" y="62" font-size="12" font-weight="800" fill="#1a202c">0 tok (검증 입력 ~1k만)</text>
+    <text x="20" y="94" font-size="12" fill="#1a202c">near 프라임+생성 (tier 2)</text>
+    <rect x="200" y="83" width="194" height="16" rx="4" fill="#1d4ed8"><title>973 tok</title></rect>
+    <text x="402" y="96" font-size="12" font-weight="700" fill="#1a202c">973</text>
+    <text x="20" y="128" font-size="12" fill="#1a202c">cold 신규 생성 (tier 3)</text>
+    <rect x="200" y="117" width="239" height="16" rx="4" fill="#1d4ed8"><title>1,199 tok</title></rect>
+    <text x="447" y="130" font-size="12" font-weight="700" fill="#1a202c">1,199</text>
+    <text x="20" y="162" font-size="12" fill="#5a6472">edit 강제 (폐기됨)</text>
+    <rect x="200" y="151" width="480" height="16" rx="4" fill="#93b4f5"><title>2,408 tok — 실측 후 폐기</title></rect>
+    <text x="530" y="163" font-size="12" font-weight="700" fill="#5a6472">2,408 — 빌드 실패, 기본 OFF</text>
+    <text x="20" y="196" font-size="10.5" fill="#5a6472">막대 축척: 200px = 1,000 tok · 출처: 이슈 #84 D3 하네스 (n=2)</text>
+  </svg>
+  <figcaption>그림 7 — 절감의 실체: 편집(2,408)이 아니라 직접서브(0)가 답이라는 실측.</figcaption>
+  </figure>
+
+  <h3>15.2 월간 비용 예상 — 적중률 시나리오 3종</h3>
+  <figure>
+  <svg viewBox="0 0 760 300" font-family="Pretendard,system-ui,sans-serif" role="img" aria-label="월간 코드턴 수 대비 예상 비용 선그래프, 시나리오 3종">
+    <text x="20" y="24" font-size="13" font-weight="800" fill="#1a202c">월간 예상 생성비 (USD) — 적중률 시나리오별</text>
+    <line x1="80" y1="230" x2="680" y2="230" stroke="#dde3ea"/>
+    <line x1="80" y1="182.5" x2="680" y2="182.5" stroke="#f0f2f5"/>
+    <line x1="80" y1="135" x2="680" y2="135" stroke="#f0f2f5"/>
+    <line x1="80" y1="87.5" x2="680" y2="87.5" stroke="#f0f2f5"/>
+    <line x1="80" y1="40" x2="680" y2="40" stroke="#f0f2f5"/>
+    <text x="72" y="234" font-size="10.5" fill="#5a6472" text-anchor="end">$0</text>
+    <text x="72" y="186" font-size="10.5" fill="#5a6472" text-anchor="end">$150</text>
+    <text x="72" y="139" font-size="10.5" fill="#5a6472" text-anchor="end">$300</text>
+    <text x="72" y="91" font-size="10.5" fill="#5a6472" text-anchor="end">$450</text>
+    <text x="72" y="44" font-size="10.5" fill="#5a6472" text-anchor="end">$600</text>
+    <text x="80" y="248" font-size="10.5" fill="#5a6472" text-anchor="middle">0</text>
+    <text x="230" y="248" font-size="10.5" fill="#5a6472" text-anchor="middle">5천</text>
+    <text x="380" y="248" font-size="10.5" fill="#5a6472" text-anchor="middle">1만</text>
+    <text x="530" y="248" font-size="10.5" fill="#5a6472" text-anchor="middle">1만5천</text>
+    <text x="680" y="248" font-size="10.5" fill="#5a6472" text-anchor="middle">2만 (월간 코드턴)</text>
+    <line x1="80" y1="230" x2="680" y2="43.2" stroke="#1d4ed8" stroke-width="2"><title>재사용 없음: $0.0295/턴</title></line>
+    <line x1="80" y1="230" x2="680" y2="93.2" stroke="#b45309" stroke-width="2"><title>P1 목표: $0.0216/턴</title></line>
+    <line x1="80" y1="230" x2="680" y2="145.8" stroke="#0d9488" stroke-width="2"><title>P2 목표: $0.0133/턴</title></line>
+    <circle cx="380" cy="136.6" r="4" fill="#1d4ed8"/>
+    <circle cx="380" cy="161.6" r="4" fill="#b45309"/>
+    <circle cx="380" cy="187.9" r="4" fill="#0d9488"/>
+    <text x="688" y="47" font-size="11.5" font-weight="700" fill="#1a202c">$590</text>
+    <text x="688" y="97" font-size="11.5" font-weight="700" fill="#1a202c">$432</text>
+    <text x="688" y="150" font-size="11.5" font-weight="700" fill="#1a202c">$266</text>
+    <rect x="90" y="52" width="10" height="10" fill="#1d4ed8"/><text x="106" y="61" font-size="11.5" fill="#1a202c">S0 재사용 없음 (현재 실전 상태 = §13)</text>
+    <rect x="90" y="70" width="10" height="10" fill="#b45309"/><text x="106" y="79" font-size="11.5" fill="#1a202c">S1 P1 목표 — 직접서브 10% + near 20% (−27%)</text>
+    <rect x="90" y="88" width="10" height="10" fill="#0d9488"/><text x="106" y="97" font-size="11.5" fill="#1a202c">S2 P2 목표 — 직접서브 30% + near 30% (−55%)</text>
+    <text x="80" y="282" font-size="10.5" fill="#5a6472">턴당 비용: S0 $0.0295 · S1 $0.0216 · S2 $0.0133 (모델 파라미터: 저장소 검증 테스트 test_cost_model.py) · 점 = 월 1만 턴 지점</text>
+  </svg>
+  <figcaption>그림 8 — 월 2만 코드턴 기준 $590 → $432 → $266. §13의 W9가 S0→S1 이동의 선행 조건이다.</figcaption>
+  </figure>
+
+  <h3>15.3 실측 코호트 수치의 현재 상태</h3>
+  <div class="note warn">
+    <b>정직한 기재</b> — tier별 실트래픽 코호트(직접서브/near/cold 비용·지연 분포)는 §13의 원인으로 <b>재사용 실발동이 0이라 아직 존재하지 않는다</b>.
+    지금 있는 실측은: 코퍼스 2,727건 · 표준질의 top1 분포 0.56~0.75 · near-miss 계측 가동 중.
+    W9 적용 후 첫 실발동 트래픽부터 코호트 표가 이 섹션에 채워진다(주간 자동 리포트 = 업무지시 W5). 그때까지 그림 8은 "모델 기반 예상"임을 명시한다.
+  </div>
+
+  <!-- ═══════════ 16. Summary ═══════════ -->
+  <h2 id="s12"><span class="no">16</span>Summary — 전체 관계도와 핵심 숫자</h2>
+
+  <h3>12.1 다섯 줄 요약</h3>
+  <ol>
+    <li><b>왜 RAG</b>: LLM 단독은 같은 것을 매번 다시 만들고(비용), 우리 도메인을 모르고(정확성), 산출물이 휘발된다 — RAG는 이 셋을 "저장·검색·재사용"으로 바꾼다.</li>
+    <li><b>왜 온톨로지</b>: 유사도는 "비슷함"만 알고 학습 순서·하드웨어·아이 말투를 모른다 — 51개념×관계 5종의 그래프가 이를 보완하며, 관계 대부분은 자동으로 자란다.</li>
+    <li><b>어떻게 정확하게 찾나</b>: 벡터(의미 0.40) + 어휘(정확 단어 0.15) + 개념 centroid(계열 0.45)의 융합 점수 → 임계 판정 → 만족도(델타) 검증의 이중 안전장치.</li>
+    <li><b>절감은 되나</b>: 된다 — 델타 없는 반복 요청은 생성비 100% 절감이 실측 확인. 전체 절감률은 적중률 함수이며, 편집 강제 같은 우회로는 실측으로 반증하고 폐기했다.</li>
+    <li><b>남은 일</b>: 코퍼스 채우기 — 관리자 선제작(51×3) + 사용자 write-back + near-miss 환류의 하이브리드로 검증 자산 150~200을 모으면 직접서브 30%+가 목표.</li>
+    <li><b>단, 지금 당장은(§13)</b>: 실전에서 재사용이 아직 0인 원인을 실측으로 확정 — code 자산이 검색 상위에 못 올라 게이트에서 탈락. 데이터 추가가 아니라 <b>재사용 전용 검색(W9)</b>이 선행 조건이다.</li>
+  </ol>
+
+  <h3>12.2 시스템 전체 관계도</h3>
+  <figure>
+  <div class="svg-scroll">
+  <svg viewBox="0 0 920 430" font-family="Pretendard,system-ui,sans-serif">
+    <rect x="20" y="40" width="150" height="50" rx="4" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="95" y="61" text-anchor="middle" font-size="12" font-weight="700">사용자 (학생·교사)</text>
+    <text x="95" y="78" text-anchor="middle" font-size="10" fill="#5a6472">웹 UI / API</text>
+    <rect x="20" y="120" width="150" height="50" rx="4" fill="#eff4ff" stroke="#93b4f5"/>
+    <text x="95" y="141" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">관리자 (사전제작)</text>
+    <text x="95" y="158" text-anchor="middle" font-size="10" fill="#1d4ed8">§9 콘텐츠 팩토리</text>
+
+    <rect x="230" y="30" width="230" height="150" rx="4" fill="#fff" stroke="#1a202c" stroke-width="1.5"/>
+    <text x="345" y="52" text-anchor="middle" font-size="12.5" font-weight="800">edu-agent 앱 (:18080)</text>
+    <rect x="244" y="62" width="202" height="26" rx="3" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="345" y="79" text-anchor="middle" font-size="10.5">intent 분류 → 코드/대화 분기</text>
+    <rect x="244" y="94" width="202" height="26" rx="3" fill="#eff4ff" stroke="#c4d5f7"/>
+    <text x="345" y="111" text-anchor="middle" font-size="10.5" fill="#1d4ed8">3-tier 라우팅 (직접서브/near/cold)</text>
+    <rect x="244" y="126" width="202" height="26" rx="3" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="345" y="143" text-anchor="middle" font-size="10.5">후처리 (게이팅·병렬 샤딩)</text>
+    <text x="345" y="170" text-anchor="middle" font-size="9.5" fill="#5a6472">킬스위치: DIRECT_SERVE 등 env</text>
+
+    <rect x="520" y="30" width="200" height="150" rx="4" fill="#fff" stroke="#1d4ed8" stroke-width="1.5"/>
+    <text x="620" y="52" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1d4ed8">rag-search (:8100)</text>
+    <rect x="534" y="62" width="172" height="26" rx="3" fill="#eff4ff" stroke="#c4d5f7"/>
+    <text x="620" y="79" text-anchor="middle" font-size="10.5" fill="#1d4ed8">BGE-m3 임베딩 (1024d)</text>
+    <rect x="534" y="94" width="172" height="26" rx="3" fill="#eff4ff" stroke="#c4d5f7"/>
+    <text x="620" y="111" text-anchor="middle" font-size="10.5" fill="#1d4ed8">3중 융합 검색 + 게이트 판정</text>
+    <rect x="534" y="126" width="172" height="26" rx="3" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="620" y="143" text-anchor="middle" font-size="10.5" fill="#166534">온톨로지 그래프 질의</text>
+    <text x="620" y="170" text-anchor="middle" font-size="9.5" fill="#5a6472">앱이 프록시 호출 · 실패 시 로컬 폴백</text>
+
+    <rect x="760" y="30" width="140" height="46" rx="4" fill="#f6f8fa" stroke="#a9b4c0"/>
+    <text x="830" y="49" text-anchor="middle" font-size="11" font-weight="700" fill="#5a6472">MySQL</text>
+    <text x="830" y="65" text-anchor="middle" font-size="9.5" fill="#5a6472">청크 원문+메타 (원천)</text>
+    <rect x="760" y="86" width="140" height="46" rx="4" fill="#f6f8fa" stroke="#a9b4c0"/>
+    <text x="830" y="105" text-anchor="middle" font-size="11" font-weight="700" fill="#5a6472">Redis Stack</text>
+    <text x="830" y="121" text-anchor="middle" font-size="9.5" fill="#5a6472">벡터 색인 (HNSW)</text>
+    <rect x="760" y="142" width="140" height="46" rx="4" fill="#f0fdf4" stroke="#86c99a"/>
+    <text x="830" y="161" text-anchor="middle" font-size="11" font-weight="700" fill="#166534">온톨로지 DB</text>
+    <text x="830" y="177" text-anchor="middle" font-size="9.5" fill="#166534">51개념 · 관계 5종</text>
+
+    <rect x="230" y="230" width="230" height="56" rx="4" fill="#fffbeb" stroke="#e5c469"/>
+    <text x="345" y="253" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e">Claude Haiku 4.5 (CLI 구독)</text>
+    <text x="345" y="271" text-anchor="middle" font-size="10" fill="#92400e">생성 (near·cold) + 만족도 검증 (~1k)</text>
+    <rect x="520" y="230" width="200" height="56" rx="4" fill="#f6f8fa" stroke="#a9b4c0"/>
+    <text x="620" y="253" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5a6472">Langfuse + Sentry</text>
+    <text x="620" y="271" text-anchor="middle" font-size="10" fill="#5a6472">tier·점수·토큰 계측 / 예외 감시</text>
+
+    <line x1="170" y1="65" x2="230" y2="65" stroke="#5a6472" stroke-width="1.5" marker-end="url(#d1)"/>
+    <line x1="170" y1="145" x2="230" y2="145" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#d2)"/>
+    <line x1="460" y1="105" x2="520" y2="105" stroke="#5a6472" stroke-width="1.5" marker-end="url(#d1)"/>
+    <text x="490" y="98" text-anchor="middle" font-size="9" fill="#5a6472">검색/판정</text>
+    <line x1="720" y1="53" x2="760" y2="53" stroke="#5a6472" stroke-width="1.2" marker-end="url(#d1)"/>
+    <line x1="720" y1="105" x2="760" y2="105" stroke="#5a6472" stroke-width="1.2" marker-end="url(#d1)"/>
+    <line x1="720" y1="150" x2="760" y2="162" stroke="#5a6472" stroke-width="1.2" marker-end="url(#d1)"/>
+    <line x1="345" y1="180" x2="345" y2="230" stroke="#92400e" stroke-width="1.5" marker-end="url(#d3)"/>
+    <text x="360" y="209" font-size="9" fill="#92400e">생성 필요 시만</text>
+    <line x1="460" y1="258" x2="520" y2="258" stroke="#5a6472" stroke-width="1.2" marker-end="url(#d1)"/>
+
+    <path d="M 345 286 L 345 330 L 830 330 L 830 192" fill="none" stroke="#1d4ed8" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#d2)"/>
+    <text x="590" y="323" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d4ed8">write-back 폐루프 — 산출물이 코퍼스·온톨로지(realized_by/uses)로 환류</text>
+
+    <text x="460" y="380" text-anchor="middle" font-size="10.5" fill="#5a6472">데이터 흐름: 실선 = 요청 경로 · 파란 점선 = 자산 공급/환류 · 주황 = LLM 호출 (tier 1 적중 시 생략)</text>
+    <text x="460" y="402" text-anchor="middle" font-size="10" fill="#5a6472">배포: 앱 .95:18080 · 도메인 edu-agent.luxrobo.net · rag-search 컨테이너 분리(torch 격리)</text>
+
+    <defs>
+      <marker id="d1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5a6472"/></marker>
+      <marker id="d2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1d4ed8"/></marker>
+      <marker id="d3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#92400e"/></marker>
+    </defs>
+  </svg>
+  </div>
+  <figcaption>그림 4 — 시스템 전체 관계도. tier 1 적중 시 주황(LLM) 경로가 통째로 생략되는 것이 절감의 실체.</figcaption>
+  </figure>
+
+  <h3>12.3 핵심 숫자 한 장</h3>
+  <div class="tbl-scroll">
+  <table>
+    <tr><th>지표</th><th>값</th><th>출처</th></tr>
+    <tr><td>cold 생성 1회 비용</td><td class="num">출력 ~1,199 tok · ~47초</td><td>이슈 #84 실측</td></tr>
+    <tr><td>직접서브 1회 비용</td><td class="num best">생성 0 · 검증 입력 ~1k tok · 즉시</td><td>이슈 #84 실측 + direct_serve.py</td></tr>
+    <tr><td>출력:입력 비용비</td><td class="num">5.6 : 1</td><td>Langfuse 실측 (orchestrator 주석)</td></tr>
+    <tr><td>융합 가중치 (벡터:어휘:개념)</td><td class="num">0.40 : 0.15 : 0.45</td><td>search_lib.py</td></tr>
+    <tr><td>게이트 임계값 (reuse/near)</td><td class="num">0.62 / 0.48</td><td>search_lib.py</td></tr>
+    <tr><td>직접서브 수락 조건</td><td class="num">만족도 ≥ 90 + 델타 없음</td><td>direct_serve.py</td></tr>
+    <tr><td>온톨로지 규모</td><td class="num">개념 51 · 관계 5종 (자동 3종)</td><td>ontology_seed.json · build_ontology.py</td></tr>
+    <tr><td>테스트</td><td class="num">427 passed / 3 skipped (10.5초)</td><td>2026-07-08 직접 실행</td></tr>
+    <tr><td>1차 데이터 목표</td><td class="num">검증 자산 150~200 (51개념 × 3)</td><td>§9.1 산정</td></tr>
+    <tr><td>적중률 목표 (P1 → P2)</td><td class="num">직접서브 10% → 30%</td><td>§11 로드맵</td></tr>
+  </table>
+  </div>
+
+  <div class="footer">
+    v2 · 2026-07-08 · 출처 — 코드: LUXROBO/edu-agent master(a708abd) 직접 조사(scripts/search_lib.py의 수식·가중치·토큰화, scripts/ontology_seed.json 51개념·alias, scripts/build_ontology.py 관계 5종, agent/direct_serve.py, agent/reuse.py, server.py write-back) ·
+    실측: 이슈 #84 D3 하네스 · 테스트: pytest 전체 실행(427/3) · 계산 시연(§5.4)의 수치는 과정 이해를 위한 가상 예시로 명시함 ·
+    이전 판: v1.html (절감 근거·AS-IS/TO-BE 초판)
+  </div>
+
+</div>
+</body>
+</html>

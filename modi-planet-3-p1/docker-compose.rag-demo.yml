@@ -1,0 +1,28 @@
+# 페르소나 온톨로지 도출 테스트 데모 (로컬/온프렘)
+#
+# 실행:
+#   docker compose -f docker-compose.rag-demo.yml up --build
+#   → 브라우저 http://localhost:8100
+#
+# Aurora/Redis 불필요 — 세션 데이터에서 온톨로지를 SQLite로 빌드해 즉시 도출 테스트.
+# projects/ 를 마운트하므로 데이터가 바뀌면 컨테이너 재시작 시 그래프 재빌드.
+
+services:
+  rag-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag-demo
+    image: edu-agent-rag-demo:latest
+    container_name: edu-agent-rag-demo
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./projects:/app/projects:ro     # 세션 데이터(읽기전용)
+      - ./scripts:/app/scripts          # 시드/코드 수정 즉시 반영(재시작만)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8100/health',timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped

@@ -1,0 +1,290 @@
+name: Deploy edu-agent
+
+# 사내 서버(.95)는 사설망이라 GitHub 클라우드 러너가 접근 불가.
+# → .95 에 등록한 self-hosted runner(라벨 edu-agent)가 로컬에서 docker compose 로 배포.
+#
+# 배포 범위: ① 메인 챗 서버(docker-compose.yml, :18080)  ② RAG 온프렘 스택
+# (docker-compose.rag-onprem.yml, 격리 프로젝트 edu-agent-rag: MySQL+Redis+rag-search, :8100).
+# RAG 스택은 개념 centroid 재랭킹(#38)을 위해 build → backfill(centroid 적재) → rag-search
+# 재기동 순으로 갱신한다. 두 스택은 프로젝트명이 분리돼 섞이지 않는다(메인 세션락 redis 보호).
+#
+# [사전 1회 설정]
+#   1) GitHub repo → Settings → Actions → Runners → New self-hosted runner
+#      안내대로 .95 에 러너 설치하고, 라벨에 'edu-agent' 추가해 실행(서비스 등록 권장).
+#   2) CLI 방식이므로 API 키 secret 불필요. 인증은 compose 가 마운트하는
+#      호스트 ~/.claude(.credentials.json, 구독 로그인)로 처리된다.
+#      → 러너는 walter 계정으로 실행되어야 /home/walter/.claude 접근 가능.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Dockerfile'
+      - 'Dockerfile.rag-search'
+      - 'docker-compose.yml'
+      - 'docker-compose.rag-onprem.yml'
+      - 'deploy/schema.sql'
+      - 'deploy/nginx/**'
+      # 환경 오버레이(onprem/dev/release.env) — compose 가 env_file 로 읽으므로
+      # 값 변경은 재배포가 필요하다. 이 경로가 빠져 있으면 쿼터·RAG 배선 같은
+      # 운영 파라미터를 고쳐 push 해도 배포가 트리거되지 않는다(2026-08-21 확인).
+      - 'deploy/*.env'
+      - '.dockerignore'
+      - 'agent/**'
+      - 'scripts/**'
+      - 'server.py'
+      - 'main.py'
+      - 'build_template/**'
+      - 'reference/**'
+      - 'docs/**'
+      - 'pyproject.toml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      port:
+        description: '호스트 노출 포트'
+        required: false
+        default: '18080'
+      run_backfill:
+        description: 'RAG 백필 재실행(개념 centroid 재적재). data 변경 없으면 false 로 스킵 가능'
+        required: false
+        default: 'true'
+      rebuild_assets:
+        description: 'RAG 코퍼스를 서버 projects/ 기준으로 재생성(--force). ⚠️ 버전관리된 canonical base 자산을 덮어씀 — 서버 세션이 더 완전할 때만 true'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: deploy-edu-agent
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, edu-agent]
+    env:
+      DEPLOY_DIR: /opt/docker/infra/edu-agent
+      EDU_AGENT_PORT: ${{ github.event.inputs.port || '18080' }}
+      # 이슈 #157: 호스트 노출 포트는 이제 edu-nginx 가 받는다(edu-agent 는 expose 만).
+      EDU_NGINX_PORT: ${{ github.event.inputs.port || '18080' }}
+      # ⚠ 레플리카 목록의 **단일 출처**. 대수를 바꿀 때 여기 한 줄만 고치면
+      #    롤링 교체·헬스 검증·upstream 검사가 모두 따라간다.
+      #    (docker-compose.yml 의 서비스 정의와 deploy/nginx 의 upstream 은 함께 고쳐야 한다)
+      EDU_REPLICAS: "edu-agent-1 edu-agent-2 edu-agent-3 edu-agent-4 edu-agent-5 edu-agent-6 edu-agent-7 edu-agent-8"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync source to deploy dir
+        run: |
+          set -euo pipefail
+          sudo mkdir -p "$DEPLOY_DIR"
+          # projects(세션)·.env(비밀)는 서버 보존(제외). data/ 는 canonical base 자산
+          # (ontology.db·chunk_emb.npy·chunk_meta.json = gold 8/8 코퍼스)을 버전관리로
+          # 함께 배포하되, 등록 스토어(registered.*)=런타임 되먹임 상태는 제외해 서버에서 보존.
+          # (과거: data 전체 제외 → 서버 코퍼스가 stale 566/573 로 고착돼 온프렘 <8/8 이던 문제 해소)
+          # 참고: 리포트 확정본은 MySQL(usage_reports)에 있다 — 파일이 아니다.
+          #   파일 스냅샷은 이 --delete 한 줄에 통째로 사라질 수 있어 DB 로 옮겼다.
+          sudo rsync -a --delete \
+            --exclude '.git' --exclude 'projects' --exclude '.env' \
+            --exclude 'data/registered.jsonl' --exclude 'data/registered_emb.npy' \
+            ./ "$DEPLOY_DIR"/
+
+      - name: Ensure .env (CLI 방식 — API 키 불필요; 없으면 최소 생성)
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # CLI 방식: 인증은 compose 가 마운트하는 ~/.claude(.credentials.json)로 처리.
+          # ANTHROPIC_API_KEY 불필요. compose 가 env_file 로 .env 를 요구하므로 없으면 생성.
+          if [ ! -f .env ]; then
+            echo "[.env 없음 → CLI 모드 최소 .env 생성]"
+            echo "USE_LOCAL_CLAUDE=true" | sudo tee .env >/dev/null
+          else
+            echo "[기존 .env 유지]"
+          fi
+
+      - name: Build image (구 컨테이너는 계속 서빙)
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # 이미지 빌드는 edu-agent-1 에만 선언돼 있고(3번 빌드 방지) 3 레플리카가
+          # 같은 edu-agent:latest 태그를 공유한다.
+          sudo -E EDU_AGENT_PORT="$EDU_AGENT_PORT" docker compose build edu-agent-1
+
+      - name: Rolling swap replicas (health-gated, 무중단)
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # 레플리카를 '한 번에 하나씩' 교체한다 — 교체 중에도 나머지 2대가 계속 서빙하므로
+          # 무응답 창이 0 이다(기존 단일 컨테이너는 교체 순간 수초간 전면 다운).
+          # stop_grace_period 180s 로 진행 중 SSE 턴을 드레인하므로 대화 유실도 없다.
+          for r in $EDU_REPLICAS; do
+            echo "── $r 교체"
+            if ! sudo -E EDU_AGENT_PORT="$EDU_AGENT_PORT" docker compose up -d --no-build --wait "$r"; then
+              echo "::warning::$r --wait 실패 → 이름충돌 정리 후 재시도"
+              sudo docker rm -f "$r" 2>/dev/null || true
+              sudo -E EDU_AGENT_PORT="$EDU_AGENT_PORT" docker compose up -d --no-build --wait "$r"
+            fi
+          done
+          # 리버스 프록시(edu-nginx, 이슈 #157) — 3 레플리카 헬스 통과 후 기동/갱신.
+          # 호스트 포트는 edu-nginx 만 노출(EDU_NGINX_PORT, 기본 18080).
+          #   ⚠ nginx 는 upstream 호스트명을 기동 시 1회 해석한다. 위 롤링 교체로 컨테이너가
+          #     재생성되면 IP 가 바뀔 수 있으므로, 교체 뒤에 반드시 nginx 를 갱신해야 한다.
+          # ⚠ --force-recreate: nginx 설정은 디렉터리 마운트라 rsync 반영이 즉시 보이지만,
+          #   upstream 호스트명은 nginx 가 **기동 시 1회만** 해석한다. 롤링 교체로 레플리카
+          #   IP 가 바뀌었을 수 있으므로 프록시를 새로 만들어 재해석시킨다.
+          sudo -E EDU_NGINX_PORT="$EDU_NGINX_PORT" docker compose up -d --no-build --force-recreate --wait edu-nginx
+
+      - name: Remove orphaned containers (구 edu-agent 등)
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # 3 레플리카로 개명하면서 옛 단일 컨테이너 `edu-agent` 가 compose 정의에서
+          # 사라져 고아로 남는다. 남겨두면 리소스만 먹고, 옛 nginx 설정이 그걸 계속
+          # 가리키는 사고가 실제로 발생했다(2026-08-21). 새 nginx 가 3 레플리카를
+          # 물은 뒤에 정리해야 트래픽 공백이 없다 — 그래서 이 스텝이 nginx 다음이다.
+          sudo -E EDU_NGINX_PORT="$EDU_NGINX_PORT" docker compose up -d --no-build --remove-orphans
+          sudo docker rm -f edu-agent 2>/dev/null || true
+
+      - name: Verify HA wiring (실제로 전 레플리카에 분산되는지)
+        run: |
+          set -euo pipefail
+          # nginx 를 통해 /health 가 응답하는지
+          for i in $(seq 1 20); do
+            if curl -fsS -m 5 "http://localhost:${EDU_NGINX_PORT}/health" >/dev/null 2>&1; then
+              echo "nginx → /health OK"; break
+            fi
+            [ "$i" = "20" ] && { echo "::error::nginx 를 통한 /health 실패"; exit 1; }
+            sleep 3
+          done
+
+          # 모든 레플리카가 healthy 인지
+          for r in $EDU_REPLICAS; do
+            st=$(sudo docker inspect -f '{{.State.Health.Status}}' "$r" 2>/dev/null || echo missing)
+            echo "  $r = $st"
+            [ "$st" = "healthy" ] || { echo "::error::$r 가 healthy 아님($st)"; exit 1; }
+          done
+
+          # ★ 핵심: nginx 가 **실제로 물고 있는** upstream 을 확인한다.
+          #   2026-08-21 사고: 컨테이너는 3대 healthy 였는데 nginx 는 옛 설정
+          #   (`server edu-agent:8000` 1줄)을 물고 있어 새 레플리카가 트래픽을 0 으로
+          #   받았다. healthy 체크만으로는 이 상태를 못 잡아 배포가 초록으로 통과했다.
+          conf=$(sudo docker exec edu-nginx nginx -T 2>/dev/null)
+          echo "$conf" | grep -A8 'upstream edu_backend' || true
+          want=$(echo "$EDU_REPLICAS" | wc -w | tr -d ' ')
+          n=$(echo "$conf" | grep -cE '^\s*server edu-agent-[0-9]+:8000' || true)
+          echo "  nginx upstream 레플리카 수 = $n (기대 $want)"
+          [ "$n" = "$want" ] || { echo "::error::nginx upstream 이 $want 대가 아님($n) — 설정이 반영되지 않았다"; exit 1; }
+          echo "$conf" | grep -q 'hash \$edu_sticky_key consistent' \
+            || { echo "::error::sticky hash 지시자가 없다 — 옛 설정이다"; exit 1; }
+          # 고아 컨테이너가 남아 있으면 실패시킨다(옛 nginx 가 가리킬 위험 제거).
+          if sudo docker ps --format '{{.Names}}' | grep -qx 'edu-agent'; then
+            echo "::error::고아 컨테이너 edu-agent 가 아직 살아 있다"; exit 1
+          fi
+          echo "✅ HA 배선 검증 통과 (3 upstream + sticky + 고아 없음)"
+
+      # ── RAG 온프렘 스택(edu-agent-rag: MySQL+Redis+rag-search) ─────────────
+      # ⚠️ 반드시 -f docker-compose.rag-onprem.yml 로만 조작(메인 스택과 분리).
+      #    소스는 위 rsync 로 DEPLOY_DIR 에 이미 동기화됨(data/ 는 보존).
+      - name: Build RAG image & bring up infra (MySQL/Redis)
+        env:
+          RAG_COMPOSE: docker-compose.rag-onprem.yml
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          mkdir -p data   # rag-search/backfill 마운트 대상(볼륨) 보장
+          # 새 코드로 rag-search 이미지 재빌드(backfill 도 이 이미지를 공유)
+          sudo docker compose -f "$RAG_COMPOSE" build rag-search
+          # 원천/벡터 인프라를 헬스 통과까지 기동(backfill 접속 보장)
+          sudo docker compose -f "$RAG_COMPOSE" up -d --wait mysql redis
+
+      - name: Rebuild RAG assets (projects/ 기준 온톨로지+임베딩 재생성)
+        # 서버 data/ 코퍼스가 stale(로컬과 chunk 수 불일치)일 때 dispatch 로 켜서 갱신.
+        # base 자산(ontology.db·chunk_emb.npy·chunk_meta.json)만 재생성 → 등록 스토어(되먹임) 보존.
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.rebuild_assets == 'true' }}
+        env:
+          RAG_COMPOSE: docker-compose.rag-onprem.yml
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          sudo docker compose -f "$RAG_COMPOSE" run --rm --no-deps rag-search sh -c \
+            "PYTHONPATH=scripts python scripts/build_ontology.py && PYTHONPATH=scripts python scripts/build_embeddings.py --force"
+
+      - name: Apply MySQL schema (멱등 — 새 테이블 반영)
+        env:
+          RAG_COMPOSE: docker-compose.rag-onprem.yml
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # ⚠ deploy/schema.sql 은 MySQL 이미지의 docker-entrypoint-initdb.d 로
+          #   **최초 컨테이너 기동 시에만** 적용된다. 이미 데이터가 쌓인 볼륨에는
+          #   그 뒤 추가된 테이블이 영원히 만들어지지 않는다.
+          #
+          #   실제로 그랬다(2026-08-21 확인): #133 에서 추가한 `usage_turns` 가 운영 DB 에
+          #   없어서, /chat 의 사용량 이중쓰기가 **처음부터 계속 실패**하고 있었다.
+          #   fail-open(try/except)이라 조용히 삼켜져 아무도 몰랐고, 비용 데이터가 0건이었다.
+          #
+          #   apply_schema.py(#149)는 이미 있었는데 배포에서 호출되지 않았다. 전 문이
+          #   CREATE ... IF NOT EXISTS 뿐이라 몇 번을 돌려도 기존 데이터에 영향이 없다(멱등).
+          #   ⚠ rag-search 이미지는 scripts/ 만 담는다(Dockerfile.rag-search:26).
+          #      deploy/schema.sql 은 이미지에 없으므로 실행 시 마운트해 넣는다
+          #      (이미지 재빌드 없이 스키마 파일만 주입 — 2026-08-21 FileNotFoundError 수정).
+          sudo docker compose -f "$RAG_COMPOSE" run --rm --no-deps \
+            -v "$DEPLOY_DIR/deploy/schema.sql:/app/deploy/schema.sql:ro" \
+            rag-search sh -c "PYTHONPATH=scripts python scripts/apply_schema.py"
+
+      - name: RAG backfill (개념 centroid 재적재, #38)
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_backfill == 'true' }}
+        env:
+          RAG_COMPOSE: docker-compose.rag-onprem.yml
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # 멱등(clear_base_chunks + reset_index + clear_centroids) — MySQL 원천·Redis 벡터·
+          # 개념 centroid 를 함께 재적재. --no-deps: mysql/redis 는 이미 up(위 --wait).
+          sudo docker compose -f "$RAG_COMPOSE" run --rm --no-deps backfill
+
+      - name: (Re)start rag-search (새 코드 + centroid 캐시 초기화)
+        env:
+          RAG_COMPOSE: docker-compose.rag-onprem.yml
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # --force-recreate: 프로세스 재시작 → centroid 프로세스 캐시를 새 적재분으로 리로드.
+          sudo docker compose -f "$RAG_COMPOSE" up -d --force-recreate --no-deps rag-search
+
+      - name: Session backfill (파일 세션 → MySQL 원천, #27 P3)
+        # 기존 파일 대화(projects/<uid>/*.json)를 MySQL sessions 로 적재. 멱등(upsert)이라 매 배포 안전.
+        # 메인 앱 컨테이너에서 실행 — projects/ 접근 + RAG_UPSTREAM 로 rag-search(/api/session/save) 도달.
+        # 위 rag-search 재기동(엔드포인트 활성) 뒤에 실행. 비치명적(실패해도 목록은 파일 union 으로 보존).
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_backfill == 'true' }}
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          sudo docker compose exec -T edu-agent python scripts/backfill_sessions.py \
+            || echo "session backfill 건너뜀(비치명적 — 파일 union 폴백 유지)"
+
+      - name: RAG health & 검색 품질(gold 8/8) 검증
+        env:
+          RAG_COMPOSE: docker-compose.rag-onprem.yml
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # 컨테이너 내부 8100(고정)로 헬스 — 호스트 노출 포트(.env PORT) 무관.
+          ok=""
+          for i in $(seq 1 20); do
+            if sudo docker compose -f "$RAG_COMPOSE" exec -T rag-search \
+                 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')" 2>/dev/null; then
+              echo "rag-search healthy"; ok=1; break
+            fi
+            echo "wait rag ${i}/20"; sleep 3
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::rag-search health check 실패"
+            sudo docker compose -f "$RAG_COMPOSE" logs --tail 60 rag-search || true
+            exit 1
+          fi
+          # 온프렘 gold 검증(#38) — primary_concept 정확도를 로그로 확인(비치명: 로그 참고용).
+          echo "── 온프렘 검색 품질(eval, backend=mysql_redis) ──"
+          sudo docker compose -f "$RAG_COMPOSE" exec -T rag-search \
+            env PYTHONPATH=scripts python scripts/eval_search.py --backend mysql_redis || \
+            echo "::warning::eval 실행 경고(로그 확인) — 헬스는 통과"

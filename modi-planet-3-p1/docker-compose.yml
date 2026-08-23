@@ -1,0 +1,258 @@
+# 교육용 바이브코딩 에이전트 (edu-agent) — 사내 서버 배포 구성 (이슈 #4)
+#
+# 설치 위치: /opt/docker/infra/edu-agent
+#   $ sudo mkdir -p /opt/docker/infra
+#   $ sudo git clone <repo> /opt/docker/infra/edu-agent   # 또는 소스 복사
+#   $ cd /opt/docker/infra/edu-agent
+#   $ docker compose up -d --build
+#
+# 포트(이슈 #157 로 변경): edu-agent 컨테이너는 더 이상 호스트 포트를 직접 잡지 않는다.
+#   대신 edu-nginx(리버스 프록시, 리트라이+점검페이지)가 호스트 ${EDU_NGINX_PORT:-18080} 을
+#   단독으로 받아 컴포즈 네트워크 내부의 edu-agent-{1,2,3}:8000 으로 프록시한다(sticky).
+#   각 레플리카는 expose(8000)만 하므로 네트워크 밖에서 직접 도달 불가.
+#   NPM(.102)은 기존과 동일하게 .95:18080 을 그대로 보면 되므로 NPM 측 재설정은 불필요.
+
+# ── 공통 설정 앵커 (이슈: 이중화) ────────────────────────────────────────────
+# edu-agent 를 3 레플리카로 띄운다. 3 서비스가 이 앵커를 머지해 쓰고, 다른 점은
+# container_name(고정 호스트명) 과 build 선언 위치뿐이다.
+#
+# 왜 replicas 가 아니라 명시 서비스 3개인가:
+#   - container_name 이 곧 compose 네트워크의 안정적 호스트명이라 nginx upstream 에
+#     그대로 적을 수 있다(DNS 다중 A레코드 해석 타이밍에 의존하지 않음).
+#   - 서비스별 헬스체크 + 배포 시 롤링 교체(--wait 를 1→2→3 순서로)가 가능하다.
+#
+# ⚠ 처리량에 대한 정직한 전제: 레플리카를 늘려도 LLM 동시성 상한은 여전히 공유
+#   구독 1계정 한도다. 3 레플리카의 실효는 ① 가용성(1대 죽어도 2대가 서빙)
+#   ② 스레드풀 3배(단일 워커의 anyio 풀 40 고갈이 동접 40 무응답의 직접 원인이었음).
+#   토큰 처리량 자체를 올리려면 API 모드 전환이 필요하다.
+# ⚠ 메모리 상한을 반드시 건다.
+#   이 호스트는 Sentry·Langfuse 와 공유하고 **스왑이 100% 차 있다**(2026-08-21 실측:
+#   swap 17G 중 17G 사용). 상한이 없으면 한 레플리카의 폭주가 호스트 OOM 으로 번져
+#   Sentry 가 죽는다(어제 실제로 11.6GB 로 죽었다). 상한이 있으면 그 컨테이너만
+#   재시작되고(restart: unless-stopped) 나머지 레플리카가 계속 서빙한다.
+#   1g 근거: 유휴 실측 335MiB → 3배 여유. 초과하면 그 자체가 조사할 신호다.
+x-edu-agent-base: &edu-agent-base
+  mem_limit: 1g
+  memswap_limit: 1g          # 스왑으로 새어 호스트를 느리게 만들지 않게 함께 묶는다
+  image: edu-agent:latest
+  restart: unless-stopped
+  # 배포 교체·재시작 시 진행 중 SSE 스트림을 드레인할 시간. 넘기면 SIGKILL.
+  #
+  # 30s → 180s 로 올렸다(2026-08-21). 근거: 실측 생성 턴이 동접 5 에서 94~160초,
+  # 동접 40 에서 300초에 근접한다. 30s 로는 배포 교체마다 진행 중이던 생성 턴이
+  # SIGKILL 되고, 그러면 /chat 의 finally(auto_save)가 실행되지 않아 **그 턴의 대화가
+  # 통째로 유실**된다(학생이 다시 입력해야 함). 180s 면 대부분의 턴이 정상 종료하고
+  # auto_save 까지 도달해 다음 요청이 이어받는다.
+  #
+  # 비용: 이 값은 '최대 대기'이지 고정 지연이 아니다 — 진행 중 스트림이 없으면 즉시
+  # 종료한다. 즉 기다리는 경우는 정확히 "기다려야 하는 경우"뿐이다.
+  # 배포는 레플리카를 1→2→3 순차 교체하므로 최악의 경우에도 한 번에 1/3 만 영향받는다.
+  stop_grace_period: 180s
+
+  # 환경변수: 기존 .env 를 그대로 읽되, 아래 environment 가 우선 적용된다.
+  # 환경별 관측 오버레이(Sentry/Langfuse, dev/onprem/release)를 .env 뒤에 덧씌운다 — 뒤 파일이 우선.
+  # 기본은 사내서버(onprem). 다른 환경 배포:
+  #   EDU_AGENT_ENV_FILE=deploy/dev.env     docker compose up -d --build
+  #   EDU_AGENT_ENV_FILE=deploy/release.env docker compose up -d --build
+  # (env_file 장문 문법은 Docker Compose v2.24+ 필요)
+  env_file:
+    - .env
+    - path: "${EDU_AGENT_ENV_FILE:-deploy/onprem.env}"
+      required: false
+  # 앵커: 레플리카별로 REPLICA_NAME 만 덧붙여 재사용한다. 서비스에 environment 를
+  # 다시 쓰면 이 블록을 **통째로 덮어쓰므로**(YAML 매핑 병합이 아님) 반드시 머지해야 한다.
+  environment: &edu-agent-env
+    # LLM 호출 방식 스위치. 기본 CLI(구독 인증), `false` 면 Anthropic API 직행.
+    #
+    # ⚠ 예전엔 여기에 "true" 를 **하드코딩**해서, 서버 .env 에 USE_LOCAL_CLAUDE=false 를
+    #   넣어도 API 모드로 안 바뀌었다(compose 의 environment 가 env_file 을 덮어쓴다 —
+    #   아래 RAG_UPSTREAM 주석의 실측과 같은 함정). 이제 오버라이드가 가능하다:
+    #     서버 .env 에  USE_LOCAL_CLAUDE=false  +  유효한 ANTHROPIC_API_KEY
+    #   기본값이 true 라 아무것도 안 하면 기존 CLI 동작 그대로 — 되돌리기도 값 하나.
+    #
+    # 왜 필요한가(2026-08-21 실측): CLI 모드는 전 사용자가 **구독 1계정**을 공유해
+    # 5시간 윈도 쿼터를 함께 태운다. 부하 테스트 생성 턴 120여 건으로 실제 소진돼
+    # "Claude 사용 한도에 도달했어요" 가 전 사용자에게 나갔다. 레플리카를 3대로 늘려도
+    # 같은 계정을 쓰므로 해결되지 않는다. 또 CLI 는 LLM 호출마다 node 서브프로세스를
+    # 띄워, 동접 40 에서 16코어 load 가 161 까지 올라 SSH 조차 막혔다. API 모드는
+    # 이 둘(공유 쿼터·서브프로세스)을 동시에 없앤다.
+    USE_LOCAL_CLAUDE: "${USE_LOCAL_CLAUDE:-true}"
+    HOME: /root
+    # 멀티워커/멀티레플리카 분산 세션 락(S1) — 3 레플리카가 이 Redis 를 공유해야
+    # 같은 session_id 가 서로 다른 레플리카에서 동시에 처리되는 걸 막는다. 필수.
+    REDIS_URL: "redis://redis:6379/0"
+    # 레플리카 1개당 uvicorn 워커 수. 3 레플리카 × 1 = 3 프로세스.
+    # 용량을 더 늘리려면 2~4 로. 단 레플리카 증설이 '가용성', 워커 증설이 '용량' 이다.
+    WEB_CONCURRENCY: "${WEB_CONCURRENCY:-1}"
+    # RAG 벡터 백엔드 프록시 대상(rag-search, docker-compose.rag-onprem.yml).
+    # 설정 시 /api/search·/api/register 등을 벡터 RAG 로 포워드. 비우면 로컬 lexical.
+    # ⚠ 여기서 environment 로 재선언하지 않는다 — environment 가 env_file 을 덮어써
+    #   (`${RAG_UPSTREAM:-}` → "") onprem.env 값을 무효화하기 때문(실측 확인).
+    #   값은 env_file 오버레이에서만 온다: 온프렘=deploy/onprem.env, dev/release 는 미설정→로컬.
+
+  # rag-search 는 별도 compose(호스트 :8100). 컨테이너에서 호스트 도달용.
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+  depends_on:
+    redis:
+      condition: service_healthy
+
+  # 호스트 포트를 직접 노출하지 않음 — edu-nginx 를 통해서만 도달(이슈 #157).
+  expose:
+    - "8000"
+
+  volumes:
+    # ⚠ 3 레플리카가 같은 호스트 디렉터리를 공유하는 것이 세션 연속성의 핵심이다.
+    #   레플리카 A 가 저장한 턴을 B 가 같은 파일에서 읽고, agent/session_store.py 의
+    #   should_reload(mtime 비교)가 "다른 레플리카가 더 최신을 저장했으면 재로딩"을
+    #   처리한다. 이 mtime 로직은 '공유 볼륨' 전제로 설계돼 있으므로(주석 참조),
+    #   레플리카를 서로 다른 박스로 흩으면 이 전제가 깨진다 — 같은 박스 유지 필수.
+    - ./projects:/app/projects
+    # 등록 스토어(data/registered.jsonl+registered_emb.npy)를 영속화 → 재배포에도 보존(#103)
+    - ./data:/app/data
+    # Claude CLI 구독 인증 주입 — 호스트(walter)의 ~/.claude 를 컨테이너 root 홈에 마운트.
+    # CLI 가 토큰 갱신 시 되써야 하므로 rw. 경로는 CLAUDE_HOME/CLAUDE_JSON 으로 변경 가능.
+    # ⚠ 알려진 위험(S6): 3 레플리카가 같은 인증 파일에 토큰 갱신을 되쓴다. 컨테이너
+    #   1개 안에서도 여러 subprocess 가 이미 같은 파일을 공유하므로 종류가 새로 생긴
+    #   위험은 아니지만 빈도는 올라간다. API 모드 전환 시 이 마운트 자체가 사라진다.
+    - "${CLAUDE_HOME:-/home/walter/.claude}:/root/.claude"
+    - "${CLAUDE_JSON:-/home/walter/.claude.json}:/root/.claude.json"
+
+  # 경량 /health 로 헬스체크 (LLM 토큰 미소모)
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health', timeout=3).status==200 else sys.exit(1)"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
+
+services:
+  # 레플리카 1 — 이미지 빌드를 여기서만 선언한다(3번 빌드 방지).
+  #   배포: docker compose build edu-agent-1  → 나머지는 같은 image 태그를 재사용.
+  # ⚠ REPLICA_NAME 을 명시하는 이유: container_name 은 **컨테이너 호스트명이 아니다.**
+  #   도커는 hostname 을 컨테이너 ID 해시로 준다(실측: "fdd47821ebd4"). 그대로 두면
+  #   부하 리포트의 '서버별' 표가 읽을 수 없는 해시로 채워지고, 재배포마다 값이 바뀌어
+  #   어제와 오늘을 대조할 수도 없다. 사람이 읽는 이름을 못 박는다.
+  edu-agent-1:
+    <<: *edu-agent-base
+    container_name: edu-agent-1
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-1
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+  edu-agent-2:
+    <<: *edu-agent-base
+    container_name: edu-agent-2
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-2
+
+  edu-agent-3:
+    <<: *edu-agent-base
+    container_name: edu-agent-3
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-3
+
+  edu-agent-4:
+    <<: *edu-agent-base
+    container_name: edu-agent-4
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-4
+
+  edu-agent-5:
+    <<: *edu-agent-base
+    container_name: edu-agent-5
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-5
+
+  edu-agent-6:
+    <<: *edu-agent-base
+    container_name: edu-agent-6
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-6
+
+  edu-agent-7:
+    <<: *edu-agent-base
+    container_name: edu-agent-7
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-7
+
+  edu-agent-8:
+    <<: *edu-agent-base
+    container_name: edu-agent-8
+    environment:
+      <<: *edu-agent-env
+      REPLICA_NAME: edu-agent-8
+
+  # 리버스 프록시(이슈 #157) — 배포 교체/크래시 재시작 창의 raw 502/연결거부를
+  # 리트라이(proxy_next_upstream)로 흡수하고, 그래도 안 되면 점검(503) 페이지를 반환.
+  # SSE(/chat) 는 버퍼링 없이 통과. 호스트 포트를 유일하게 받는 진입점.
+  edu-nginx:
+    image: nginx:1.27-alpine
+    container_name: edu-nginx
+    restart: unless-stopped
+    depends_on:
+      # 모든 레플리카가 헬스 통과한 뒤 프록시를 올린다 — upstream 호스트명이
+      # 해석되지 않은 상태로 nginx 가 기동하면 config 로드 자체가 실패한다.
+      edu-agent-1:
+        condition: service_healthy
+      edu-agent-2:
+        condition: service_healthy
+      edu-agent-3:
+        condition: service_healthy
+      edu-agent-4:
+        condition: service_healthy
+      edu-agent-5:
+        condition: service_healthy
+      edu-agent-6:
+        condition: service_healthy
+      edu-agent-7:
+        condition: service_healthy
+      edu-agent-8:
+        condition: service_healthy
+    ports:
+      # "호스트포트:컨테이너포트" — NPM(.102)이 향하는 기존 진입점(.95:18080)을 그대로 받음.
+      - "${EDU_NGINX_PORT:-18080}:8080"
+    volumes:
+      # ⚠ '디렉터리'를 마운트한다 — 단일 '파일' 마운트는 배포마다 stale 이 된다.
+      #
+      # 실제 사고(2026-08-21): 이전엔 edu-agent.conf 를 파일로 마운트했다. Docker 의
+      # 단일 파일 bind mount 는 경로가 아니라 **inode** 를 바인딩한다. 배포 스텝의
+      # rsync 가 파일을 원자적 교체(temp 작성 → rename)하면 inode 가 새로 생기고,
+      # 컨테이너는 계속 **옛 inode** 를 본다. 그래서 3 레플리카로 바꾼 설정이
+      # 반영되지 않고 nginx 가 `server edu-agent:8000`(구 컨테이너) 한 줄을 계속 물어,
+      # 새 레플리카 3대가 트래픽을 0 으로 받았다. `nginx -s reload` 도 컨테이너 안
+      # 파일이 옛것이라 무의미했다.
+      #
+      # 디렉터리 마운트는 경로를 따라가므로 rsync 로 파일이 교체돼도 즉시 보인다.
+      # nginx 는 /etc/nginx/conf.d/*.conf 만 로드하므로 maintenance.html 이 같은
+      # 디렉터리에 있어도 설정으로 해석되지 않는다(점검 페이지는 root 로 서빙).
+      - ./deploy/nginx:/etc/nginx/conf.d:ro
+
+  # 분산 세션 락 저장소(멀티워커/멀티레플리카 S1). 내부 단일 박스에서도 멀티워커면 필요.
+  redis:
+    image: redis:7-alpine
+    container_name: edu-agent-redis
+    restart: unless-stopped
+    # AOF 로 가벼운 영속화(락은 휘발돼도 무방하나, 재시작 시 깔끔하게).
+    command: ["redis-server", "--appendonly", "yes", "--save", ""]
+    volumes:
+      - edu-agent-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  edu-agent-redis-data:

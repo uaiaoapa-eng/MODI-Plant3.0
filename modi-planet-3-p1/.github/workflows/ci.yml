@@ -1,0 +1,38 @@
+name: CI
+
+# 코드규칙(ruff) + 테스트(pytest) 게이트. 배포(deploy.yml, self-hosted)와 분리된
+# GitHub 클라우드 러너에서 실행 — 사내 사설망 접근이 필요 없다.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install (project + test extras + ruff)
+        run: |
+          python -m pip install --upgrade pip
+          # ruff 는 버전을 고정한다 — 미고정이면 릴리스마다 기본 룰셋/판정이 바뀌어
+          # 코드 변경 없이 CI 가 깨진다(2026-08-21: 0.16.x 기본 룰셋 확장으로 457건 발생).
+          # 룰셋 자체는 pyproject [tool.ruff.lint] select 로 명시 고정돼 있다.
+          pip install 'ruff==0.16.4'
+          pip install -e '.[test]'
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Pytest
+        run: pytest

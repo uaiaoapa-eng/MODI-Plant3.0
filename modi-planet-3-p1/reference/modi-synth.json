@@ -1,0 +1,345 @@
+{
+  "session_id": "reference_modi-synth",
+  "title": "MODI 신디사이저",
+  "description": "모디(MODI) 스피커·센서로 연주하는 웹 신디사이저 음악 연주 앱",
+  "phase": "implement",
+  "diagram": "graph TD\n  A[MODI 신디사이저 메인 화면] --> B[헤더]\n  B --> B1[타이틀]\n  B --> B2[초기화 버튼]\n  A --> C[컨트롤 패널]\n  C --> C1[\"옥타브 카드<br/>다이얼/+- 버튼\"]\n  C --> C2[음량 슬라이더]\n  C --> C3[테레민 토글]\n  A --> D[현재 음 표시]\n  A --> E[피아노 건반]\n  E --> E1[흰 건반 7개]\n  E --> E2[검은 건반 5개]\n  A --> F[연주 기록 칩]\n\n  subgraph HW[MODI 하드웨어]\n    H1[다이얼 turn]\n    H2[ToF 거리센서]\n    H3[\"스피커 playTone/stop\"]\n  end\n\n  H1 -- 각도→옥타브2~6 --> C1\n  H2 -- 거리2~40cm→200~1200Hz --> C3\n  E1 -- 주파수 계산 --> H3\n  E2 -- 주파수 계산 --> H3\n  C3 -- 테레민 주파수 --> H3",
+  "generated_code": {
+    "App.tsx": "const { useState, useEffect, useRef } = React;\n\nconst NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];\nconst WHITE_KEYS = [\n  { name: 'C', semitone: 0, label: '도' },\n  { name: 'D', semitone: 2, label: '레' },\n  { name: 'E', semitone: 4, label: '미' },\n  { name: 'F', semitone: 5, label: '파' },\n  { name: 'G', semitone: 7, label: '솔' },\n  { name: 'A', semitone: 9, label: '라' },\n  { name: 'B', semitone: 11, label: '시' },\n];\nconst BLACK_KEYS = [\n  { name: 'C#', semitone: 1, after: 0 },\n  { name: 'D#', semitone: 3, after: 1 },\n  { name: 'F#', semitone: 6, after: 3 },\n  { name: 'G#', semitone: 8, after: 4 },\n  { name: 'A#', semitone: 10, after: 5 },\n];\n\n// 음 이름 -> 주파수 (A4 = 440Hz)\nfunction noteToFreq(semitone, octave) {\n  const n = semitone + (octave - 4) * 12 - 9; // A4 기준\n  return Math.round(440 * Math.pow(2, n / 12));\n}\n\nfunction App() {\n  const [octave, setOctave] = useState(4);\n  const [volume, setVolume] = useState(70);\n  const [activeNote, setActiveNote] = useState(null);\n  const [theremin, setTheremin] = useState(false);\n  const [thereminFreq, setThereminFreq] = useState(0);\n  const [log, setLog] = useState([]);\n\n  const octaveRef = useRef(4);\n  const volumeRef = useRef(70);\n  const thereminRef = useRef(false);\n  const lastFreqRef = useRef(0);\n  const lastSetRef = useRef(0);\n\n  useEffect(() => { octaveRef.current = octave; }, [octave]);\n  useEffect(() => { volumeRef.current = volume; }, [volume]);\n  useEffect(() => { thereminRef.current = theremin; }, [theremin]);\n\n  // 다이얼로 옥타브 조절 (turn 각도 -> 옥타브 2~6)\n  useEffect(() => {\n    const offDial = MODI.onValue('dial', 1, 'turn', (turn) => {\n      const oct = 2 + Math.round((Math.max(0, Math.min(360, turn || 0)) / 360) * 4);\n      if (oct !== octaveRef.current) {\n        octaveRef.current = oct;\n        setOctave(oct);\n      }\n    }, { pollMs: 60 });\n    return () => { offDial(); };\n  }, []);\n\n  // 테레민: 거리센서(cm) -> 주파수\n  useEffect(() => {\n    const offTof = MODI.onValue('tof', 1, 'distance', (dist) => {\n      if (!thereminRef.current) return;\n      const d = dist || 0;\n      if (d <= 0 || d > 40) {\n        if (lastFreqRef.current !== 0) {\n          lastFreqRef.current = 0;\n          MODI.speaker(1).stop();\n        }\n        return;\n      }\n      // 2cm~40cm -> 200Hz~1200Hz\n      const clamped = Math.max(2, Math.min(40, d));\n      const freq = Math.round(200 + (1 - (clamped - 2) / 38) * 1000);\n      lastFreqRef.current = freq;\n      MODI.speaker(1).playTone(freq, volumeRef.current);\n      const now = performance.now();\n      if (now - lastSetRef.current > 120) {\n        lastSetRef.current = now;\n        setThereminFreq(freq);\n      }\n    }, { pollMs: 40 });\n    return () => { offTof(); };\n  }, []);\n\n  // 테레민 켜고 끌 때 소리 정리\n  useEffect(() => {\n    if (!theremin) {\n      MODI.speaker(1).stop();\n      lastFreqRef.current = 0;\n      setThereminFreq(0);\n    }\n  }, [theremin]);\n\n  const playKey = (semitone, name) => {\n    if (theremin) return;\n    const freq = noteToFreq(semitone, octave);\n    MODI.speaker(1).playTone(freq, volume);\n    setActiveNote(name + octave);\n    setLog((prev) => [`${name}${octave}  ${freq}Hz`, ...prev].slice(0, 8));\n  };\n\n  const stopKey = () => {\n    if (theremin) return;\n    MODI.speaker(1).stop();\n    setActiveNote(null);\n  };\n\n  const reset = () => {\n    MODI.speaker(1).stop();\n    setOctave(4);\n    setVolume(70);\n    setActiveNote(null);\n    setTheremin(false);\n    setThereminFreq(0);\n    setLog([]);\n    lastFreqRef.current = 0;\n  };\n\n  return (\n    <div className=\"h-screen flex flex-col bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white\">\n      {/* 헤더 */}\n      <div className=\"flex-shrink-0 px-8 py-5 flex items-center justify-between border-b border-white/10\">\n        <div>\n          <h1 className=\"text-2xl font-bold tracking-tight\">MODI 신디사이저</h1>\n          <p className=\"text-sm text-indigo-300/70\">모디 스피커로 연주하는 음악 웹</p>\n        </div>\n        <button\n          onClick={reset}\n          className=\"px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-medium transition-colors\"\n        >\n          초기화\n        </button>\n      </div>\n\n      {/* 본문 */}\n      <div className=\"flex-1 min-h-0 flex flex-col p-8 gap-6\">\n        {/* 컨트롤 패널 */}\n        <div className=\"flex-shrink-0 grid grid-cols-3 gap-4\">\n          <div className=\"rounded-2xl bg-white/5 border border-white/10 p-5\">\n            <div className=\"text-xs uppercase tracking-wider text-indigo-300/60 mb-1\">옥타브 (다이얼)</div>\n            <div className=\"text-4xl font-bold text-indigo-300\">{octave}</div>\n            <div className=\"mt-3 flex gap-2\">\n              <button onClick={() => setOctave((o) => Math.max(2, o - 1))} className=\"flex-1 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm\">-</button>\n              <button onClick={() => setOctave((o) => Math.min(6, o + 1))} className=\"flex-1 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm\">+</button>\n            </div>\n          </div>\n\n          <div className=\"rounded-2xl bg-white/5 border border-white/10 p-5\">\n            <div className=\"text-xs uppercase tracking-wider text-indigo-300/60 mb-1\">음량</div>\n            <div className=\"text-4xl font-bold text-pink-300\">{volume}</div>\n            <input\n              type=\"range\" min={0} max={100} value={volume}\n              onChange={(e) => setVolume(Number(e.target.value))}\n              className=\"w-full mt-3 accent-pink-400\"\n            />\n          </div>\n\n          <div className=\"rounded-2xl bg-white/5 border border-white/10 p-5 flex flex-col\">\n            <div className=\"text-xs uppercase tracking-wider text-indigo-300/60 mb-1\">테레민 모드 (거리센서)</div>\n            <button\n              onClick={() => setTheremin((t) => !t)}\n              className={`mt-1 py-2 rounded-xl font-semibold transition-colors ${theremin ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}\n            >\n              {theremin ? `연주중  ${thereminFreq}Hz` : '켜기'}\n            </button>\n            <div className=\"mt-2 text-xs text-indigo-300/50\">손을 거리센서 가까이/멀리</div>\n          </div>\n        </div>\n\n        {/* 현재 음 표시 */}\n        <div className=\"flex-shrink-0 flex items-center justify-center\">\n          <div className=\"text-lg font-medium text-indigo-200/80\">\n            {theremin ? (thereminFreq > 0 ? `테레민 ♪ ${thereminFreq}Hz` : '거리센서에 손을 대보세요') : (activeNote ? `연주중 ♪ ${activeNote}` : '건반을 눌러 연주하세요')}\n          </div>\n        </div>\n\n        {/* 피아노 건반 */}\n        <div className=\"flex-1 min-h-0 flex items-center justify-center\">\n          <div className={`relative w-full max-w-3xl h-full max-h-72 select-none ${theremin ? 'opacity-30 pointer-events-none' : ''}`}>\n            {/* 흰 건반 */}\n            <div className=\"absolute inset-0 flex gap-1.5\">\n              {WHITE_KEYS.map((key) => {\n                const id = key.name + octave;\n                const isActive = activeNote === id;\n                return (\n                  <button\n                    key={key.name}\n                    onMouseDown={() => playKey(key.semitone, key.name)}\n                    onMouseUp={stopKey}\n                    onMouseLeave={() => { if (activeNote === id) stopKey(); }}\n                    onTouchStart={(e) => { e.preventDefault(); playKey(key.semitone, key.name); }}\n                    onTouchEnd={stopKey}\n                    className={`flex-1 rounded-b-xl flex items-end justify-center pb-4 font-semibold transition-all ${isActive ? 'bg-indigo-400 text-white shadow-inner translate-y-0.5' : 'bg-white text-slate-700 hover:bg-indigo-50'}`}\n                  >\n                    <span className=\"text-sm\">{key.label}</span>\n                  </button>\n                );\n              })}\n            </div>\n            {/* 검은 건반 */}\n            <div className=\"absolute inset-0 pointer-events-none\">\n              {BLACK_KEYS.map((key) => {\n                const id = key.name + octave;\n                const isActive = activeNote === id;\n                const leftPct = ((key.after + 1) / 7) * 100;\n                return (\n                  <button\n                    key={key.name}\n                    onMouseDown={() => playKey(key.semitone, key.name)}\n                    onMouseUp={stopKey}\n                    onMouseLeave={() => { if (activeNote === id) stopKey(); }}\n                    onTouchStart={(e) => { e.preventDefault(); playKey(key.semitone, key.name); }}\n                    onTouchEnd={stopKey}\n                    style={{ left: `calc(${leftPct}% - 4%)`, width: '8%' }}\n                    className={`absolute top-0 h-3/5 rounded-b-lg pointer-events-auto transition-all ${isActive ? 'bg-indigo-500' : 'bg-slate-900 hover:bg-slate-700'} border-2 border-slate-800 shadow-lg`}\n                  />\n                );\n              })}\n            </div>\n          </div>\n        </div>\n\n        {/* 연주 기록 */}\n        <div className=\"flex-shrink-0 h-10 flex items-center gap-2 overflow-hidden\">\n          <span className=\"text-xs text-indigo-300/50 flex-shrink-0\">기록</span>\n          {log.map((item, i) => (\n            <span key={i} className=\"px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-indigo-200/70 whitespace-nowrap\">{item}</span>\n          ))}\n        </div>\n      </div>\n    </div>\n  );\n}\n\nexport default App;\n"
+  },
+  "coding_type": "hybrid",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": {
+    "modules": [
+      {
+        "key": "network",
+        "role": "필수",
+        "reason": "PC와 통신하고 전원을 공급해요",
+        "count": 1
+      },
+      {
+        "key": "dial",
+        "role": "입력",
+        "reason": "다이얼 회전값을 입력해요",
+        "count": 1
+      },
+      {
+        "key": "tof",
+        "role": "입력",
+        "reason": "거리를 감지해요",
+        "count": 1
+      },
+      {
+        "key": "speaker",
+        "role": "출력",
+        "reason": "소리·멜로디를 출력해요",
+        "count": 1
+      }
+    ],
+    "layout": [
+      {
+        "key": "network",
+        "pos": [
+          0.0,
+          0.0
+        ],
+        "usbFace": "left"
+      },
+      {
+        "key": "dial",
+        "pos": [
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "key": "tof",
+        "pos": [
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "key": "speaker",
+        "pos": [
+          1.0,
+          1.0
+        ]
+      }
+    ],
+    "assembly": [
+      "네트워크 모듈을 놓고 USB 케이블을 PC에 연결하세요.",
+      "다이얼 모듈을 자석 면에 맞대어 연결하세요.",
+      "거리 센서(ToF) 모듈을 자석 면에 맞대어 연결하세요.",
+      "스피커 모듈을 자석 면에 맞대어 연결하세요."
+    ],
+    "title": "MODI 신디사이저",
+    "description": "모디(MODI) 스피커·센서로 연주하는 웹 신디사이저 음악 연주 앱"
+  },
+  "files": "- App.tsx (typescript): 모디 스피커로 연주하는 음악 웹. 화면 건반 클릭 연주, 거리센서 테레민 모드, 다이얼로 옥타브 조절",
+  "design_doc": {
+    "project_name": "MODI 신디사이저",
+    "description": "모디(MODI) 스피커·센서로 연주하는 웹 신디사이저 음악 연주 앱",
+    "users": [
+      "연주자(학습자)"
+    ],
+    "features": [
+      {
+        "name": "피아노 건반 연주",
+        "description": "흰 건반 7개(도~시)와 검은 건반 5개(반음)를 마우스/터치로 눌러 모디 스피커로 해당 음을 재생. 음 이름과 옥타브 기준 주파수(A4=440Hz)를 계산해 playTone 호출",
+        "priority": "mvp"
+      },
+      {
+        "name": "옥타브 조절 (다이얼)",
+        "description": "모디 다이얼 모듈의 turn 각도(0~360)를 옥타브 2~6으로 매핑해 실시간 조절. 화면 -/+ 버튼으로도 조절 가능",
+        "priority": "mvp"
+      },
+      {
+        "name": "음량 조절",
+        "description": "0~100 범위 슬라이더로 재생 음량 조절",
+        "priority": "mvp"
+      },
+      {
+        "name": "테레민 모드 (거리센서)",
+        "description": "모디 ToF 거리센서(2~40cm)를 200~1200Hz 주파수로 매핑해 손 거리로 연속 연주. 범위 밖이면 소리 정지",
+        "priority": "mvp"
+      },
+      {
+        "name": "현재 음 표시",
+        "description": "현재 연주 중인 음 이름+옥타브 또는 테레민 주파수를 중앙에 표시",
+        "priority": "nice_to_have"
+      },
+      {
+        "name": "연주 기록",
+        "description": "최근 연주한 음과 주파수를 최대 8개까지 칩 형태로 표시",
+        "priority": "nice_to_have"
+      },
+      {
+        "name": "초기화",
+        "description": "옥타브/음량/모드/기록을 기본값으로 리셋하고 스피커 정지",
+        "priority": "nice_to_have"
+      }
+    ],
+    "pages": [
+      {
+        "name": "메인 연주 화면",
+        "description": "단일 화면 신디사이저 인터페이스 (헤더 + 컨트롤 패널 + 건반 + 기록)",
+        "components": [
+          "헤더(타이틀/초기화 버튼)",
+          "옥타브 컨트롤 카드",
+          "음량 슬라이더 카드",
+          "테레민 모드 토글 카드",
+          "현재 음 표시",
+          "피아노 건반(흰 건반/검은 건반)",
+          "연주 기록 칩 목록"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "WhiteKey",
+        "fields": [
+          "name",
+          "semitone",
+          "label"
+        ],
+        "description": "흰 건반 정의 (예: C, 0, '도')"
+      },
+      {
+        "name": "BlackKey",
+        "fields": [
+          "name",
+          "semitone",
+          "after"
+        ],
+        "description": "검은 건반 정의 (반음, 위치 기준 건반)"
+      },
+      {
+        "name": "PlayState",
+        "fields": [
+          "octave(2~6)",
+          "volume(0~100)",
+          "activeNote",
+          "theremin(boolean)",
+          "thereminFreq",
+          "log[]"
+        ],
+        "description": "현재 연주 상태"
+      },
+      {
+        "name": "LogEntry",
+        "fields": [
+          "note",
+          "frequency"
+        ],
+        "description": "연주 기록 항목 (예: 'C4 262Hz')"
+      }
+    ],
+    "user_flows": [
+      "건반 누름 → 주파수 계산(옥타브 반영) → 스피커 재생 → 현재 음/기록 갱신 → 떼면 정지",
+      "다이얼 회전 → turn 각도 → 옥타브(2~6) 변경",
+      "테레민 켜기 → 거리센서 입력(2~40cm) → 주파수(200~1200Hz) 매핑 → 연속 재생"
+    ],
+    "strengths": [
+      "하드웨어 입력(다이얼/거리센서)과 출력(스피커)을 직관적으로 연결",
+      "단일 화면에 모든 기능이 모여 조작이 명확",
+      "테레민/건반 모드 전환 시 소리 정리 및 UI 비활성화 처리"
+    ],
+    "weaknesses": [
+      "동시에 여러 음을 내는 화음(폴리포니) 미지원",
+      "녹음/재생, 악보 저장 기능 없음",
+      "모디 모듈 연결 실패/미연결 시 에러 안내가 없음"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "화면이 방금 누른 건반을 '기억'하는 비밀",
+      "what": "프로그램에는 지금 어떤 상태인지를 적어두는 작은 메모장이 있어요. 지금 누른 음이 무엇인지, 음량이 얼마인지, 테레민 모드가 켜졌는지를 이 메모장에 적어둡니다. 메모장 내용이 바뀌면 화면도 그에 맞춰 새로 그려져요. 사람이 직접 화면을 고치지 않아도 알아서 따라옵니다.",
+      "why": "이 메모장이 없으면 건반을 눌러도 화면은 아무 변화 없이 그대로 있게 돼요. 지금 무슨 음이 연주 중인지, 음량이 얼마인지 알 길이 없어 매번 헷갈립니다. 상태를 기억하기 때문에 누른 건반이 색이 변하고 숫자가 바뀌는 거예요. 덕분에 사용자는 지금 무슨 일이 일어나는지 한눈에 알 수 있습니다.",
+      "where": "인스타에서 하트를 누르면 바로 빨갛게 변하는 것도 '좋아요 눌렀음'을 기억하기 때문이에요. 카톡에서 읽음 표시(1)가 사라지는 것도 같은 원리고요. 쿠팡 장바구니에 담은 개수가 화면 위에 바로 뜨는 것도 그 숫자를 기억하고 있어서예요."
+    },
+    {
+      "title": "기기를 켜면 연결하고, 끄면 깔끔히 정리하는 습관",
+      "what": "프로그램이 시작될 때 다이얼이나 거리센서에 '신호 좀 계속 보내줘'라고 연결을 겁니다. 그리고 화면을 떠날 때는 그 연결을 다시 끊어 정리해요. 마치 도서관에서 책을 빌리면 나갈 때 반납하는 것과 같아요. 빌리기와 반납이 짝을 이뤄야 깔끔합니다.",
+      "why": "연결만 하고 정리를 안 하면, 안 쓰는 센서가 계속 신호를 보내며 자원을 낭비해요. 시간이 지나면 프로그램이 점점 느려지고 소리가 멈추지 않는 오류도 생깁니다. 정리하는 습관이 있어야 켜고 끄기를 반복해도 항상 깨끗한 상태로 시작할 수 있어요. 안정적으로 오래 쓰려면 꼭 필요합니다.",
+      "where": "유튜브 영상을 보다가 다른 화면으로 넘어가면 소리가 자동으로 멈추죠. 카톡에서 채팅방을 나가면 그 방의 실시간 업데이트를 더 이상 받지 않고요. 화상회의 앱에서 회의를 끝내면 카메라와 마이크 연결이 자동으로 꺼지는 것도 같은 정리 습관이에요."
+    },
+    {
+      "title": "센서가 너무 자주 말 걸 때 적당히 걸러 듣기",
+      "what": "거리센서는 1초에도 수십 번씩 '지금 손이 이만큼 떨어졌어요'라고 보고해요. 보고가 올 때마다 화면 숫자를 전부 바꾸면 눈이 어지럽고 기기가 버거워합니다. 그래서 '0.12초에 한 번씩만 화면을 새로 고치자'라고 약속을 정해요. 소리는 바로바로 내되, 화면 숫자만 살짝 천천히 바꾸는 거예요.",
+      "why": "이 걸러 듣기가 없으면 숫자가 너무 빨리 깜빡여 읽을 수 없고, 기기도 일을 너무 많이 해 뜨겁고 느려집니다. 배터리도 빨리 닳고 화면이 끊겨 보일 수 있어요. 적당히 간격을 두면 부드럽게 보이면서도 기기는 편하게 일합니다. 빠른 반응과 안정감의 균형을 맞추는 거예요.",
+      "where": "검색창에 글자를 칠 때 자동완성이 한 글자마다가 아니라 잠깐 멈췄을 때 뜨는 것도 이 원리예요. 인스타 피드를 빠르게 내릴 때 사진이 조금씩 끊어 뜨는 것도 한꺼번에 다 안 불러오고 적당히 조절하기 때문이고요. 지도 앱에서 화면을 움직일 때 위치를 계속이 아니라 잠깐 멈출 때 갱신하는 것도 비슷합니다."
+    },
+    {
+      "title": "손잡이를 돌린 만큼 단계가 척척 나뉘는 마법",
+      "what": "다이얼은 0도부터 360도까지 빙 돌릴 수 있어요. 이 각도를 보고 '얼마나 돌렸나'를 계산해서 옥타브 단계 2부터 6까지로 바꿔줍니다. 거리센서도 가까울수록 높은 소리, 멀수록 낮은 소리로 바꿔주고요. 즉 빙글빙글 돌리거나 손을 멀리하는 동작을 숫자 범위로 깔끔하게 옮기는 거예요.",
+      "why": "이 변환이 없으면 다이얼을 돌려도 무슨 의미인지 알 수 없는 숫자만 나와요. 사람이 이해하기 쉬운 '단계'나 '음 높이'로 바꿔줘야 비로소 쓸모가 생깁니다. 또 범위를 정해두기 때문에 아무리 세게 돌려도 너무 높거나 낮은 엉뚱한 값이 나오지 않아요. 항상 안전한 범위 안에서 움직이게 됩니다.",
+      "where": "휴대폰 밝기 조절 막대를 끝까지 밀어도 최대 밝기를 넘지 않는 것과 같아요. 음악 앱에서 볼륨 손잡이를 돌리면 0에서 100 사이로만 움직이고요. 게임에서 컨트롤러를 살짝 기울이면 천천히, 많이 기울이면 빠르게 움직이는 것도 같은 변환 방식이에요."
+    },
+    {
+      "title": "도레미가 사실은 '숫자'였다는 사실",
+      "what": "스피커는 사실 도레미 같은 음 이름을 모르고, 1초에 몇 번 떨리는지(주파수)만 알아요. 그래서 '솔'을 누르면 그 음에 맞는 떨림 횟수로 바꿔 스피커에 전달합니다. 옥타브가 한 단계 올라갈 때마다 떨림 횟수가 정확히 두 배가 되는 규칙도 들어있어요. 음악을 수학으로 번역하는 작은 통역사인 셈이에요.",
+      "why": "이 번역이 없으면 사람이 직접 모든 음의 떨림 숫자를 외워서 입력해야 해요. 옥타브를 바꿀 때마다 일일이 다시 계산해야 하니 무척 번거롭습니다. 규칙을 코드에 넣어두면 어떤 음, 어떤 높이든 자동으로 정확한 소리를 내줘요. 덕분에 사용자는 그냥 건반만 누르면 됩니다.",
+      "where": "피아노 연주 앱에서 화면 건반을 누르면 진짜 음이 나는 것도 이 번역 덕분이에요. 노래방 앱에서 키(음 높이)를 올리고 내리는 버튼도 이 두 배 규칙을 활용합니다. 악기 튜너 앱이 '이 소리는 라 음이에요'라고 알려주는 것도 떨림 숫자를 음 이름으로 거꾸로 번역하는 거예요."
+    },
+    {
+      "title": "상황에 따라 화면이 통째로 바뀌는 똑똑함",
+      "what": "테레민 모드를 켜면 피아노 건반이 흐릿해지고 눌러도 반응하지 않아요. 대신 손 거리에 따른 주파수가 화면에 표시되죠. 같은 화면이지만 '지금 어떤 모드냐'에 따라 보여주는 내용과 작동 방식이 달라지는 거예요. 마치 한 방을 낮에는 거실, 밤에는 침실로 쓰는 것과 비슷해요.",
+      "why": "이 구분이 없으면 테레민 연주 중에 실수로 건반을 눌러 소리가 섞여 엉망이 됩니다. 지금 무슨 모드인지 화면으로 안 보여주면 사용자는 헷갈려서 잘못 조작해요. 상황에 맞게 화면을 바꿔주면 실수를 막고 무엇을 해야 할지 분명해집니다. 사용자가 길을 잃지 않게 안내하는 역할이에요.",
+      "where": "쿠팡에서 로그인 전에는 '로그인' 버튼이, 로그인 후에는 '내 정보'가 뜨는 것과 같아요. 카톡에서 인터넷이 끊기면 메시지 옆에 빨간 느낌표가 떠 상태를 알려주고요. 배달 앱에서 가게가 영업 끝나면 주문 버튼이 회색으로 변해 못 누르게 막는 것도 같은 원리예요."
+    },
+    {
+      "title": "건반을 '누를 때'와 '뗄 때'를 따로 아는 손가락",
+      "what": "이 앱은 건반을 누르는 순간 소리를 내고, 손을 떼는 순간 소리를 멈춰요. 누름과 뗌을 따로 알아채기 때문에 진짜 피아노처럼 길게 누르면 길게 소리가 납니다. 게다가 손가락을 건반 밖으로 미끄러뜨려도 소리가 알아서 멈춰요. 마우스든 손가락 터치든 둘 다 똑같이 작동하게 만들어 뒀습니다.",
+      "why": "누름만 알고 뗌을 모르면 한 번 누른 소리가 영영 멈추지 않아요. 반대로 너무 빨리 끊으면 음을 길게 늘이는 연주를 할 수 없고요. 두 동작을 나눠 다뤄야 사람이 원하는 만큼 자연스럽게 소리를 조절할 수 있습니다. 마우스와 터치를 모두 챙겨야 컴퓨터든 휴대폰이든 어디서나 잘 작동해요.",
+      "where": "카톡에서 음성 메시지 버튼을 꾹 누르는 동안만 녹음되고 떼면 멈추는 것과 똑같아요. 게임에서 버튼을 길게 누르면 캐릭터가 계속 움직이고 떼면 멈추는 것도 그렇고요. 인스타 스토리를 손으로 누르고 있으면 멈췄다가 떼면 다시 넘어가는 것도 누름과 뗌을 따로 아는 덕분이에요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 3,
+      "title": "여러 값을 한 줄로 모아두는 배열",
+      "explanation": "대괄호 [] 안에 음 이름들을 순서대로 담아두는 '배열'입니다. 여러 데이터를 하나의 묶음으로 관리할 때 사용해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 5,
+      "title": "객체로 정보 묶기",
+      "explanation": "중괄호 {} 로 이름, 음 높이, 라벨처럼 관련된 정보를 하나의 '객체'로 묶었습니다. 각 건반의 정보를 깔끔하게 표현할 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 22,
+      "title": "함수로 계산 과정 재사용하기",
+      "explanation": "음 이름을 주파수로 바꾸는 계산을 함수로 만들어 두면, 필요할 때마다 이름만 불러서 똑같은 계산을 반복할 수 있습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 29,
+      "title": "화면에서 변하는 값 저장하기 (useState)",
+      "explanation": "useState는 화면에 보이는 값을 기억하고, 값이 바뀌면 화면을 자동으로 다시 그려줍니다. 여기서는 옥타브 숫자를 저장해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 43,
+      "title": "값이 바뀔 때 실행되는 코드 (useEffect)",
+      "explanation": "useEffect는 지정한 값(octave)이 바뀔 때마다 안의 코드를 실행합니다. 변화에 반응해 무언가를 처리할 때 써요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 49,
+      "title": "범위 안으로 값 가두기",
+      "explanation": "Math.max와 Math.min을 같이 쓰면 값이 최소~최대 범위를 벗어나지 않도록 제한할 수 있습니다. 여기선 0~360 사이로 맞춰요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 64,
+      "title": "조건이 맞으면 일찍 빠져나가기",
+      "explanation": "if 조건에 걸리면 return으로 함수를 바로 끝냅니다. 불필요한 코드를 실행하지 않고 미리 멈추는 방법이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 92,
+      "title": "함수에 값 전달하기 (매개변수)",
+      "explanation": "playKey 함수는 semitone과 name이라는 값을 받아서 사용합니다. 함수를 부를 때 필요한 재료를 건네주는 것이에요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 97,
+      "title": "기존 목록 앞에 새 항목 추가하기",
+      "explanation": "...prev로 이전 기록을 펼쳐 놓고 앞에 새 연주를 붙인 뒤, slice(0,8)로 최근 8개만 남깁니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 130,
+      "title": "버튼 클릭에 동작 연결하기",
+      "explanation": "onClick에 함수를 연결하면 사용자가 버튼을 눌렀을 때 그 함수가 실행됩니다. 여기선 reset 함수로 모든 값을 초기화해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 153,
+      "title": "이전 값을 바탕으로 값 바꾸기",
+      "explanation": "setOctave에 함수를 넣으면 현재 옥타브 o를 받아 1을 뺀 값으로 바꿉니다. Math.max로 2 아래로는 내려가지 않게 막아요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 184,
+      "title": "조건에 따라 다른 화면 보여주기",
+      "explanation": "삼항연산자(조건 ? A : B)로 테레민 모드인지에 따라 다른 안내 문구를 보여줍니다. 상황별로 화면을 바꿀 때 자주 써요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 195,
+      "title": "배열을 반복해서 화면 만들기 (map)",
+      "explanation": "map은 배열의 각 항목을 하나씩 꺼내 버튼으로 바꿔줍니다. 건반 7개를 일일이 적지 않고 자동으로 만들어내요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 209,
+      "title": "조건에 따라 스타일 바꾸기",
+      "explanation": "isActive 값이 참인지에 따라 버튼 색깔 클래스를 다르게 적용합니다. 눌린 건반을 시각적으로 표시할 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 244,
+      "title": "목록을 반복해 태그로 표시하기",
+      "explanation": "log 배열을 map으로 돌며 연주 기록을 하나씩 작은 태그로 화면에 나열합니다. key는 각 항목을 구별하는 이름표예요."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: 소프트웨어+하드웨어로 할게요\n튜터: 좋아요! 웹 화면과 MODI가 함께 동작하는 작품을 만들어볼게요. 어떤 걸 만들고 싶나요?\n학습자: 모디로 음악을 연주해볼 수 있는 멋있는 웹 만들어줘.\n튜터: 모디 스피커로 소리를 내는 신디사이저를 만들게요. 화면 건반을 눌러 연주하고, 거리센서로 테레민처럼 음높이를 바꾸고, 다이얼로 옥타브를 조절할 수 있어요. 하드웨어가 없어도 마우스로 체험할 수 있게 할게요.\n학습자: 옥타브랑 음량도 조절할 수 있으면 좋겠어.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "MODI 스피커와 센서로 음악을 연주하는 웹 신디사이저를 만들어줘. 화면 건반 연주, 거리센서 테레민 모드, 다이얼 옥타브 조절을 넣어줘."
+    },
+    {
+      "role": "ai",
+      "content": "MODI 스피커로 연주하는 웹 신디사이저를 만들게요. 화면 건반으로 음을 연주하고, 거리센서 테레민 모드와 다이얼 옥타브·음량 조절을 넣을게요."
+    }
+  ]
+}

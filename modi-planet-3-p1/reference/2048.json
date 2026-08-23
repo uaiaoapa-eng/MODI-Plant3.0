@@ -1,0 +1,271 @@
+{
+  "session_id": "reference_2048",
+  "title": "2048",
+  "description": "타일을 합쳐 2048을 만드는 4x4 슬라이딩 퍼즐 게임",
+  "phase": "implement",
+  "diagram": "graph TD\n  App[\"App.tsx<br/>게임 상태 관리\"]\n  App --> Header[\"제목 + 점수/최고 패널\"]\n  App --> Controls[조작 안내 + 새 게임 버튼]\n  App --> BoardWrap[\"보드 영역<br/>키보드/터치 입력\"]\n  BoardWrap --> Board[\"Board.tsx<br/>4x4 타일 렌더링\"]\n  BoardWrap --> Overlay[\"승리/게임오버 오버레이<br/>계속하기·다시 시작\"]\n  App --> Game[\"utils/game.ts\"]\n  Game --> G1[createEmptyGrid]\n  Game --> G2[addRandomTile]\n  Game --> G3[\"move / slideRow / transpose\"]\n  Game --> G4[hasWon]\n  Game --> G5[canMove]\n  App --> LS[\"(localStorage<br/>best2048)\"]",
+  "generated_code": {
+    "App.tsx": "import { useState, useEffect, useCallback, useRef } from 'react';\nimport { RotateCcw, Trophy } from 'lucide-react';\nimport Board from './components/Board';\nimport { Grid, createEmptyGrid, addRandomTile, move, hasWon, canMove, Direction } from './utils/game';\n\nexport default function App() {\n  const [grid, setGrid] = useState<Grid>(() => addRandomTile(addRandomTile(createEmptyGrid())));\n  const [score, setScore] = useState(0);\n  const [best, setBest] = useState(() => Number(localStorage.getItem('best2048') || 0));\n  const [won, setWon] = useState(false);\n  const [over, setOver] = useState(false);\n  const [keepGoing, setKeepGoing] = useState(false);\n\n  const reset = useCallback(() => {\n    setGrid(addRandomTile(addRandomTile(createEmptyGrid())));\n    setScore(0);\n    setWon(false);\n    setOver(false);\n    setKeepGoing(false);\n  }, []);\n\n  const handleMove = useCallback((dir: Direction) => {\n    if (over) return;\n    if (won && !keepGoing) return;\n    setGrid(prev => {\n      const { grid: moved, gained, changed } = move(prev, dir);\n      if (!changed) return prev;\n      const next = addRandomTile(moved);\n      setScore(s => {\n        const ns = s + gained;\n        setBest(b => {\n          const nb = Math.max(b, ns);\n          localStorage.setItem('best2048', String(nb));\n          return nb;\n        });\n        return ns;\n      });\n      if (!won && hasWon(next)) setWon(true);\n      if (!canMove(next)) setOver(true);\n      return next;\n    });\n  }, [over, won, keepGoing]);\n\n  useEffect(() => {\n    const onKey = (e: KeyboardEvent) => {\n      const map: Record<string, Direction> = {\n        ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',\n        w: 'up', s: 'down', a: 'left', d: 'right',\n      };\n      const dir = map[e.key];\n      if (dir) {\n        e.preventDefault();\n        handleMove(dir);\n      }\n    };\n    window.addEventListener('keydown', onKey);\n    return () => window.removeEventListener('keydown', onKey);\n  }, [handleMove]);\n\n  const touchStart = useRef<{ x: number; y: number } | null>(null);\n  const onTouchStart = (e: React.TouchEvent) => {\n    const t = e.touches[0];\n    touchStart.current = { x: t.clientX, y: t.clientY };\n  };\n  const onTouchEnd = (e: React.TouchEvent) => {\n    if (!touchStart.current) return;\n    const t = e.changedTouches[0];\n    const dx = t.clientX - touchStart.current.x;\n    const dy = t.clientY - touchStart.current.y;\n    const ax = Math.abs(dx), ay = Math.abs(dy);\n    if (Math.max(ax, ay) < 24) return;\n    if (ax > ay) handleMove(dx > 0 ? 'right' : 'left');\n    else handleMove(dy > 0 ? 'down' : 'up');\n    touchStart.current = null;\n  };\n\n  return (\n    <div className=\"min-h-screen bg-[#faf8ef] flex items-center justify-center p-6\">\n      <div className=\"w-full max-w-md\">\n        <div className=\"flex items-end justify-between mb-6\">\n          <div>\n            <h1 className=\"text-5xl font-extrabold text-[#776e65] leading-none\">2048</h1>\n            <p className=\"text-[#776e65] text-sm mt-2\">타일을 합쳐 2048을 만드세요</p>\n          </div>\n          <div className=\"flex gap-2\">\n            <div className=\"bg-[#bbada0] rounded-lg px-4 py-2 text-center min-w-[72px]\">\n              <div className=\"text-[#eee4da] text-xs font-bold uppercase\">점수</div>\n              <div className=\"text-white text-xl font-bold\">{score}</div>\n            </div>\n            <div className=\"bg-[#bbada0] rounded-lg px-4 py-2 text-center min-w-[72px]\">\n              <div className=\"text-[#eee4da] text-xs font-bold uppercase flex items-center justify-center gap-1\"><Trophy size={12} />최고</div>\n              <div className=\"text-white text-xl font-bold\">{best}</div>\n            </div>\n          </div>\n        </div>\n\n        <div className=\"flex justify-between items-center mb-4\">\n          <p className=\"text-sm text-[#776e65]\">방향키 또는 스와이프로 이동</p>\n          <button\n            onClick={reset}\n            className=\"flex items-center gap-2 bg-[#8f7a66] hover:bg-[#7d6a58] text-white font-bold px-4 py-2 rounded-lg transition-colors\"\n          >\n            <RotateCcw size={16} /> 새 게임\n          </button>\n        </div>\n\n        <div className=\"relative\" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>\n          <Board grid={grid} />\n          {(over || (won && !keepGoing)) && (\n            <div className=\"absolute inset-0 bg-white/70 rounded-xl flex flex-col items-center justify-center gap-4\">\n              <p className=\"text-3xl font-extrabold text-[#776e65]\">\n                {over ? '게임 오버!' : '승리!'}\n              </p>\n              <div className=\"flex gap-3\">\n                {won && !over && (\n                  <button\n                    onClick={() => setKeepGoing(true)}\n                    className=\"bg-[#edc22e] hover:bg-[#e0b71f] text-white font-bold px-5 py-2.5 rounded-lg transition-colors\"\n                  >\n                    계속하기\n                  </button>\n                )}\n                <button\n                  onClick={reset}\n                  className=\"bg-[#8f7a66] hover:bg-[#7d6a58] text-white font-bold px-5 py-2.5 rounded-lg transition-colors\"\n                >\n                  다시 시작\n                </button>\n              </div>\n            </div>\n          )}\n        </div>\n      </div>\n    </div>\n  );\n}\n",
+    "components/Board.tsx": "import { Grid } from '../utils/game';\n\nconst tileStyles: Record<number, string> = {\n  2: 'bg-[#eee4da] text-[#776e65]',\n  4: 'bg-[#ede0c8] text-[#776e65]',\n  8: 'bg-[#f2b179] text-white',\n  16: 'bg-[#f59563] text-white',\n  32: 'bg-[#f67c5f] text-white',\n  64: 'bg-[#f65e3b] text-white',\n  128: 'bg-[#edcf72] text-white',\n  256: 'bg-[#edcc61] text-white',\n  512: 'bg-[#edc850] text-white',\n  1024: 'bg-[#edc53f] text-white',\n  2048: 'bg-[#edc22e] text-white',\n};\n\nfunction fontSize(value: number) {\n  if (value < 100) return 'text-4xl';\n  if (value < 1000) return 'text-3xl';\n  return 'text-2xl';\n}\n\nexport default function Board({ grid }: { grid: Grid }) {\n  return (\n    <div className=\"bg-[#bbada0] rounded-xl p-3 aspect-square\">\n      <div className=\"grid grid-cols-4 grid-rows-4 gap-3 h-full\">\n        {grid.flat().map((value, i) => (\n          <div\n            key={i}\n            className={`rounded-md flex items-center justify-center font-extrabold leading-none min-w-0 transition-all ${\n              value === 0 ? 'bg-[#cdc1b4]' : tileStyles[value] || 'bg-[#3c3a32] text-white'\n            } ${value ? fontSize(value) : ''}`}\n          >\n            {value !== 0 ? value : ''}\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n}\n",
+    "utils/game.ts": "export type Grid = number[][];\nexport type Direction = 'up' | 'down' | 'left' | 'right';\n\nexport function createEmptyGrid(): Grid {\n  return Array.from({ length: 4 }, () => Array(4).fill(0));\n}\n\nexport function addRandomTile(grid: Grid): Grid {\n  const empty: [number, number][] = [];\n  for (let r = 0; r < 4; r++)\n    for (let c = 0; c < 4; c++)\n      if (grid[r][c] === 0) empty.push([r, c]);\n  if (empty.length === 0) return grid;\n  const next = grid.map(row => [...row]);\n  const [r, c] = empty[Math.floor(Math.random() * empty.length)];\n  next[r][c] = Math.random() < 0.9 ? 2 : 4;\n  return next;\n}\n\nfunction slideRow(row: number[]): { row: number[]; gained: number } {\n  const filtered = row.filter(v => v !== 0);\n  const result: number[] = [];\n  let gained = 0;\n  for (let i = 0; i < filtered.length; i++) {\n    if (i + 1 < filtered.length && filtered[i] === filtered[i + 1]) {\n      const merged = filtered[i] * 2;\n      result.push(merged);\n      gained += merged;\n      i++;\n    } else {\n      result.push(filtered[i]);\n    }\n  }\n  while (result.length < 4) result.push(0);\n  return { row: result, gained };\n}\n\nfunction transpose(grid: Grid): Grid {\n  return grid[0].map((_, c) => grid.map(row => row[c]));\n}\n\nexport function move(grid: Grid, dir: Direction): { grid: Grid; gained: number; changed: boolean } {\n  let working = grid.map(row => [...row]);\n  const reverse = dir === 'right' || dir === 'down';\n  const vertical = dir === 'up' || dir === 'down';\n\n  if (vertical) working = transpose(working);\n  let gained = 0;\n  working = working.map(row => {\n    const input = reverse ? [...row].reverse() : row;\n    const { row: slid, gained: g } = slideRow(input);\n    gained += g;\n    return reverse ? slid.reverse() : slid;\n  });\n  if (vertical) working = transpose(working);\n\n  const changed = JSON.stringify(working) !== JSON.stringify(grid);\n  return { grid: working, gained, changed };\n}\n\nexport function hasWon(grid: Grid): boolean {\n  return grid.some(row => row.some(v => v >= 2048));\n}\n\nexport function canMove(grid: Grid): boolean {\n  for (let r = 0; r < 4; r++)\n    for (let c = 0; c < 4; c++) {\n      if (grid[r][c] === 0) return true;\n      if (c + 1 < 4 && grid[r][c] === grid[r][c + 1]) return true;\n      if (r + 1 < 4 && grid[r][c] === grid[r + 1][c]) return true;\n    }\n  return false;\n}\n"
+  },
+  "coding_type": "react",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": null,
+  "files": "- App.tsx (typescript): 2048 게임 메인 컴포넌트 - 보드 상태, 키보드/스와이프 입력, 점수 관리\n- components/Board.tsx (typescript): 2048 보드 렌더링 - 배경 셀과 타일 표시\n- utils/game.ts (typescript): 2048 게임 로직 - 그리드 생성, 이동/병합, 랜덤 타일, 승패 판정",
+  "design_doc": {
+    "project_name": "2048",
+    "description": "타일을 합쳐 2048을 만드는 4x4 슬라이딩 퍼즐 게임",
+    "users": [
+      "플레이어"
+    ],
+    "features": [
+      {
+        "name": "타일 이동 및 병합",
+        "description": "방향키(↑↓←→/WASD) 또는 터치 스와이프로 타일을 이동시키고 같은 값의 타일을 합쳐 두 배 값으로 만든다",
+        "priority": "mvp"
+      },
+      {
+        "name": "랜덤 타일 생성",
+        "description": "이동 후 빈 칸에 90% 확률로 2, 10% 확률로 4 타일을 추가한다",
+        "priority": "mvp"
+      },
+      {
+        "name": "점수 계산",
+        "description": "병합 시 합쳐진 값만큼 점수를 가산한다",
+        "priority": "mvp"
+      },
+      {
+        "name": "최고 점수 저장",
+        "description": "localStorage('best2048')에 최고 점수를 저장하고 표시한다",
+        "priority": "mvp"
+      },
+      {
+        "name": "승리 판정 및 계속하기",
+        "description": "2048 이상 타일이 생기면 승리 오버레이를 띄우고, '계속하기'로 이어서 플레이할 수 있다",
+        "priority": "mvp"
+      },
+      {
+        "name": "게임 오버 판정",
+        "description": "이동 가능한 칸이 없으면 게임 오버 오버레이를 띄운다",
+        "priority": "mvp"
+      },
+      {
+        "name": "새 게임 / 다시 시작",
+        "description": "그리드와 점수를 초기화하고 시작 타일 2개를 배치한다",
+        "priority": "mvp"
+      }
+    ],
+    "pages": [
+      {
+        "name": "게임 화면",
+        "description": "제목, 점수/최고 점수 패널, 조작 안내, 새 게임 버튼, 4x4 보드, 승리/게임오버 오버레이로 구성된 단일 화면",
+        "components": [
+          "제목(2048)",
+          "점수 패널",
+          "최고 점수 패널",
+          "새 게임 버튼",
+          "Board(4x4 그리드)",
+          "승리/게임오버 오버레이",
+          "계속하기/다시 시작 버튼"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "Grid",
+        "fields": [
+          "number[][] (4x4 타일 값 배열, 0은 빈 칸)"
+        ],
+        "description": "게임판 상태를 나타내는 2차원 숫자 배열"
+      },
+      {
+        "name": "GameState",
+        "fields": [
+          "grid: Grid",
+          "score: number",
+          "best: number",
+          "won: boolean",
+          "over: boolean",
+          "keepGoing: boolean"
+        ],
+        "description": "App 컴포넌트가 관리하는 게임 상태"
+      },
+      {
+        "name": "MoveResult",
+        "fields": [
+          "grid: Grid",
+          "gained: number",
+          "changed: boolean"
+        ],
+        "description": "move 함수의 반환값 - 이동 후 그리드, 획득 점수, 변경 여부"
+      }
+    ],
+    "user_flows": [
+      "새 게임 시작 → 시작 타일 2개 배치 → 방향키/스와이프 입력 → 타일 이동·병합·점수 가산 → 랜덤 타일 추가 → 승리/게임오버 판정",
+      "승리 → 계속하기 선택 시 이어서 플레이",
+      "게임오버/승리 → 다시 시작 → 초기화"
+    ],
+    "strengths": [
+      "게임 로직(slideRow, transpose, move)이 utils/game.ts에 순수 함수로 분리되어 테스트·재사용 용이",
+      "키보드와 터치 스와이프 입력을 모두 지원해 PC·모바일 양쪽 대응",
+      "localStorage로 최고 점수를 영구 저장"
+    ],
+    "weaknesses": [
+      "타일 등장/병합 애니메이션이 transition-all 수준으로만 처리되어 부드러운 슬라이드 연출 부족",
+      "실행 취소(undo) 기능 없음",
+      "보드 크기·목표 점수가 4x4·2048로 하드코딩되어 난이도 설정 불가"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "앱이 점수를 기억하는 비밀",
+      "what": "이 게임은 화면 안에 '지금 점수'와 '최고 점수'를 따로 적어두는 작은 메모장을 가지고 있어요. 타일이 합쳐질 때마다 이 메모장의 숫자를 새로 고쳐 적습니다. 메모장이 바뀌면 화면도 그 숫자를 보고 자동으로 다시 그려져요. 그래서 우리가 직접 숫자를 지우고 다시 쓰지 않아도 화면이 알아서 최신 상태를 보여줍니다.",
+      "why": "이런 메모장이 없다면 점수가 올라도 화면은 옛날 숫자를 계속 보여주게 돼요. 사람이 일일이 '여기 숫자 바꿔줘'라고 명령해야 해서 실수도 잦고 복잡해집니다. 메모장과 화면이 연결돼 있으면 한 곳만 고쳐도 모든 화면이 척척 맞춰집니다. 덕분에 게임이 매끄럽게 돌아가는 거예요.",
+      "where": "인스타에서 '좋아요'를 누르면 숫자가 바로 올라가는 것, 카톡에서 안 읽은 메시지 개수가 자동으로 줄어드는 것이 모두 같은 원리예요. 쿠팡 장바구니에 물건을 담으면 위쪽 숫자가 바로 바뀌는 것도 마찬가지죠. 앱들은 이렇게 보이지 않는 메모장을 두고 화면을 항상 최신으로 유지합니다."
+    },
+    {
+      "title": "껐다 켜도 최고 기록이 남는 이유",
+      "what": "게임은 최고 점수를 기기 안의 '서랍' 같은 공간에 저장해 둬요. 창을 닫거나 다시 켜도 이 서랍은 그대로 남아 있어서 기록을 잃지 않습니다. 새 기록이 나오면 서랍 안 숫자와 비교해서 더 큰 값으로 바꿔 넣어요. 그래서 다음에 다시 와도 '최고 점수'가 기억되어 있는 거예요.",
+      "why": "이 서랍이 없으면 게임을 끌 때마다 모든 기록이 사라져 버립니다. 아무리 좋은 점수를 내도 다음에 켜면 0부터 시작해야 해서 김이 빠지겠죠. 기록이 남아 있어야 '저번보다 잘해보자'는 재미가 생깁니다. 작은 서랍 하나가 게임을 계속하고 싶게 만드는 힘이에요.",
+      "where": "유튜브가 봤던 영상의 위치를 기억해 이어보기를 해주는 것, 쇼핑앱이 로그인을 안 해도 봤던 상품을 기억하는 것이 이 서랍 덕분이에요. 게임 앱들이 최고 점수나 진행 상황을 저장하는 것도 같은 방식이고요. 기기 안에 작게 적어두는 메모라고 보면 됩니다."
+    },
+    {
+      "title": "방향키 한 번에 줄이 정리되는 마법",
+      "what": "타일을 한쪽으로 밀면, 먼저 빈칸을 없애 숫자들을 쭉 붙이고, 같은 숫자끼리 만나면 하나로 합쳐요. 마치 책장에서 책을 한쪽으로 밀어 빈틈을 없애고, 똑같은 책 두 권을 합치는 것과 같죠. 이 정리 규칙을 '한 줄'에 대해 딱 한 번 만들어 두면 됩니다. 위아래 방향은 줄을 잠깐 옆으로 눕혀서 같은 규칙을 쓰고 다시 세워요.",
+      "why": "만약 위, 아래, 왼쪽, 오른쪽마다 따로따로 규칙을 만들면 코드가 네 배로 길어지고 실수도 네 배가 됩니다. 한 가지 규칙을 잘 만들어 돌려쓰면 고칠 일이 생겨도 한 곳만 고치면 돼요. 깔끔하고 실수가 적어집니다. 같은 일을 반복할 땐 규칙 하나를 잘 만드는 게 훨씬 똑똑한 방법이에요.",
+      "where": "사진 앱에서 사진을 돌릴 때 가로든 세로든 같은 회전 기능을 쓰는 것, 엑셀에서 한 줄 정렬 기능을 모든 줄에 똑같이 적용하는 것과 비슷해요. 똑같은 일을 방향만 바꿔 반복할 때 자주 쓰는 생각법입니다."
+    },
+    {
+      "title": "손가락으로 쓸어서 움직이는 원리",
+      "what": "화면에 손가락을 댄 첫 위치와 뗀 마지막 위치를 기억해, 둘을 비교해서 어느 방향으로 움직였는지 알아내요. 좌우로 더 많이 움직였으면 좌우, 위아래로 더 많이 움직였으면 위아래로 판단합니다. 또 너무 조금 움직였으면 '실수로 닿은 것'으로 보고 무시해요. 그래서 의도한 스와이프만 정확히 알아챕니다.",
+      "why": "이 판단이 없으면 손가락만 살짝 스쳐도 타일이 멋대로 움직여서 답답해집니다. 어느 쪽으로 밀었는지 헷갈리면 게임이 마음대로 안 되겠죠. 시작점과 끝점을 비교하는 똑똑한 판단 덕분에 터치만으로도 키보드처럼 편하게 조작할 수 있어요. 휴대폰에서도 게임이 자연스럽게 돌아갑니다.",
+      "where": "인스타 사진을 옆으로 넘길 때, 카톡에서 채팅방을 밀어서 메뉴를 꺼낼 때, 쿠팡 상품 사진을 좌우로 넘길 때 모두 이 원리가 쓰여요. 손가락이 어디서 시작해 어디서 끝났는지를 보고 방향을 알아내는 것이죠."
+    },
+    {
+      "title": "키보드와 손가락, 둘 다 통하는 비밀",
+      "what": "이 게임은 키보드 방향키든, W·A·S·D 키든, 손가락 스와이프든 결국 '한 방향으로 움직여라'라는 같은 명령으로 모아서 처리해요. 입력 방법은 여러 가지지만, 안에서는 똑같은 하나의 통로로 연결됩니다. 그래서 어떤 방법으로 조작해도 결과가 똑같아요. 새 조작 방법을 추가하기도 쉽습니다.",
+      "why": "만약 입력마다 따로 처리하면 키보드용, 터치용 규칙을 각각 만들어야 해서 일이 두 배가 돼요. 한 쪽만 고치면 다른 쪽에 버그가 생기기도 쉽습니다. 모든 입력을 한 통로로 모으면 관리가 간단하고, 새 기기에도 금방 대응할 수 있어요. 사용자는 자기가 편한 방법을 골라 쓸 수 있고요.",
+      "where": "유튜브를 리모컨, 마우스, 손가락 어느 걸로 조작해도 똑같이 재생되는 것, 노트북에서 마우스와 터치패드를 모두 쓸 수 있는 것이 같은 생각이에요. 여러 입력을 하나로 모아 처리하면 누구나 편하게 쓸 수 있습니다."
+    },
+    {
+      "title": "게임이 끝났는지 미리 알아내는 법",
+      "what": "게임이 한 번 움직일 때마다, 아직 움직일 수 있는 칸이 남았는지 빠르게 검사해요. 빈칸이 있거나, 옆이나 위아래에 같은 숫자가 붙어 있으면 아직 합칠 수 있다는 뜻이죠. 그런 자리가 하나도 없으면 '더 이상 못 움직임'으로 보고 게임 오버를 알려줍니다. 또 2048이 만들어졌는지도 함께 확인해 승리를 띄워요.",
+      "why": "이 검사가 없으면 이미 끝난 게임인데도 사용자가 계속 멍하니 키만 누르게 됩니다. 끝났다는 걸 바로 알려줘야 다시 시작하거나 멈출 수 있죠. 또 2048을 만든 순간을 놓치면 성취감을 못 느낄 거예요. 상황을 그때그때 확인해 알려주는 게 좋은 게임의 기본입니다.",
+      "where": "쿠팡에서 품절이면 '구매 불가'라고 바로 알려주는 것, 카톡에서 글자를 안 쓰면 전송 버튼이 회색이 되는 것이 비슷해요. 지금 할 수 있는 일과 없는 일을 미리 검사해서 알려주는 것이죠. 게임에서도 끝났는지 이겼는지를 매번 확인해 안내합니다."
+    },
+    {
+      "title": "새 타일이 매번 다른 곳에 나오는 이유",
+      "what": "한 번 움직일 때마다 빈칸 중에서 무작위로 한 자리를 골라 새 숫자를 만들어요. 대부분은 2가 나오지만 가끔 4가 나오도록 확률을 살짝 섞어 뒀습니다. 마치 주사위를 던져 자리를 정하는 것과 같아요. 그래서 똑같은 판이 거의 나오지 않고 매번 새로운 게임이 됩니다.",
+      "why": "만약 항상 같은 자리에 같은 숫자가 나오면 게임이 외워져서 금방 지루해질 거예요. 적당한 무작위가 있어야 매판이 신선하고 머리를 써야 하죠. 또 너무 4만 자주 나오면 어려워지니, 2가 더 자주 나오게 균형도 맞췄어요. 우연과 규칙이 섞여야 재미있는 게임이 됩니다.",
+      "where": "음악 앱의 '랜덤 재생', 게임의 뽑기, 인스타 추천 피드가 매번 다르게 보이는 것이 이 무작위 원리예요. 정해진 듯하면서도 매번 조금씩 달라서 질리지 않게 만드는 것이죠. 2048의 새 타일도 같은 방식으로 신선함을 줍니다."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 7,
+      "title": "상태(state)로 화면 데이터 관리하기",
+      "explanation": "useState는 값이 바뀌면 화면을 자동으로 다시 그려주는 '기억 상자'예요. 여기서는 게임판(grid)을 저장해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 9,
+      "title": "브라우저에 데이터 저장하기",
+      "explanation": "localStorage는 브라우저에 값을 영구히 저장하는 공간이에요. 창을 닫았다 열어도 최고 점수가 남아 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 24,
+      "title": "조건이 맞으면 일찍 함수 끝내기",
+      "explanation": "if 조건이 참이면 return으로 함수를 바로 멈춰요. 게임이 끝났을 땐 더 이상 이동하지 않게 막아요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 47,
+      "title": "키와 값을 짝지어 저장하는 객체",
+      "explanation": "눌린 키 이름을 방향 값으로 바꿔주는 표(객체)예요. map['ArrowUp']을 찾으면 'up'이 나와요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 57,
+      "title": "이벤트로 키보드 입력 감지하기",
+      "explanation": "addEventListener는 '키를 누르면 이 함수를 실행해줘'라고 등록하는 거예요. 사용자 입력에 반응하게 해줘요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 58,
+      "title": "뒷정리(클린업) 함수",
+      "explanation": "컴포넌트가 사라질 때 등록했던 이벤트를 다시 제거해요. 안 치우면 쓰레기가 쌓여 오류가 생길 수 있어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 72,
+      "title": "방향을 계산하는 흐름 제어",
+      "explanation": "손가락이 가로로 많이 움직였는지 세로로 많이 움직였는지 비교해서 어느 방향으로 스와이프했는지 정해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 113,
+      "title": "조건에 따라 다른 화면 보여주기",
+      "explanation": "게임 오버이거나 이겼을 때만 결과 화면을 보여줘요. && 앞 조건이 참일 때만 뒤 내용이 화면에 나와요."
+    },
+    {
+      "file": "components/Board.tsx",
+      "line": 28,
+      "title": "목록 데이터를 화면 요소로 바꾸기",
+      "explanation": "flat()으로 2차원 배열을 한 줄로 펴고, map()으로 칸 하나하나를 화면 네모로 만들어요."
+    },
+    {
+      "file": "components/Board.tsx",
+      "line": 31,
+      "title": "값에 따라 다른 스타일 고르기",
+      "explanation": "타일 숫자가 0이면 빈 칸 색, 아니면 숫자에 맞는 색을 골라요. 삼항 연산자로 둘 중 하나를 선택해요."
+    },
+    {
+      "file": "utils/game.ts",
+      "line": 5,
+      "title": "2차원 배열로 격자판 만들기",
+      "explanation": "배열 안에 배열을 넣어 4x4 표를 만들어요. 모든 칸을 0으로 채워 빈 게임판을 준비해요."
+    },
+    {
+      "file": "utils/game.ts",
+      "line": 16,
+      "title": "랜덤으로 위치와 값 정하기",
+      "explanation": "Math.random으로 빈 칸 중 하나를 무작위로 골라요. 90% 확률로 2, 10% 확률로 4가 들어가요."
+    },
+    {
+      "file": "utils/game.ts",
+      "line": 22,
+      "title": "반복문으로 같은 숫자 합치기",
+      "explanation": "for문으로 한 줄을 훑으며 옆에 같은 숫자가 있으면 합쳐요. 게임의 핵심 규칙을 처리하는 부분이에요."
+    },
+    {
+      "file": "utils/game.ts",
+      "line": 67,
+      "title": "값을 비교해 변화 여부 확인하기",
+      "explanation": "이동 전과 후의 격자를 글자로 바꿔 비교해요. 똑같으면 움직임이 없었다는 뜻이에요."
+    },
+    {
+      "file": "utils/game.ts",
+      "line": 76,
+      "title": "더 움직일 수 있는지 검사하기",
+      "explanation": "빈 칸이 있거나 옆/아래에 같은 숫자가 있으면 아직 이동 가능해요. 모두 막히면 게임 오버예요."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: 2048 게임을 만들어줘\n튜터: 2048 게임을 만들게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "2048 게임을 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "2048 게임을 만들게요."
+    }
+  ]
+}

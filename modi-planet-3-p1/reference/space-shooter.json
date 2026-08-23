@@ -1,0 +1,416 @@
+{
+  "session_id": "reference_space_shooter",
+  "title": "우주 슈팅게임",
+  "description": "MODI IMU를 기울여 우주선을 사방으로 조종하고 버튼으로 운석을 쏘는 슈팅 게임",
+  "phase": "implement",
+  "diagram": "(아직 다이어그램이 없습니다)",
+  "generated_code": {
+    "App.tsx": "const { useState, useEffect, useRef } = React;\n\nconst SHIP = 60;           // 우주선 크기(px)\nconst TILT_DEAD = 4;       // 기울기 데드존(도) — 이 안이면 정지\nconst TILT_MAX = 25;       // 이 각도(도)에서 최대 속도\nconst MOVE_SPEED = 0.55;   // 최대 이동 속도(px/ms)\nconst FIRE_COOLDOWN = 220; // 연사 간격(ms)\nconst BULLET_SPEED = 0.9;  // 총알 속도(px/ms)\n\n// 별 배경은 한 번만 만들어 고정 (렌더마다 위치가 바뀌면 별이 튐)\nconst STARS = [...Array(120)].map(() => ({\n  size: Math.max(1, Math.random() * 2.5),\n  left: Math.random() * 100,\n  top: Math.random() * 100,\n  opacity: Math.random() * 0.8 + 0.2,\n  glow: Math.random() * 4 + 2,\n  dur: Math.random() * 4 + 2,\n  delay: Math.random() * 3,\n}));\n\nlet bestScore = 0; // 세션 동안 유지되는 최고 점수\n\nfunction App() {\n  const [gameOver, setGameOver] = useState(false);\n  const [score, setScore] = useState(0);\n  const [kills, setKills] = useState(0);\n  const [, bump] = useState(0);\n\n  const areaRef = useRef(null);\n  const sizeRef = useRef({ w: 1100, h: 620 });          // 게임 영역 실제 크기(창에 맞춰 갱신)\n  const posRef = useRef({ x: 0, y: 0, placed: false });\n  const tiltRef = useRef({ roll: 0, pitch: 0 });        // IMU 원본 각도(도)\n  const smoothRef = useRef({ x: 0, y: 0 });             // 저역통과된 -1~1 입력\n  const keyRef = useRef({ x: 0, y: 0, fire: false });   // 키보드 폴백\n  const btnRef = useRef(false);                          // MODI 버튼 눌림 상태\n  const meteorsRef = useRef([]);\n  const bulletsRef = useRef([]);\n  const particlesRef = useRef([]);\n  const nodeMap = useRef(new Map());\n  const resetRef = useRef(() => {});\n  const gameRef = useRef({\n    over: false, score: 0, kills: 0,\n    startAt: 0, diedAt: 0, lastTick: 0,\n    lastSpawn: 0, lastFire: 0, lastSound: 0, ledOff: 0,\n    nextMilestone: 100, nextId: 0,\n  });\n\n  // MODI 입력: IMU 기울기(roll=좌우, pitch=앞뒤) + 버튼(pressed) → 전부 ref에만 저장\n  useEffect(() => {\n    const offRoll = MODI.onValue('imu', 1, 'roll', (v) => { tiltRef.current.roll = v || 0; }, { pollMs: 30 });\n    const offPitch = MODI.onValue('imu', 1, 'pitch', (v) => { tiltRef.current.pitch = v || 0; }, { pollMs: 30 });\n    const offBtn = MODI.onValue('button', 1, 'pressed', (v) => { btnRef.current = !!v; }, { pollMs: 30 });\n    return () => { offRoll(); offPitch(); offBtn(); };\n  }, []);\n\n  // 키보드 폴백: 방향키/WASD 이동, 스페이스·엔터 발사 (하드웨어 없이도 플레이 가능)\n  useEffect(() => {\n    const down = (e) => {\n      if (e.key === 'ArrowLeft' || e.key === 'a') keyRef.current.x = -1;\n      else if (e.key === 'ArrowRight' || e.key === 'd') keyRef.current.x = 1;\n      else if (e.key === 'ArrowUp' || e.key === 'w') keyRef.current.y = -1;\n      else if (e.key === 'ArrowDown' || e.key === 's') keyRef.current.y = 1;\n      else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); keyRef.current.fire = true; }\n    };\n    const up = (e) => {\n      if (['ArrowLeft', 'a', 'ArrowRight', 'd'].includes(e.key)) keyRef.current.x = 0;\n      if (['ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) keyRef.current.y = 0;\n      if (e.key === ' ' || e.key === 'Enter') keyRef.current.fire = false;\n    };\n    window.addEventListener('keydown', down);\n    window.addEventListener('keyup', up);\n    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };\n  }, []);\n\n  // 게임 영역 크기를 실측해서 창 크기가 바뀌어도 물리 좌표가 따라가게 함\n  useEffect(() => {\n    const el = areaRef.current;\n    if (!el) return;\n    const measure = () => {\n      const r = el.getBoundingClientRect();\n      sizeRef.current = { w: r.width, h: r.height };\n      if (!posRef.current.placed) {\n        posRef.current = { x: r.width / 2 - SHIP / 2, y: r.height - SHIP * 1.6, placed: true };\n      }\n    };\n    measure();\n    const ro = new ResizeObserver(measure);\n    ro.observe(el);\n    return () => ro.disconnect();\n  }, []);\n\n  // 게임 루프\n  useEffect(() => {\n    let raf;\n    let last = performance.now();\n    let lastHud = 0;\n\n    const playTone = (freq, dur) => {\n      const g = gameRef.current;\n      const now = performance.now();\n      if (now - g.lastSound > 90) { MODI.speaker(1).playTone(freq, dur); g.lastSound = now; }\n    };\n\n    const explode = (cx, cy, count) => {\n      for (let i = 0; i < count; i++) {\n        const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;\n        const speed = 3 + Math.random() * 5;\n        particlesRef.current.push({\n          id: gameRef.current.nextId++,\n          x: cx, y: cy,\n          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,\n          life: 1, decay: 0.04 + Math.random() * 0.03,\n        });\n      }\n      bump((v) => v + 1);\n    };\n\n    const doReset = () => {\n      const { w, h } = sizeRef.current;\n      const t = performance.now();\n      posRef.current = { x: w / 2 - SHIP / 2, y: h - SHIP * 1.6, placed: true };\n      smoothRef.current = { x: 0, y: 0 };\n      meteorsRef.current = [];\n      bulletsRef.current = [];\n      particlesRef.current = [];\n      gameRef.current = {\n        over: false, score: 0, kills: 0,\n        startAt: t, diedAt: 0, lastTick: t,\n        lastSpawn: t, lastFire: 0, lastSound: 0, ledOff: 0,\n        nextMilestone: 100, nextId: 0,\n      };\n      setGameOver(false); setScore(0); setKills(0);\n      bump((v) => v + 1);\n      MODI.led(1).setColor(0, 0, 0);\n      MODI.speaker(1).playTone(523, 120);\n    };\n    resetRef.current = doReset;\n\n    const t0 = performance.now();\n    gameRef.current.startAt = t0;\n    gameRef.current.lastTick = t0;\n    gameRef.current.lastSpawn = t0;\n    MODI.led(1).setColor(0, 0, 0); // LED는 평소엔 꺼두고 이벤트 때만 반짝임\n\n    const loop = (now) => {\n      const dt = Math.min(50, now - last); // 프레임이 밀려도 순간이동 방지\n      last = now;\n      const g = gameRef.current;\n      const p = posRef.current;\n      const { w, h } = sizeRef.current;\n      const ms = meteorsRef.current;\n      const bs = bulletsRef.current;\n      const ps = particlesRef.current;\n      const firing = btnRef.current || keyRef.current.fire;\n\n      if (!g.over) {\n        // IMU 기울기 → -1~1 입력: 데드존으로 미세 떨림 무시, 저역통과로 부드럽게\n        // 이 모듈 장착 방향에선 pitch가 좌우(오른쪽 +), roll이 앞뒤(앞쪽 +)를 잰다\n        // (좌우가 반대면 pitch 부호를, 위아래가 반대면 roll 부호를 뒤집으세요)\n        const t = tiltRef.current;\n        const rawX = Math.abs(t.pitch) < TILT_DEAD ? 0 : Math.max(-1, Math.min(1, t.pitch / TILT_MAX));\n        const rawY = Math.abs(t.roll) < TILT_DEAD ? 0 : Math.max(-1, Math.min(1, -t.roll / TILT_MAX));\n        const s = smoothRef.current;\n        s.x += (Math.max(-1, Math.min(1, rawX + keyRef.current.x)) - s.x) * 0.22;\n        s.y += (Math.max(-1, Math.min(1, rawY + keyRef.current.y)) - s.y) * 0.22;\n\n        // 속도형 이동: 기울인 방향·세기만큼 계속 이동, 놓으면 그 자리에 정지\n        p.x = Math.max(0, Math.min(w - SHIP, p.x + s.x * MOVE_SPEED * dt));\n        p.y = Math.max(0, Math.min(h - SHIP, p.y + s.y * MOVE_SPEED * dt));\n\n        // 발사: 버튼(또는 스페이스)을 누르고 있으면 쿨다운 간격으로 연사\n        if (firing && now - g.lastFire > FIRE_COOLDOWN) {\n          bs.push({ id: g.nextId++, x: p.x + SHIP / 2 - 5, y: p.y - 10 });\n          g.lastFire = now;\n          playTone(880, 40);\n          bump((v) => v + 1);\n        }\n\n        // 난이도 상승: 시간이 갈수록 운석이 더 자주, 더 빠르게 떨어짐\n        const elapsed = now - g.startAt;\n        const spawnGap = Math.max(420, 1200 - elapsed * 0.02);\n        const speedUp = 1 + Math.min(1.4, elapsed / 45000);\n        if (now - g.lastSpawn > spawnGap) {\n          const size = 42 + Math.random() * 34;\n          ms.push({\n            id: g.nextId++,\n            x: Math.random() * Math.max(1, w - size),\n            y: -size, size,\n            speed: (0.12 + Math.random() * 0.15) * speedUp,\n            spin: (Math.random() - 0.5) * 0.15,\n          });\n          g.lastSpawn = now;\n          bump((v) => v + 1);\n        }\n\n        // 총알 이동 + 운석 명중 판정 (명중 시 +15점, 폭발 파티클)\n        for (let i = bs.length - 1; i >= 0; i--) {\n          const b = bs[i];\n          b.y -= BULLET_SPEED * dt;\n          let hit = false;\n          for (let k = ms.length - 1; k >= 0; k--) {\n            const m = ms[k];\n            if (b.x < m.x + m.size && b.x + 10 > m.x && b.y < m.y + m.size && b.y + 24 > m.y) {\n              ms.splice(k, 1);\n              g.kills += 1;\n              g.score += 15;\n              setKills(g.kills);\n              explode(m.x + m.size / 2, m.y + m.size / 2, 10);\n              playTone(196, 120);\n              MODI.led(1).setColor(0, 255, 0); g.ledOff = now + 500; // 격추: 초록 0.5초\n              hit = true;\n              break;\n            }\n          }\n          if (hit || b.y < -30) { bs.splice(i, 1); bump((v) => v + 1); }\n        }\n\n        // 운석 낙하 + 우주선 충돌 (판정 상자를 8px 줄여 억울한 죽음 방지)\n        const PAD = 8;\n        for (let i = ms.length - 1; i >= 0; i--) {\n          const m = ms[i];\n          m.y += m.speed * dt;\n          if (m.x < p.x + SHIP - PAD && m.x + m.size > p.x + PAD &&\n              m.y < p.y + SHIP - PAD && m.y + m.size > p.y + PAD) {\n            g.over = true;\n            g.diedAt = now;\n            bestScore = Math.max(bestScore, g.score);\n            setGameOver(true);\n            setScore(g.score);\n            MODI.led(1).setColor(255, 0, 0); g.ledOff = now + 500; // 피격: 빨강 0.5초\n            MODI.speaker(1).playTone(80, 400);\n            explode(p.x + SHIP / 2, p.y + SHIP / 2, 16);\n          }\n          if (m.y > h) { ms.splice(i, 1); bump((v) => v + 1); }\n        }\n\n        // 파티클\n        for (let i = ps.length - 1; i >= 0; i--) {\n          const pt = ps[i];\n          pt.x += pt.vx;\n          pt.y += pt.vy;\n          pt.vy += 0.2;\n          pt.life -= pt.decay;\n          if (pt.life <= 0) { ps.splice(i, 1); bump((v) => v + 1); }\n        }\n\n        // 점수: 생존 100ms당 1점, 100점 고비마다 축하음. HUD 갱신은 150ms throttle\n        if (now - g.lastTick >= 100) {\n          g.score += Math.floor((now - g.lastTick) / 100);\n          g.lastTick = now;\n          if (g.score >= g.nextMilestone) { playTone(1047, 100); g.nextMilestone += 100; }\n        }\n        if (now - lastHud >= 150) { setScore(g.score); lastHud = now; }\n      } else if (firing && now - g.diedAt > 800) {\n        // 게임오버 후 0.8초가 지나면 MODI 버튼(또는 스페이스)으로 바로 재시작\n        doReset();\n      }\n\n      // LED는 이벤트 플래시 전용: 켜진 지 0.5초가 지나면 끈다 (게임오버 중에도 동작)\n      if (g.ledOff && now >= g.ledOff) { MODI.led(1).setColor(0, 0, 0); g.ledOff = 0; }\n\n      // DOM 직접 갱신 (리렌더 없음): 우주선은 기울인 방향으로 살짝 기울어짐\n      const shipEl = nodeMap.current.get('ship');\n      if (shipEl) shipEl.style.transform = `translate3d(${p.x}px,${p.y}px,0) rotate(${smoothRef.current.x * 16}deg)`;\n\n      const dotEl = nodeMap.current.get('dot');\n      if (dotEl) dotEl.style.transform = `translate3d(${smoothRef.current.x * 20}px,${smoothRef.current.y * 20}px,0)`;\n\n      for (const m of ms) {\n        const el = nodeMap.current.get(`m${m.id}`);\n        if (el) el.style.transform = `translate3d(${m.x}px,${m.y}px,0) rotate(${(now * m.spin) % 360}deg)`;\n      }\n      for (const b of bs) {\n        const el = nodeMap.current.get(`b${b.id}`);\n        if (el) el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`;\n      }\n      for (const pt of ps) {\n        const el = nodeMap.current.get(`p${pt.id}`);\n        if (el) {\n          el.style.transform = `translate3d(${pt.x}px,${pt.y}px,0)`;\n          el.style.opacity = pt.life;\n        }\n      }\n\n      raf = requestAnimationFrame(loop);\n    };\n\n    raf = requestAnimationFrame(loop);\n    return () => cancelAnimationFrame(raf);\n  }, []);\n\n  const node = (id) => (el) => {\n    if (el) nodeMap.current.set(id, el);\n    else nodeMap.current.delete(id);\n  };\n\n  return (\n    <div className=\"h-screen w-screen overflow-hidden flex flex-col\" style={{ background: 'radial-gradient(ellipse at 50% 100%, #667eea 0%, #764ba2 25%, #1a1a2e 100%)' }}>\n      {/* 별 배경 (모듈 로드 시 한 번만 생성된 STARS 사용) */}\n      <div className=\"absolute inset-0 z-0 pointer-events-none\">\n        {STARS.map((st, i) => (\n          <div\n            key={i}\n            className=\"absolute rounded-full bg-white\"\n            style={{\n              width: st.size + 'px', height: st.size + 'px',\n              left: st.left + '%', top: st.top + '%',\n              opacity: st.opacity,\n              boxShadow: `0 0 ${st.glow}px rgba(255,255,255,0.8)`,\n              animation: `twinkle ${st.dur}s infinite ${st.delay}s`,\n            }}\n          />\n        ))}\n        <style>{`\n          @keyframes twinkle { 0%,100% { opacity: 0.2; } 50% { opacity: 0.9; } }\n          @keyframes flame { 0%,100% { transform: translateX(-50%) scaleY(1); opacity: 0.9; } 50% { transform: translateX(-50%) scaleY(1.5); opacity: 0.6; } }\n        `}</style>\n      </div>\n\n      {/* 상단 HUD: 제목 · 점수 · 최고점수 · 격추 수 · 기울기 인디케이터 */}\n      <div className=\"relative z-10 flex items-center justify-between gap-6 px-8 py-4\">\n        <h1 className=\"text-4xl font-black whitespace-nowrap\" style={{ color: '#00d4ff', textShadow: '0 0 16px #00d4ff' }}>\n          🚀 SPACE SHOOTER\n        </h1>\n        <div className=\"flex items-center gap-8\">\n          <p className=\"text-3xl font-black\" style={{ color: '#ffdd44', textShadow: '0 0 10px #ffaa00' }}>📊 {score}</p>\n          <p className=\"text-2xl font-bold text-white/90\">🏆 {Math.max(bestScore, score)}</p>\n          <p className=\"text-2xl font-bold\" style={{ color: '#ff8866' }}>💥 {kills}</p>\n          {/* 기울기 인디케이터: 지금 IMU가 어느 방향으로 얼마나 기울었는지 표시 */}\n          <div className=\"relative w-14 h-14 rounded-xl border-2 border-cyan-400/60 bg-black/30\">\n            <div className=\"absolute left-1/2 top-0 bottom-0 w-px bg-cyan-400/30\" />\n            <div className=\"absolute top-1/2 left-0 right-0 h-px bg-cyan-400/30\" />\n            <div ref={node('dot')} className=\"absolute rounded-full\" style={{ left: 23, top: 23, width: 10, height: 10, background: '#00d4ff', boxShadow: '0 0 8px #00d4ff', willChange: 'transform' }} />\n          </div>\n        </div>\n      </div>\n\n      {/* 게임 영역: 창 크기에 맞춰 늘어나고, 실제 크기는 ResizeObserver로 측정 */}\n      <div\n        ref={areaRef}\n        className=\"relative flex-1 min-h-0 mx-6 mb-5 rounded-3xl overflow-hidden border-4 z-10\"\n        style={{\n          borderColor: '#00d4ff',\n          background: 'linear-gradient(135deg, #0f3460 0%, #16213e 50%, #1a1a2e 100%)',\n          boxShadow: '0 0 60px rgba(0, 212, 255, 0.4), inset 0 0 60px rgba(0, 100, 200, 0.1)',\n        }}\n      >\n        {/* 우주선 (엔진 불꽃 포함, 위를 향하도록 회전) */}\n        <div ref={node('ship')} className=\"absolute\" style={{ left: 0, top: 0, width: SHIP, height: SHIP, willChange: 'transform' }}>\n          <div style={{ fontSize: SHIP - 8, lineHeight: 1, transform: 'rotate(-45deg)' }}>🚀</div>\n          <div className=\"absolute text-2xl\" style={{ left: '50%', bottom: -14, transform: 'translateX(-50%)', animation: 'flame 0.3s infinite' }}>🔥</div>\n        </div>\n\n        {/* 총알들 */}\n        {bulletsRef.current.map((b) => (\n          <div key={b.id} ref={node(`b${b.id}`)} className=\"absolute rounded-full\" style={{ left: 0, top: 0, width: 10, height: 24, background: 'linear-gradient(180deg, #ffffff, #00d4ff)', boxShadow: '0 0 12px #00d4ff', willChange: 'transform' }} />\n        ))}\n\n        {/* 운석들 (크기 랜덤) */}\n        {meteorsRef.current.map((m) => (\n          <div key={m.id} ref={node(`m${m.id}`)} className=\"absolute drop-shadow-lg\" style={{ left: 0, top: 0, fontSize: m.size - 6, lineHeight: 1, willChange: 'transform' }}>🪨</div>\n        ))}\n\n        {/* 파티클들 */}\n        {particlesRef.current.map((pt) => (\n          <div key={pt.id} ref={node(`p${pt.id}`)} className=\"absolute text-3xl\" style={{ left: 0, top: 0, willChange: 'transform', opacity: pt.life }}>✨</div>\n        ))}\n\n        {/* 조작 안내 */}\n        <p className=\"absolute bottom-3 left-1/2 -translate-x-1/2 text-white/50 text-sm whitespace-nowrap z-10\">\n          🎮 IMU를 기울여 사방으로 이동 · 버튼으로 발사 &nbsp;|&nbsp; ⌨️ 방향키/WASD + 스페이스\n        </p>\n\n        {/* 게임오버 화면 */}\n        {gameOver && (\n          <div className=\"absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center gap-6 z-50\">\n            <div className=\"text-8xl animate-bounce\">💥</div>\n            <h2 className=\"text-6xl font-black\" style={{ color: '#ff4444', textShadow: '0 0 20px #ff0000' }}>GAME OVER</h2>\n            <div className=\"flex gap-10 text-center\">\n              <div>\n                <p className=\"text-lg text-white/60 font-bold\">SCORE</p>\n                <p className=\"text-5xl font-black\" style={{ color: '#ffdd44' }}>{score}</p>\n              </div>\n              <div>\n                <p className=\"text-lg text-white/60 font-bold\">BEST</p>\n                <p className=\"text-5xl font-black\" style={{ color: '#00d4ff' }}>{bestScore}</p>\n              </div>\n              <div>\n                <p className=\"text-lg text-white/60 font-bold\">HITS</p>\n                <p className=\"text-5xl font-black\" style={{ color: '#ff8866' }}>{kills}</p>\n              </div>\n            </div>\n            <button\n              className=\"px-12 py-5 text-2xl font-black rounded-2xl transition-all active:scale-95\"\n              style={{ background: 'linear-gradient(135deg, #00d4ff, #0099ff)', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}\n              onClick={() => resetRef.current()}\n            >\n              RESTART\n            </button>\n            <p className=\"text-white/50 text-base\">MODI 버튼이나 스페이스를 눌러도 다시 시작돼요</p>\n          </div>\n        )}\n      </div>\n    </div>\n  );\n}\n\nexport default App;\n"
+  },
+  "coding_type": "hybrid",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": {
+    "modules": [
+      {
+        "key": "network",
+        "role": "필수",
+        "reason": "PC와 통신하고 전원을 공급해요",
+        "count": 1
+      },
+      {
+        "key": "imu",
+        "role": "입력",
+        "reason": "기울기(앞뒤·좌우)로 우주선을 사방으로 조종해요",
+        "count": 1
+      },
+      {
+        "key": "button",
+        "role": "입력",
+        "reason": "총알을 발사하고, 게임오버 후 다시 시작해요",
+        "count": 1
+      },
+      {
+        "key": "speaker",
+        "role": "출력",
+        "reason": "발사음·폭발음·축하음을 출력해요",
+        "count": 1
+      },
+      {
+        "key": "led",
+        "role": "출력",
+        "reason": "운석을 맞추면 초록, 우주선이 맞으면 빨강으로 0.5초 반짝여요",
+        "count": 1
+      }
+    ],
+    "layout": [
+      {
+        "key": "network",
+        "pos": [0.0, 0.0],
+        "usbFace": "left"
+      },
+      {
+        "key": "imu",
+        "pos": [1.0, 0.0]
+      },
+      {
+        "key": "button",
+        "pos": [2.0, 0.0]
+      },
+      {
+        "key": "speaker",
+        "pos": [1.0, 1.0]
+      },
+      {
+        "key": "led",
+        "pos": [2.0, 1.0]
+      }
+    ],
+    "assembly": [
+      "네트워크 모듈을 놓고 USB 케이블을 PC에 연결하세요.",
+      "IMU 모듈을 네트워크 오른쪽에 자석 면에 맞대어 연결하세요.",
+      "버튼 모듈을 IMU 오른쪽에 연결하세요.",
+      "스피커 모듈을 IMU 아래에, LED 모듈을 버튼 아래에 연결하세요.",
+      "완성된 본체를 두 손으로 잡고 기울여 조종하고, 엄지로 버튼을 눌러 발사하세요."
+    ],
+    "title": "우주 슈팅게임",
+    "description": "MODI IMU를 기울여 우주선을 사방으로 조종하고 버튼으로 운석을 쏘는 슈팅 게임"
+  },
+  "files": "- App.tsx (tsx): IMU 기울기 사방 조종 + 버튼 연사 운석 슈팅 — 난이도 상승, LED/스피커 피드백, 키보드 폴백",
+  "design_doc": {
+    "project_name": "우주 슈팅게임",
+    "description": "MODI IMU 기울기로 우주선을 사방으로 조종하고 버튼으로 운석을 격추하는 슈팅 게임",
+    "users": ["게임 플레이어"],
+    "features": [
+      {
+        "name": "IMU 기울기 입력",
+        "description": "MODI IMU 각도를 30ms 폴링으로 수신(이 장착 방향 기준 pitch=좌우·roll=앞뒤), 데드존 4°와 저역통과 보간(0.22)으로 노이즈 제거",
+        "priority": "mvp"
+      },
+      {
+        "name": "우주선 사방 이동",
+        "description": "속도형 조작 — 기울인 방향·세기에 비례해 이동(최대 0.55px/ms), 놓으면 그 자리에 정지, dt 기반 프레임 독립, 화면 경계 클램프",
+        "priority": "mvp"
+      },
+      {
+        "name": "버튼 총알 발사",
+        "description": "MODI 버튼 pressed 상태를 30ms 폴링으로 수신, 누르고 있으면 220ms 쿨다운으로 연사, 총알은 0.9px/ms로 상승",
+        "priority": "mvp"
+      },
+      {
+        "name": "운석 격추",
+        "description": "총알-운석 AABB 충돌 판정, 명중 시 운석 파괴 +15점, 폭발 파티클·효과음과 LED 초록 0.5초 플래시",
+        "priority": "mvp"
+      },
+      {
+        "name": "운석 생성·난이도 상승",
+        "description": "랜덤 크기(42~76px)·회전·속도로 생성, 시간이 지날수록 스폰 간격 감소(1200→420ms)와 낙하 속도 증가(최대 2.4배)",
+        "priority": "mvp"
+      },
+      {
+        "name": "충돌 게임오버",
+        "description": "우주선-운석 판정 상자를 8px 줄여 억울한 죽음 방지, 충돌 시 LED 빨강 0.5초 플래시·폭발음·파티클",
+        "priority": "mvp"
+      },
+      {
+        "name": "점수 시스템",
+        "description": "생존 100ms당 1점 + 격추당 15점, 100점 고비마다 축하음, 세션 최고 점수 유지",
+        "priority": "mvp"
+      },
+      {
+        "name": "빠른 재시작",
+        "description": "화면 버튼 클릭 외에 MODI 버튼·스페이스로도 재시작(사망 후 0.8초 잠금으로 오발 방지)",
+        "priority": "mvp"
+      },
+      {
+        "name": "키보드 폴백",
+        "description": "하드웨어 없이도 방향키/WASD 이동, 스페이스 발사로 플레이 가능",
+        "priority": "nice_to_have"
+      },
+      {
+        "name": "성능 최적화",
+        "description": "센서 입력은 ref에만 저장, rAF 루프에서 DOM transform 직접 갱신, HUD setState는 150ms throttle",
+        "priority": "nice_to_have"
+      }
+    ],
+    "pages": [
+      {
+        "name": "게임 플레이 화면",
+        "description": "창 크기에 맞춰 늘어나는 유동 게임 캔버스(ResizeObserver 실측)와 상단 HUD",
+        "components": [
+          "상단 HUD(점수·최고점수·격추 수)",
+          "기울기 인디케이터(IMU 입력 실시간 표시)",
+          "우주선(🚀, 엔진 불꽃·기울임 연출)",
+          "총알(네온 캡슐)",
+          "운석들(🪨, 랜덤 크기·회전)",
+          "폭발 파티클(✨)",
+          "조작 안내 문구"
+        ]
+      },
+      {
+        "name": "게임 오버 모달",
+        "description": "충돌 시 표시되는 오버레이 — 점수·최고점수·격추 수와 재시작 안내",
+        "components": [
+          "검정/85% 배경 오버레이",
+          "폭발 이모지(💥)",
+          "SCORE/BEST/격추 3단 통계",
+          "RESTART 버튼",
+          "MODI 버튼·스페이스 재시작 안내"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "우주선 위치",
+        "fields": ["x: number (0~영역폭-60)", "y: number (0~영역높이-60)"],
+        "description": "우주선의 현재 위치 — 게임 영역 크기는 창에 맞춰 실측"
+      },
+      {
+        "name": "IMU 입력",
+        "fields": [
+          "roll: number (도, 좌우)",
+          "pitch: number (도, 앞뒤)",
+          "smoothed x/y: number (-1~1)"
+        ],
+        "description": "IMU 원본 각도와 데드존·저역통과를 거친 조작 입력"
+      },
+      {
+        "name": "총알",
+        "fields": ["id: number", "x: number", "y: number"],
+        "description": "발사된 총알 — 위로 0.9px/ms 이동, 명중하거나 화면을 벗어나면 제거"
+      },
+      {
+        "name": "운석",
+        "fields": [
+          "id: number",
+          "x: number",
+          "y: number",
+          "size: number (42~76)",
+          "speed: number (px/ms)",
+          "spin: number"
+        ],
+        "description": "개별 운석의 위치·크기·낙하 속도·회전 속도"
+      },
+      {
+        "name": "게임 상태",
+        "fields": [
+          "over: boolean",
+          "score: number",
+          "kills: number",
+          "startAt/diedAt: timestamp",
+          "lastSpawn/lastFire/lastSound: timestamp",
+          "nextMilestone: number"
+        ],
+        "description": "게임 진행 상태와 각종 쿨다운·타이밍 기준값"
+      }
+    ],
+    "user_flows": [
+      "게임 시작 → IMU를 기울여 우주선을 사방으로 이동 → 운석을 피하거나 버튼으로 격추 → 충돌 시 게임 오버 → 점수·최고점수·격추 수 확인 → MODI 버튼(또는 스페이스·화면 버튼)으로 재시작",
+      "버튼을 누르고 있으면 220ms 간격으로 연사 → 총알이 운석에 명중 → 폭발 파티클·효과음과 함께 +15점",
+      "IMU를 수평으로 놓으면 우주선이 그 자리에 정지 → 시간이 지날수록 운석이 더 자주·더 빠르게 낙하(난이도 상승)",
+      "하드웨어가 없으면 방향키/WASD + 스페이스로 동일하게 플레이"
+    ],
+    "strengths": [
+      "IMU 기울기 속도형 조작 — 데드존(4°)·저역통과(0.22)·dt 기반 이동으로 부드럽고 프레임 독립적인 사방 조종",
+      "버튼 연사 쿨다운(220ms)으로 스팸 없는 자연스러운 슈팅",
+      "시간 기반 난이도 상승(스폰 간격·낙하 속도)으로 긴장감 유지",
+      "센서 입력 ref 저장 + rAF에서 DOM transform 직접 갱신으로 리렌더 없는 60fps",
+      "게임 영역 실측(ResizeObserver)으로 창 크기가 달라져도 레이아웃이 깨지지 않음",
+      "MODI 하드웨어 피드백(격추 초록·피격 빨강 0.5초 LED 플래시, 발사·폭발·축하 효과음)과 하드웨어 버튼 재시작",
+      "키보드 폴백으로 하드웨어 없이도 플레이 가능"
+    ],
+    "weaknesses": [
+      "최고 점수가 세션 메모리에만 유지 (새로고침 시 사라짐)",
+      "일시 정지/재개 기능 없음",
+      "이모지 기반 렌더링으로 히트박스가 실제 그림과 약간 다를 수 있음",
+      "IMU 장착 방향에 따라 축·부호 보정이 필요할 수 있음 (코드 주석으로 안내)",
+      "스테이지·아이템 등 장기 플레이 요소 없음"
+    ]
+  },
+  "task_plan": null,
+  "learning_notes": [
+    {
+      "title": "게임의 상태를 메모장처럼 기억하기",
+      "what": "점수, 게임오버 여부 같은 게임 상태를 메모장에 적듯이 기억해두는 거예요. 변수에 값을 저장했다가 필요할 때 꺼내 써요. 마치 숙제하면서 부족한 부분을 메모해뒀다가 나중에 확인하는 것처럼요.",
+      "why": "상태를 기억하지 않으면 점수가 계속 사라져버려요. 매번 새로 계산해야 하고, 게임이 어떤 상태인지 알 수 없게 됩니다. 그럼 게임이 제대로 작동하지 않죠.",
+      "where": "카톡에서 채팅 내용이 계속 남아있어서 예전 메시지를 다시 볼 수 있잖아요. 게임도 마찬가지로 점수와 상태를 저장해뒀다가 나중에 보여주는 거예요."
+    },
+    {
+      "title": "빠르게 변하는 정보 따로 모아두기",
+      "what": "우주선이 움직이는 위치처럼 계속 바뀌는 정보를 서랍에 따로 넣어두는 거예요. 필요할 때마다 서랍에서 꺼내서 쓰고, 화면 전체를 새로 그릴 필요가 없어요.",
+      "why": "위치 정보가 매 순간 바뀔 때마다 화면 전체를 다시 그리면 엄청 느려져요. 서랍에 몰래 넣어뒀다가 쓰면 훨씬 빠르고 부드럽게 움직입니다.",
+      "where": "영상 게임에서 캐릭터가 매 순간 조금씩 움직이는데도 부드럽게 플레이할 수 있잖아요. 화면을 계속 새로 그리지 않고, 필요한 정보만 빠르게 업데이트하기 때문이에요."
+    },
+    {
+      "title": "화면을 계속 새로 그려서 움직임 만들기",
+      "what": "영화처럼 화면을 빠르게 계속 그려내는 거예요. 한 장 한 장의 정지된 그림을 빠르게 차례대로 보여주면 움직이는 것처럼 보이죠. 게임도 이런 방식으로 작동합니다.",
+      "why": "화면을 한 번만 그리면 아무것도 움직이지 않아요. 우주선도 운석도 그냥 사진처럼 가만히 있게 되죠. 계속 새로 그려야 움직이는 환상을 만들 수 있습니다.",
+      "where": "영화나 애니메이션, 유튜브 영상도 결국 정지된 장면들을 초당 24~60장씩 빠르게 보여주는 거잖아요. 게임도 그 원리와 똑같아요."
+    },
+    {
+      "title": "두 물체가 부딪혔는지 감지하기",
+      "what": "우주선과 운석이 겹쳤는지를 확인하는 거예요. 두 개의 박스를 그려서 그 박스들이 겹치면 '부딪혔다!'라고 판단하는 거죠. 마치 택배가 내 집에 도착했는지 확인하는 것처럼요.",
+      "why": "이 감지가 없으면 운석이 우주선을 뚫고 지나가버려요. 게임의 규칙이 전혀 작동하지 않습니다. 재미있는 게임이 되려면 반드시 필요해요.",
+      "where": "쿠팡 배달 추적에서 배달원의 위치와 내 집 주소가 겹치면 '배달 도착'이라고 알려주잖아요. 게임도 우주선 위치와 운석 위치가 겹치면 '게임 오버'라고 판단하는 거예요."
+    },
+    {
+      "title": "IMU 기울기로 게임 조종하기",
+      "what": "IMU는 기울기를 재는 센서예요. 모듈을 앞뒤·좌우로 기울인 각도를 읽어서, 기울인 방향과 정도만큼 우주선이 움직이게 해요. 많이 기울일수록 빨라지고, 수평으로 놓으면 그 자리에 멈춰요.",
+      "why": "조이스틱은 손가락으로 스틱을 미는 방식이지만, IMU는 기기 자체를 기울이는 방식이라 몸으로 조종하는 느낌을 줘요. 스마트폰 게임처럼 직관적이어서 조작법을 따로 배울 필요가 없어요.",
+      "where": "스마트폰 레이싱 게임에서 폰을 핸들처럼 기울여 조종하잖아요. 닌텐도 위(Wii) 리모컨이나 스위치의 모션 컨트롤도 같은 원리예요."
+    },
+    {
+      "title": "화면의 일부만 빠르게 바꾸기",
+      "what": "우주선과 운석의 위치만 바꾸고, 게임판 전체를 새로 그리지 않는 거예요. 마치 칠판 위의 그림에서 사람의 팔 위치만 지워서 새로 그리는 것처럼요.",
+      "why": "게임 화면 전체를 계속 새로 그리면 엄청 느려져요. 하지만 위치만 바꾸면 훨씬 빠르고 부드럽게 움직일 수 있어서 게임이 더 재미있게 느껴집니다.",
+      "where": "인스타그램에서 무한 스크롤할 때, 새 사진만 아래에 추가되고 위에 있던 사진들은 그냥 그대로 있잖아요. 전체를 다시 로드하지 않죠. 게임도 같은 방식으로 효율적으로 작동해요."
+    },
+    {
+      "title": "불필요한 업데이트 줄이기",
+      "what": "점수를 0.1초마다 한 번씩만 업데이트하는 거예요. 매 순간마다 하지 않고, 적절한 시간 간격을 두고 처리하는 거죠. 마치 신문사가 뉴스를 매 초마다가 아닌 정해진 시간에만 업데이트하는 것처럼요.",
+      "why": "업데이트를 너무 자주 하면 화면이 깜빡거리고 성능이 떨어져요. 불필요한 작업이 많아지면 게임이 느려지고 끊기게 됩니다. 필요한 시점에만 업데이트하면 훨씬 부드럽고 빨라요.",
+      "where": "유튜브에서 조회수나 좋아요 숫자가 실시간으로 바뀌지 않고 가끔씩만 업데이트되잖아요. 그것도 트래픽을 줄이고 화면 깜빡임을 막기 위함이에요."
+    },
+    {
+      "title": "너무 민감한 입력 무시하기",
+      "what": "IMU를 살짝만 기울인 건 무시하는 '죽은 영역(데드존)'을 만드는 거예요. 4도 안쪽의 작은 기울임은 없는 것처럼 취급하고, 남은 값도 한 번에 확 반영하지 않고 조금씩만 따라가게 해요(저역통과).",
+      "why": "데드존이 없으면 손이 조금만 떨려도 우주선이 계속 흔들리며 흘러가요(드리프트). 수평으로 놓았는데도 미세한 값 때문에 멈추지 않죠. 작은 움직임을 무시해야 '놓으면 정지'가 제대로 돼요.",
+      "where": "게임기 컨트롤러의 아날로그 스틱에도 데드존이 있어요. 스틱에서 손을 떼도 캐릭터가 안 움직이는 이유가 바로 이거예요."
+    },
+    {
+      "title": "버튼 연사에 쿨다운 넣기",
+      "what": "버튼을 계속 누르고 있어도 총알이 220ms에 한 발씩만 나가게 발사 간격을 제한하는 거예요. '마지막으로 쏜 시각'을 기억해뒀다가, 충분한 시간이 지났을 때만 새 총알을 만들어요.",
+      "why": "쿨다운이 없으면 매 프레임(1초에 60번!) 총알이 생겨서 화면이 총알로 가득 차고 게임이 느려져요. 게임 밸런스도 무너지죠. 간격을 제한하면 성능도 지키고 연사의 손맛도 살아요.",
+      "where": "슈팅 게임 대부분이 무기마다 연사 속도가 정해져 있어요. 기관총은 빠르게, 저격총은 느리게 — 그게 다 쿨다운으로 만든 거예요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "App.tsx",
+      "line": 3,
+      "title": "조작 감도 튜닝 상수",
+      "explanation": "데드존 4°, 최대 기울기 25°, 이동 속도, 연사 간격처럼 게임 감각을 결정하는 숫자들을 한곳에 모아 쉽게 조절할 수 있게 했습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 11,
+      "title": "별 배경은 한 번만 생성",
+      "explanation": "컴포넌트 밖에서 별 위치를 한 번만 만들어 고정합니다. 렌더마다 다시 만들면 화면이 갱신될 때마다 별이 튀어 보입니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 21,
+      "title": "세션 최고 점수",
+      "explanation": "컴포넌트 밖 변수라 게임을 재시작해도 값이 유지됩니다. 페이지를 새로고침하면 초기화됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 50,
+      "title": "IMU 기울기 구독",
+      "explanation": "IMU의 roll·pitch 각도를 30ms마다 받아 ref에만 저장합니다. setState를 쓰지 않아 값이 와도 리렌더가 일어나지 않습니다. 어느 축이 좌우/앞뒤인지는 모듈 장착 방향에 따라 달라 게임 루프에서 매핑합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 52,
+      "title": "버튼 눌림 상태 구독",
+      "explanation": "버튼 pressed(누르고 있는 동안 1)를 ref에 저장하고, 실제 발사 판단은 게임 루프에서 쿨다운과 함께 합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 58,
+      "title": "키보드 폴백",
+      "explanation": "하드웨어가 없어도 방향키/WASD와 스페이스로 같은 입력을 만들 수 있어 언제든 테스트·플레이가 가능합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 87,
+      "title": "게임 영역 실측",
+      "explanation": "ResizeObserver로 게임 영역의 실제 크기를 재서 물리 좌표의 경계로 씁니다. 창 크기가 바뀌어도 게임이 깨지지 않습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 98,
+      "title": "효과음 스팸 방지",
+      "explanation": "스피커 재생을 90ms에 한 번으로 제한합니다. 매 프레임 소리를 보내면 하드웨어가 감당하지 못합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 118,
+      "title": "재시작 로직",
+      "explanation": "모든 ref와 상태를 초기값으로 되돌리고 LED를 끕니다. resetRef에 담아 화면 버튼과 게임 루프 양쪽에서 호출합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 146,
+      "title": "프레임 시간(dt) 계산",
+      "explanation": "이전 프레임과의 시간 차를 이동량에 곱해 프레임이 밀려도 실제 속도가 일정합니다. 50ms 상한으로 순간이동을 막습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 161,
+      "title": "기울기 → 조작 입력 변환",
+      "explanation": "데드존(4°) 안이면 0으로, 그 밖이면 25°를 최대로 -1~1로 정규화합니다. 이 모듈 장착 방향에선 pitch가 좌우, roll이 앞뒤를 재서 실기기 기준으로 축을 맞췄습니다. 방향이 반대로 느껴지면 부호만 뒤집으면 됩니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 168,
+      "title": "속도형 사방 이동",
+      "explanation": "기울인 방향·세기만큼 위치를 누적(+=)하고 화면 안으로 클램프합니다. 수평으로 놓으면 입력이 0이라 그 자리에 멈춥니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 172,
+      "title": "쿨다운 연사",
+      "explanation": "버튼(또는 스페이스)을 누르고 있으면 220ms 간격으로 총알을 만듭니다. 마지막 발사 시각을 기억해 간격을 강제합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 181,
+      "title": "시간 기반 난이도 상승",
+      "explanation": "플레이 시간이 길수록 운석 생성 간격은 1200→420ms로 줄고 낙하 속도는 최대 2.4배까지 빨라집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 203,
+      "title": "총알-운석 명중 판정",
+      "explanation": "AABB(사각형 겹침) 검사로 명중을 판정합니다. 맞으면 운석 제거, +15점, 폭발 파티클과 효과음을 냅니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 219,
+      "title": "충돌 판정에 여유 주기",
+      "explanation": "우주선 판정 상자를 8px 줄여 이모지 가장자리를 스친 정도로는 죽지 않게 합니다. 억울한 죽음이 줄어 재미가 좋아집니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 254,
+      "title": "하드웨어 버튼으로 재시작",
+      "explanation": "게임오버 후 0.8초가 지나면 MODI 버튼이나 스페이스로 바로 재시작합니다. 잠금 시간은 연사 중 죽자마자 실수로 재시작되는 것을 막습니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 260,
+      "title": "LED 이벤트 플래시",
+      "explanation": "LED는 평소엔 꺼두고 격추(초록)·피격(빨강) 순간에만 켠 뒤, 꺼질 시각(ledOff)을 기억해 게임 루프가 0.5초 뒤에 끕니다. setTimeout 대신 루프에서 처리해 재시작·게임오버 중에도 안전합니다."
+    },
+    {
+      "file": "App.tsx",
+      "line": 264,
+      "title": "리렌더 없는 화면 갱신",
+      "explanation": "rAF 루프에서 DOM의 transform만 직접 바꿔 우주선·총알·운석을 움직입니다. React 리렌더 없이 60fps를 유지하는 핵심입니다."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: IMU를 기울여서 우주선을 사방으로 조종하고 버튼으로 운석을 쏘는 게임 만들어줘\n튜터: MODI IMU와 버튼으로 조작하는 운석 슈팅 게임을 만들게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "IMU를 기울여서 우주선을 사방으로 조종하고 버튼으로 운석을 쏘는 게임 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "MODI IMU와 버튼으로 조작하는 운석 슈팅 게임을 만들게요."
+    }
+  ]
+}

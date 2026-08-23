@@ -1,0 +1,310 @@
+{
+  "session_id": "reference_webcam_magic_filter",
+  "title": "웹캠 매직 필터",
+  "description": "웹캠 영상에 실시간 필터 효과를 입히고 마음에 드는 순간을 사진으로 저장하는 웹앱",
+  "phase": "implement",
+  "diagram": "(아직 다이어그램이 없습니다)",
+  "generated_code": {
+    "lib/filters.ts": "// 웹캠 프레임에 적용할 필터 카탈로그와 \"필터 문자열\" 빌더 모음\n//\n// 이 앱은 픽셀을 직접 도는 반복문 없이, 브라우저(GPU)가 처리하는 두 가지로만 효과를 낸다.\n//   - kind 'css' : ctx.filter 의 CSS 필터 함수 (grayscale, sepia, hue-rotate ...)\n//   - kind 'svg' : 인라인 SVG <filter> 를 url(#id) 로 참조 (포스터화·엣지검출)\n//   - kind 'pixelate' / 'ghost' : drawImage 만으로 처리하는 특수 효과\n//   - kind 'none' : 원본\n//\n// 필터 \"강도\"는 App 의 렌더 루프에서 필터를 입힌 화면을 원본 위에 반투명(globalAlpha)으로\n// 덮는 방식으로 조절한다. 그래서 여기 함수들은 \"최대 강도\" 문자열만 돌려주면 된다.\n\nexport type FilterId =\n  | 'none'\n  | 'grayscale'\n  | 'sepia'\n  | 'invert'\n  | 'vintage'\n  | 'blur'\n  | 'warm'\n  | 'cool'\n  | 'rainbow'\n  | 'threshold'\n  | 'cartoon'\n  | 'neon'\n  | 'pixelate'\n  | 'ghost';\n\nexport type FilterKind = 'none' | 'css' | 'svg' | 'pixelate' | 'ghost';\n\nexport interface FilterOption {\n  id: FilterId;\n  label: string;\n  emoji: string;\n  kind: FilterKind;\n  gradient: string; // 필터 칩 미리보기에 쓰는 CSS 그라데이션\n}\n\nexport const FILTER_OPTIONS: FilterOption[] = [\n  { id: 'none',      label: '원본',     emoji: '🎥', kind: 'none',     gradient: 'linear-gradient(135deg,#64748b,#94a3b8)' },\n  { id: 'grayscale', label: '흑백',     emoji: '🌑', kind: 'css',      gradient: 'linear-gradient(135deg,#1f2937,#9ca3af)' },\n  { id: 'sepia',     label: '세피아',   emoji: '🟤', kind: 'css',      gradient: 'linear-gradient(135deg,#78350f,#d6a36e)' },\n  { id: 'invert',    label: '반전',     emoji: '🔄', kind: 'css',      gradient: 'linear-gradient(135deg,#0ea5e9,#f43f5e)' },\n  { id: 'vintage',   label: '빈티지',   emoji: '📷', kind: 'css',      gradient: 'linear-gradient(135deg,#b45309,#fcd34d)' },\n  { id: 'blur',      label: '소프트',   emoji: '🌫️', kind: 'css',      gradient: 'linear-gradient(135deg,#a5b4fc,#e0e7ff)' },\n  { id: 'warm',      label: '웜톤',     emoji: '🔥', kind: 'css',      gradient: 'linear-gradient(135deg,#f97316,#fbbf24)' },\n  { id: 'cool',      label: '쿨톤',     emoji: '❄️', kind: 'css',      gradient: 'linear-gradient(135deg,#2563eb,#22d3ee)' },\n  { id: 'rainbow',   label: '무지개',   emoji: '🌈', kind: 'css',      gradient: 'linear-gradient(135deg,#ef4444,#eab308,#22c55e,#3b82f6,#a855f7)' },\n  { id: 'threshold', label: '흑백대비', emoji: '🌗', kind: 'css',      gradient: 'linear-gradient(135deg,#000000,#ffffff)' },\n  { id: 'cartoon',   label: '만화',     emoji: '🎨', kind: 'svg',      gradient: 'linear-gradient(135deg,#f472b6,#facc15)' },\n  { id: 'neon',      label: '네온',     emoji: '⚡', kind: 'svg',      gradient: 'linear-gradient(135deg,#22d3ee,#a855f7)' },\n  { id: 'pixelate',  label: '픽셀',     emoji: '🟦', kind: 'pixelate', gradient: 'linear-gradient(135deg,#3b82f6,#1e3a8a)' },\n  { id: 'ghost',     label: '고스트',   emoji: '👻', kind: 'ghost',    gradient: 'linear-gradient(135deg,#475569,#cbd5e1)' },\n];\n\n// 밝기/대비/채도 보정값 (1 = 기본)\nexport interface Adjustments {\n  brightness: number; // 0.5 ~ 1.5\n  contrast: number;   // 0.5 ~ 1.5\n  saturation: number; // 0 ~ 2\n}\n\nexport const DEFAULT_ADJUSTMENTS: Adjustments = {\n  brightness: 1,\n  contrast: 1,\n  saturation: 1,\n};\n\n// 밝기·대비·채도 보정을 ctx.filter 문자열로 만든다 (모든 필터에 공통 적용)\nexport function buildAdjustmentFilter(adjust: Adjustments): string {\n  return [\n    `brightness(${adjust.brightness})`,\n    `contrast(${adjust.contrast})`,\n    `saturate(${adjust.saturation})`,\n  ].join(' ');\n}\n\n// 선택한 필터의 \"최대 강도\" 효과를 ctx.filter 문자열로 만든다.\n// css 계열은 CSS 필터 함수, svg 계열은 인라인 SVG 필터를 url(#id)로 참조한다.\nexport function buildEffectFilter(filter: FilterOption, frame: number): string {\n  switch (filter.id) {\n    case 'grayscale':\n      return 'grayscale(1)';\n    case 'sepia':\n      return 'sepia(1)';\n    case 'invert':\n      return 'invert(1)';\n    case 'blur':\n      return 'blur(6px)';\n    case 'vintage':\n      return 'sepia(0.6) contrast(1.15) brightness(1.05) saturate(1.5)';\n    case 'warm':\n      return 'sepia(0.5) saturate(1.6) hue-rotate(-12deg) brightness(1.05)';\n    case 'cool':\n      return 'sepia(0.6) hue-rotate(180deg) saturate(1.5) brightness(1.02)';\n    case 'threshold':\n      return 'grayscale(1) contrast(8)';\n    case 'rainbow':\n      // 시간에 따라 색상환을 돌려 무지개처럼 색이 흐른다\n      return `hue-rotate(${(frame * 3) % 360}deg) saturate(2)`;\n    case 'cartoon':\n      return 'saturate(1.4) url(#magic-posterize)';\n    case 'neon':\n      return 'brightness(1.1) url(#magic-edge)';\n    default:\n      return '';\n  }\n}\n",
+    "components/FilterChip.tsx": "import { FilterOption, FilterId } from '../lib/filters';\n\ninterface FilterChipProps {\n  option: FilterOption;\n  isActive: boolean;\n  onSelect: (id: FilterId) => void;\n}\n\n// 필터 하나를 고르는 카드형 버튼 — 그라데이션 미리보기 + 이모지 + 이름\nexport default function FilterChip({ option, isActive, onSelect }: FilterChipProps) {\n  return (\n    <button\n      onClick={() => onSelect(option.id)}\n      title={option.label}\n      className={`group relative flex flex-col items-center gap-1.5 rounded-2xl p-2 transition-all duration-200 ${\n        isActive\n          ? 'scale-105 bg-white/15 ring-2 ring-white/70 shadow-lg shadow-fuchsia-500/20'\n          : 'bg-white/5 hover:bg-white/10 hover:scale-105'\n      }`}\n    >\n      <span\n        className=\"relative flex h-12 w-12 items-center justify-center rounded-xl text-xl shadow-inner transition-transform duration-200 group-active:scale-90\"\n        style={{ background: option.gradient }}\n      >\n        <span className=\"drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]\">{option.emoji}</span>\n      </span>\n      <span\n        className={`text-[11px] font-semibold transition-colors ${\n          isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'\n        }`}\n      >\n        {option.label}\n      </span>\n      {isActive && (\n        <span className=\"absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-slate-900\" />\n      )}\n    </button>\n  );\n}\n",
+    "components/ControlSlider.tsx": "import { ReactNode } from 'react';\n\ninterface ControlSliderProps {\n  icon: ReactNode;\n  label: string;\n  value: number;\n  min: number;\n  max: number;\n  step?: number;\n  unit?: string;\n  color?: string;\n  disabled?: boolean;\n  onChange: (value: number) => void;\n}\n\n// 라벨 + 현재값 + 채워지는 트랙을 가진 예쁜 슬라이더\nexport default function ControlSlider({\n  icon,\n  label,\n  value,\n  min,\n  max,\n  step = 1,\n  unit = '%',\n  color = '#a855f7',\n  disabled = false,\n  onChange,\n}: ControlSliderProps) {\n  const percent = ((value - min) / (max - min)) * 100;\n  const trackBackground = `linear-gradient(to right, ${color} 0%, ${color} ${percent}%, rgba(255,255,255,0.12) ${percent}%, rgba(255,255,255,0.12) 100%)`;\n\n  return (\n    <div className={disabled ? 'opacity-40' : ''}>\n      <div className=\"mb-1.5 flex items-center justify-between text-xs\">\n        <span className=\"flex items-center gap-1.5 font-medium text-slate-300\">\n          <span className=\"text-slate-400\">{icon}</span>\n          {label}\n        </span>\n        <span className=\"font-mono text-slate-400\">\n          {Math.round(value)}\n          {unit}\n        </span>\n      </div>\n      <input\n        type=\"range\"\n        min={min}\n        max={max}\n        step={step}\n        value={value}\n        disabled={disabled}\n        onChange={(event) => onChange(Number(event.target.value))}\n        className=\"magic-slider w-full\"\n        style={{ background: trackBackground }}\n      />\n    </div>\n  );\n}\n",
+    "components/Gallery.tsx": "import { Download, Trash2, X, ImageIcon } from 'lucide-react';\n\nexport interface Photo {\n  id: string;\n  url: string;     // data URL (png)\n  filter: string;  // 촬영 당시 필터 이름\n}\n\ninterface GalleryProps {\n  photos: Photo[];\n  onView: (photo: Photo) => void;\n  onDownloadAll: () => void;\n  onClear: () => void;\n}\n\n// 찍은 사진 모음 — 썸네일 그리드 + 전체 저장/비우기\nexport default function Gallery({ photos, onView, onDownloadAll, onClear }: GalleryProps) {\n  return (\n    <div>\n      <div className=\"mb-3 flex items-center justify-between\">\n        <h2 className=\"flex items-center gap-2 text-sm font-semibold text-slate-200\">\n          <ImageIcon className=\"h-4 w-4 text-fuchsia-300\" />\n          갤러리\n          {photos.length > 0 && (\n            <span className=\"rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-slate-300\">\n              {photos.length}\n            </span>\n          )}\n        </h2>\n        {photos.length > 0 && (\n          <div className=\"flex items-center gap-1.5\">\n            <button\n              onClick={onDownloadAll}\n              className=\"flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:bg-white/20\"\n            >\n              <Download className=\"h-3.5 w-3.5\" /> 전체\n            </button>\n            <button\n              onClick={onClear}\n              className=\"flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition hover:bg-red-500/30\"\n            >\n              <Trash2 className=\"h-3.5 w-3.5\" /> 비우기\n            </button>\n          </div>\n        )}\n      </div>\n\n      {photos.length === 0 ? (\n        <div className=\"flex aspect-[3/2] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 text-sm text-slate-500\">\n          <ImageIcon className=\"h-7 w-7\" />\n          아직 찍은 사진이 없어요\n        </div>\n      ) : (\n        <div className=\"grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(84px,1fr))]\">\n          {photos.map((photo) => (\n            <button\n              key={photo.id}\n              onClick={() => onView(photo)}\n              className=\"group relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black\"\n              style={{ animation: 'fade-up 0.35s ease-out' }}\n            >\n              <img\n                src={photo.url}\n                alt={`${photo.filter} 필터 사진`}\n                className=\"h-full w-full object-cover transition-transform duration-300 group-hover:scale-110\"\n              />\n              <span className=\"absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-left text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100\">\n                {photo.filter}\n              </span>\n            </button>\n          ))}\n        </div>\n      )}\n    </div>\n  );\n}\n\ninterface PhotoModalProps {\n  photo: Photo;\n  onClose: () => void;\n  onDownload: (photo: Photo) => void;\n  onDelete: (id: string) => void;\n}\n\n// 사진 크게 보기 모달\nexport function PhotoModal({ photo, onClose, onDownload, onDelete }: PhotoModalProps) {\n  return (\n    <div\n      className=\"fixed inset-0 z-40 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm\"\n      style={{ animation: 'fade-up 0.2s ease-out' }}\n      onClick={onClose}\n    >\n      <div\n        className=\"relative max-h-full w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl\"\n        onClick={(event) => event.stopPropagation()}\n      >\n        <button\n          onClick={onClose}\n          className=\"absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/80\"\n        >\n          <X className=\"h-5 w-5\" />\n        </button>\n        <img src={photo.url} alt={`${photo.filter} 필터 사진`} className=\"max-h-[70vh] w-full object-contain\" />\n        <div className=\"flex items-center justify-between gap-3 border-t border-white/10 px-5 py-3\">\n          <span className=\"text-sm text-slate-300\">\n            필터: <span className=\"font-semibold text-white\">{photo.filter}</span>\n          </span>\n          <div className=\"flex items-center gap-2\">\n            <button\n              onClick={() => onDownload(photo)}\n              className=\"flex items-center gap-1.5 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-400\"\n            >\n              <Download className=\"h-4 w-4\" /> 저장\n            </button>\n            <button\n              onClick={() => {\n                onDelete(photo.id);\n                onClose();\n              }}\n              className=\"flex items-center gap-1.5 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500/40\"\n            >\n              <Trash2 className=\"h-4 w-4\" /> 삭제\n            </button>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n}\n",
+    "App.tsx": "import { useEffect, useRef, useState } from 'react';\nimport {\n  Camera,\n  Download,\n  Power,\n  Square,\n  Circle,\n  Sparkles,\n  Sun,\n  Contrast,\n  Droplet,\n  Wand2,\n  FlipHorizontal2,\n  Timer,\n  Film,\n  RotateCcw,\n  SlidersHorizontal,\n  ImageIcon,\n} from 'lucide-react';\nimport FilterChip from './components/FilterChip';\nimport ControlSlider from './components/ControlSlider';\nimport Gallery, { Photo, PhotoModal } from './components/Gallery';\nimport {\n  FILTER_OPTIONS,\n  FilterId,\n  FilterOption,\n  Adjustments,\n  buildAdjustmentFilter,\n  buildEffectFilter,\n} from './lib/filters';\n\n// 렌더 루프가 매 프레임 참고하는 설정 묶음 (state 대신 ref로 최신값 전달)\ninterface RenderSettings {\n  filter: FilterOption;\n  intensity: number; // 0 ~ 1\n  adjust: Adjustments;\n  mirror: boolean;\n}\n\nconst TIMER_OPTIONS = [0, 3, 5];\n\n// 오른쪽 컨트롤 패널의 탭 메뉴\ntype TabId = 'filter' | 'adjust' | 'gallery';\nconst TABS: { id: TabId; label: string; icon: typeof Wand2 }[] = [\n  { id: 'filter', label: '필터', icon: Wand2 },\n  { id: 'adjust', label: '보정', icon: SlidersHorizontal },\n  { id: 'gallery', label: '갤러리', icon: ImageIcon },\n];\n\nexport default function App() {\n  const videoRef = useRef<HTMLVideoElement>(null);\n  const canvasRef = useRef<HTMLCanvasElement>(null);\n  const ghostBufferRef = useRef<HTMLCanvasElement | null>(null);\n  const animationRef = useRef<number>(0);\n  const frameCountRef = useRef<number>(0);\n  const settingsRef = useRef<RenderSettings | null>(null);\n  const mediaRecorderRef = useRef<MediaRecorder | null>(null);\n  const recordedChunksRef = useRef<Blob[]>([]);\n  const recordTimerRef = useRef<number>(0);\n  const countdownTimerRef = useRef<number>(0);\n\n  const [isStreaming, setIsStreaming] = useState(false);\n  const [activeFilter, setActiveFilter] = useState<FilterId>('none');\n  const [intensity, setIntensity] = useState(100); // 0 ~ 100\n  const [adjust, setAdjust] = useState({ brightness: 100, contrast: 100, saturation: 100 });\n  const [mirror, setMirror] = useState(true);\n  const [timerSeconds, setTimerSeconds] = useState(0);\n  const [activeTab, setActiveTab] = useState<TabId>('filter');\n\n  const [photos, setPhotos] = useState<Photo[]>([]);\n  const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null);\n  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);\n  const [isRecording, setIsRecording] = useState(false);\n  const [recordSeconds, setRecordSeconds] = useState(0);\n  const [countdown, setCountdown] = useState<number | null>(null);\n  const [showFlash, setShowFlash] = useState(false);\n  const [errorMessage, setErrorMessage] = useState<string | null>(null);\n\n  const currentFilter = FILTER_OPTIONS.find((option) => option.id === activeFilter) ?? FILTER_OPTIONS[0];\n  const hasIntensity = currentFilter.kind !== 'none';\n\n  // 렌더 루프에서 쓸 최신 설정을 매 렌더마다 ref에 반영\n  settingsRef.current = {\n    filter: currentFilter,\n    intensity: intensity / 100,\n    adjust: {\n      brightness: adjust.brightness / 100,\n      contrast: adjust.contrast / 100,\n      saturation: adjust.saturation / 100,\n    },\n    mirror,\n  };\n\n  // 카메라 시작\n  const startCamera = async () => {\n    setErrorMessage(null);\n    try {\n      const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });\n      if (videoRef.current) {\n        videoRef.current.srcObject = cameraStream;\n        await videoRef.current.play();\n        setIsStreaming(true);\n      }\n    } catch {\n      setErrorMessage('카메라를 켤 수 없어요. 브라우저에서 카메라 권한을 허용해 주세요.');\n    }\n  };\n\n  // 카메라 끄기\n  const stopCamera = () => {\n    if (isRecording) stopRecording();\n    if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);\n    setCountdown(null);\n    const activeStream = videoRef.current?.srcObject as MediaStream | null;\n    activeStream?.getTracks().forEach((track) => track.stop());\n    if (videoRef.current) videoRef.current.srcObject = null;\n    setIsStreaming(false);\n  };\n\n  // 매 프레임 그리기 + 필터 적용\n  useEffect(() => {\n    if (!isStreaming) return;\n\n    const renderFrame = () => {\n      const video = videoRef.current;\n      const canvas = canvasRef.current;\n      const settings = settingsRef.current;\n      if (video && canvas && settings && video.videoWidth > 0) {\n        const width = video.videoWidth;\n        const height = video.videoHeight;\n        if (canvas.width !== width) canvas.width = width;\n        if (canvas.height !== height) canvas.height = height;\n\n        const context = canvas.getContext('2d');\n        if (context) {\n          frameCountRef.current += 1;\n          const { filter, intensity: strength, adjust: adjustments, mirror: isMirrored } = settings;\n          const adjustmentFilter = buildAdjustmentFilter(adjustments);\n\n          context.save();\n          if (isMirrored) {\n            context.translate(width, 0);\n            context.scale(-1, 1);\n          }\n\n          // 1) 원본(밝기·대비·채도 보정만 적용)을 바탕에 그린다\n          context.globalAlpha = 1;\n          context.filter = adjustmentFilter;\n          context.drawImage(video, 0, 0, width, height);\n\n          // 2) css·svg 필터는 \"효과를 입힌 같은 화면\"을 강도(strength)만큼 반투명하게 덮는다.\n          //    이렇게 하면 픽셀 반복문 없이도 GPU만으로 강도 조절이 된다.\n          if ((filter.kind === 'css' || filter.kind === 'svg') && strength > 0) {\n            context.filter = `${adjustmentFilter} ${buildEffectFilter(filter, frameCountRef.current)}`;\n            context.globalAlpha = strength;\n            context.drawImage(video, 0, 0, width, height);\n          }\n\n          context.restore();\n          context.filter = 'none';\n          context.globalAlpha = 1;\n\n          // 3) drawImage 만으로 처리하는 특수 효과\n          if (filter.kind === 'pixelate') {\n            applyPixelate(context, canvas, width, height, strength);\n          } else if (filter.kind === 'ghost') {\n            applyGhost(context, canvas, width, height, strength);\n          }\n\n          // 4) 빈티지는 가장자리를 어둡게 (비네팅)\n          if (filter.id === 'vintage') {\n            drawVignette(context, width, height, strength);\n          }\n        }\n      }\n      animationRef.current = requestAnimationFrame(renderFrame);\n    };\n\n    animationRef.current = requestAnimationFrame(renderFrame);\n    return () => cancelAnimationFrame(animationRef.current);\n  }, [isStreaming]);\n\n  // 컴포넌트 정리: 남아있는 타이머/URL 해제\n  useEffect(() => {\n    return () => {\n      if (recordTimerRef.current) window.clearInterval(recordTimerRef.current);\n      if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);\n    };\n  }, []);\n\n  // 픽셀화: 작게 줄였다 다시 키워 모자이크 (강도가 셀수록 블록이 커짐)\n  const applyPixelate = (\n    context: CanvasRenderingContext2D,\n    canvas: HTMLCanvasElement,\n    width: number,\n    height: number,\n    strength: number,\n  ) => {\n    const blockScale = 0.18 - strength * 0.14; // 강도 0 → 0.18, 강도 1 → 0.04\n    const smallWidth = Math.max(1, Math.floor(width * blockScale));\n    const smallHeight = Math.max(1, Math.floor(height * blockScale));\n    context.imageSmoothingEnabled = false;\n    context.drawImage(canvas, 0, 0, width, height, 0, 0, smallWidth, smallHeight);\n    context.drawImage(canvas, 0, 0, smallWidth, smallHeight, 0, 0, width, height);\n    context.imageSmoothingEnabled = true;\n  };\n\n  // 고스트: 이전 프레임을 반투명하게 겹쳐 잔상\n  const applyGhost = (\n    context: CanvasRenderingContext2D,\n    canvas: HTMLCanvasElement,\n    width: number,\n    height: number,\n    strength: number,\n  ) => {\n    if (!ghostBufferRef.current) {\n      ghostBufferRef.current = document.createElement('canvas');\n    }\n    const buffer = ghostBufferRef.current;\n    if (buffer.width !== width) {\n      buffer.width = width;\n      buffer.height = height;\n    }\n    const bufferContext = buffer.getContext('2d');\n    if (!bufferContext) return;\n\n    context.globalAlpha = 0.2 + strength * 0.55;\n    context.drawImage(buffer, 0, 0);\n    context.globalAlpha = 1;\n\n    bufferContext.clearRect(0, 0, width, height);\n    bufferContext.drawImage(canvas, 0, 0);\n  };\n\n  // 비네팅: 가운데는 그대로, 가장자리를 어둡게\n  const drawVignette = (\n    context: CanvasRenderingContext2D,\n    width: number,\n    height: number,\n    strength: number,\n  ) => {\n    const gradient = context.createRadialGradient(\n      width / 2,\n      height / 2,\n      Math.min(width, height) * 0.35,\n      width / 2,\n      height / 2,\n      Math.max(width, height) * 0.75,\n    );\n    gradient.addColorStop(0, 'rgba(0,0,0,0)');\n    gradient.addColorStop(1, `rgba(0,0,0,${(0.65 * strength).toFixed(2)})`);\n    context.fillStyle = gradient;\n    context.fillRect(0, 0, width, height);\n  };\n\n  // 촬영 플래시 효과\n  const triggerFlash = () => {\n    setShowFlash(true);\n    window.setTimeout(() => setShowFlash(false), 350);\n  };\n\n  // 사진 찍기 — 현재 캔버스를 갤러리에 추가\n  const capturePhoto = () => {\n    const canvas = canvasRef.current;\n    if (!canvas || canvas.width === 0) return;\n    const url = canvas.toDataURL('image/png');\n    const photo: Photo = {\n      id: `${Date.now()}-${Math.round(Math.random() * 1e6)}`,\n      url,\n      filter: currentFilter.label,\n    };\n    setPhotos((previous) => [photo, ...previous].slice(0, 18));\n    triggerFlash();\n  };\n\n  // 셀카 타이머 — 0초면 바로, 아니면 카운트다운 후 촬영\n  const handleShutter = () => {\n    if (!isStreaming || countdown !== null) return;\n    if (timerSeconds === 0) {\n      capturePhoto();\n      return;\n    }\n    setCountdown(timerSeconds);\n    countdownTimerRef.current = window.setInterval(() => {\n      setCountdown((current) => {\n        if (current === null) return null;\n        if (current <= 1) {\n          window.clearInterval(countdownTimerRef.current);\n          capturePhoto();\n          return null;\n        }\n        return current - 1;\n      });\n    }, 1000);\n  };\n\n  // 스페이스바로 촬영\n  useEffect(() => {\n    const onKeyDown = (event: KeyboardEvent) => {\n      const tag = (event.target as HTMLElement)?.tagName;\n      if (tag === 'INPUT' || tag === 'TEXTAREA') return;\n      if (event.code === 'Space') {\n        event.preventDefault();\n        handleShutter();\n      }\n    };\n    window.addEventListener('keydown', onKeyDown);\n    return () => window.removeEventListener('keydown', onKeyDown);\n  });\n\n  // 녹화에 쓸 수 있는 mimeType 고르기\n  const pickMimeType = () => {\n    const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];\n    for (const candidate of candidates) {\n      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(candidate)) {\n        return candidate;\n      }\n    }\n    return '';\n  };\n\n  // 녹화 시작 — 필터가 적용된 캔버스 화면을 그대로 영상으로 저장\n  const startRecording = () => {\n    const canvas = canvasRef.current;\n    if (!canvas) return;\n    const canvasStream = canvas.captureStream(30);\n    recordedChunksRef.current = [];\n    const mimeType = pickMimeType();\n\n    const recorder = new MediaRecorder(canvasStream, mimeType ? { mimeType } : undefined);\n    recorder.ondataavailable = (event) => {\n      if (event.data.size > 0) recordedChunksRef.current.push(event.data);\n    };\n    recorder.onstop = () => {\n      const recordedBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });\n      setRecordedUrl((previous) => {\n        if (previous) URL.revokeObjectURL(previous);\n        return URL.createObjectURL(recordedBlob);\n      });\n    };\n    recorder.start();\n    mediaRecorderRef.current = recorder;\n    setIsRecording(true);\n    setRecordSeconds(0);\n    recordTimerRef.current = window.setInterval(() => {\n      setRecordSeconds((previous) => previous + 1);\n    }, 1000);\n  };\n\n  // 녹화 멈춤\n  const stopRecording = () => {\n    mediaRecorderRef.current?.stop();\n    mediaRecorderRef.current = null;\n    window.clearInterval(recordTimerRef.current);\n    setIsRecording(false);\n  };\n\n  // 단일 사진 다운로드\n  const downloadPhoto = (photo: Photo) => {\n    const link = document.createElement('a');\n    link.href = photo.url;\n    link.download = `magic-${photo.id}.png`;\n    link.click();\n  };\n\n  // 전체 사진 다운로드\n  const downloadAllPhotos = () => {\n    photos.forEach((photo, index) => {\n      window.setTimeout(() => downloadPhoto(photo), index * 200);\n    });\n  };\n\n  const deletePhoto = (id: string) => {\n    setPhotos((previous) => previous.filter((photo) => photo.id !== id));\n  };\n\n  const resetAdjustments = () => {\n    setAdjust({ brightness: 100, contrast: 100, saturation: 100 });\n    setIntensity(100);\n  };\n\n  const formatTime = (totalSeconds: number) => {\n    const minutes = Math.floor(totalSeconds / 60);\n    const seconds = totalSeconds % 60;\n    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;\n  };\n\n  return (\n    <div className=\"relative flex min-h-screen flex-col overflow-x-hidden text-white\">\n      <GlobalStyles />\n      <SvgFilters />\n\n      {/* 움직이는 그라데이션 배경 */}\n      <div\n        className=\"fixed inset-0 -z-10\"\n        style={{\n          background: 'linear-gradient(125deg,#0b1120,#1e1b4b,#0f172a,#3b0764,#0b1120)',\n          backgroundSize: '320% 320%',\n          animation: 'bg-pan 22s ease infinite',\n        }}\n      />\n      <div className=\"pointer-events-none fixed -left-32 -top-32 -z-10 h-96 w-96 rounded-full bg-fuchsia-600/20 blur-3xl\" />\n      <div className=\"pointer-events-none fixed -bottom-32 -right-32 -z-10 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl\" />\n\n      {/* 촬영 플래시 */}\n      {showFlash && (\n        <div\n          className=\"pointer-events-none fixed inset-0 z-50 bg-white\"\n          style={{ animation: 'flash-fade 0.35s ease-out' }}\n        />\n      )}\n\n      {/* 콘텐츠가 화면보다 짧으면 세로 중앙, 길면 위에서부터 스크롤 (m-auto가 둘 다 처리) */}\n      <div className=\"m-auto w-full max-w-6xl px-4 py-8\">\n        <header className=\"mb-8 text-center\">\n          <div className=\"mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-fuchsia-200 backdrop-blur\">\n            <Sparkles className=\"h-3.5 w-3.5\" />\n            실시간 웹캠 매직 필터\n          </div>\n          <h1 className=\"bg-gradient-to-r from-fuchsia-300 via-violet-200 to-sky-300 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl\">\n            웹캠 매직 필터 스튜디오\n          </h1>\n          <p className=\"mt-3 text-sm text-slate-400\">\n            14가지 효과를 입히고, 밝기·강도를 조절해 마음에 드는 순간을 사진·영상으로 남겨보세요.\n          </p>\n        </header>\n\n        <div className=\"grid gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-start\">\n          {/* 왼쪽: 미리보기 + 촬영 버튼 */}\n          <div>\n            <div className=\"relative aspect-video w-full overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl shadow-black/50\">\n              <video ref={videoRef} className=\"hidden\" playsInline muted />\n              <canvas ref={canvasRef} className=\"h-full w-full object-cover\" />\n\n              {!isStreaming && (\n                <div className=\"absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-slate-900 to-slate-950 text-slate-400\">\n                  <div className=\"flex h-20 w-20 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10\">\n                    <Camera className=\"h-9 w-9\" />\n                  </div>\n                  <p className=\"text-sm\">카메라가 꺼져 있어요</p>\n                  <button\n                    onClick={startCamera}\n                    className=\"flex items-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 px-6 py-3 font-semibold shadow-lg shadow-fuchsia-500/30 transition hover:scale-105\"\n                  >\n                    <Power className=\"h-5 w-5\" /> 카메라 켜기\n                  </button>\n                </div>\n              )}\n\n              {/* 녹화 표시 */}\n              {isRecording && (\n                <div className=\"absolute left-4 top-4 flex items-center gap-2 rounded-full bg-red-500/90 px-3 py-1.5 text-xs font-bold shadow-lg backdrop-blur\">\n                  <span className=\"h-2.5 w-2.5 rounded-full bg-white\" style={{ animation: 'pulse-rec 1s ease-in-out infinite' }} />\n                  REC {formatTime(recordSeconds)}\n                </div>\n              )}\n\n              {/* 현재 필터 배지 */}\n              {isStreaming && (\n                <div className=\"absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium backdrop-blur\">\n                  <span>{currentFilter.emoji}</span>\n                  {currentFilter.label}\n                </div>\n              )}\n\n              {/* 카운트다운 */}\n              {countdown !== null && (\n                <div className=\"absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm\">\n                  <span\n                    key={countdown}\n                    className=\"font-black text-white\"\n                    style={{ fontSize: '9rem', textShadow: '0 8px 40px rgba(0,0,0,0.6)', animation: 'pop-in 0.6s ease-out' }}\n                  >\n                    {countdown}\n                  </span>\n                </div>\n              )}\n            </div>\n\n            {errorMessage && (\n              <p className=\"mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300\">\n                {errorMessage}\n              </p>\n            )}\n\n            {/* 촬영/녹화 버튼 */}\n            <div className=\"mt-4 flex flex-wrap items-center gap-3\">\n              <button\n                onClick={handleShutter}\n                disabled={!isStreaming}\n                className=\"flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3.5 font-semibold shadow-lg shadow-emerald-500/30 transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100\"\n              >\n                <Camera className=\"h-5 w-5\" /> 사진 찍기\n                <kbd className=\"ml-1 hidden rounded bg-black/20 px-1.5 py-0.5 text-[10px] font-normal sm:inline\">Space</kbd>\n              </button>\n\n              {isRecording ? (\n                <button\n                  onClick={stopRecording}\n                  className=\"flex items-center gap-2 rounded-2xl bg-red-500 px-5 py-3.5 font-semibold shadow-lg shadow-red-500/30 transition hover:scale-[1.02]\"\n                >\n                  <Square className=\"h-5 w-5\" /> 녹화 멈춤\n                </button>\n              ) : (\n                <button\n                  onClick={startRecording}\n                  disabled={!isStreaming}\n                  className=\"flex items-center gap-2 rounded-2xl bg-rose-500/90 px-5 py-3.5 font-semibold shadow-lg shadow-rose-500/30 transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100\"\n                >\n                  <Circle className=\"h-5 w-5\" /> 녹화 시작\n                </button>\n              )}\n\n              {isStreaming && (\n                <button\n                  onClick={stopCamera}\n                  className=\"flex items-center gap-2 rounded-2xl bg-white/10 px-5 py-3.5 font-semibold transition hover:bg-white/20\"\n                >\n                  <Power className=\"h-5 w-5\" /> 끄기\n                </button>\n              )}\n            </div>\n\n            {/* 촬영 옵션: 거울 모드 + 타이머 */}\n            <div className=\"mt-3 flex flex-wrap items-center gap-3\">\n              <button\n                onClick={() => setMirror((value) => !value)}\n                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition ${\n                  mirror ? 'bg-indigo-500/80 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'\n                }`}\n              >\n                <FlipHorizontal2 className=\"h-4 w-4\" /> 거울 모드\n              </button>\n\n              <div className=\"flex items-center gap-1 rounded-xl bg-white/5 p-1\">\n                <span className=\"flex items-center gap-1 px-2 text-xs text-slate-400\">\n                  <Timer className=\"h-4 w-4\" /> 타이머\n                </span>\n                {TIMER_OPTIONS.map((seconds) => (\n                  <button\n                    key={seconds}\n                    onClick={() => setTimerSeconds(seconds)}\n                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${\n                      timerSeconds === seconds ? 'bg-fuchsia-500 text-white' : 'text-slate-300 hover:bg-white/10'\n                    }`}\n                  >\n                    {seconds === 0 ? '끄기' : `${seconds}초`}\n                  </button>\n                ))}\n              </div>\n            </div>\n          </div>\n\n          {/* 오른쪽: 탭 메뉴 컨트롤 패널 (필터 / 보정 / 갤러리) */}\n          <div className=\"flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl\">\n            {/* 탭 바 */}\n            <div className=\"flex gap-1 border-b border-white/10 p-2\">\n              {TABS.map((tab) => {\n                const isActive = activeTab === tab.id;\n                const TabIcon = tab.icon;\n                return (\n                  <button\n                    key={tab.id}\n                    onClick={() => setActiveTab(tab.id)}\n                    className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${\n                      isActive\n                        ? 'bg-white/10 text-white'\n                        : 'text-slate-400 hover:bg-white/5 hover:text-white'\n                    }`}\n                  >\n                    <TabIcon className=\"h-4 w-4\" />\n                    <span>{tab.label}</span>\n                    {tab.id === 'gallery' && photos.length > 0 && (\n                      <span className=\"ml-0.5 rounded-full bg-fuchsia-500 px-1.5 text-[10px] font-bold text-white\">\n                        {photos.length}\n                      </span>\n                    )}\n                    {isActive && (\n                      <span className=\"absolute inset-x-3 -bottom-[9px] h-0.5 rounded-full bg-gradient-to-r from-fuchsia-400 to-indigo-400\" />\n                    )}\n                  </button>\n                );\n              })}\n            </div>\n\n            {/* 탭 내용 */}\n            <div key={activeTab} className=\"min-h-[320px] flex-1 p-4\" style={{ animation: 'fade-up 0.25s ease-out' }}>\n              {/* 필터 탭 */}\n              {activeTab === 'filter' && (\n                <div className=\"grid grid-cols-4 gap-2 sm:grid-cols-5\">\n                  {FILTER_OPTIONS.map((option) => (\n                    <FilterChip\n                      key={option.id}\n                      option={option}\n                      isActive={activeFilter === option.id}\n                      onSelect={setActiveFilter}\n                    />\n                  ))}\n                </div>\n              )}\n\n              {/* 보정 탭 */}\n              {activeTab === 'adjust' && (\n                <div>\n                  <div className=\"mb-4 flex justify-end\">\n                    <button\n                      onClick={resetAdjustments}\n                      className=\"flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-300 transition hover:bg-white/20\"\n                    >\n                      <RotateCcw className=\"h-3.5 w-3.5\" /> 초기화\n                    </button>\n                  </div>\n                  <div className=\"space-y-4\">\n                    <ControlSlider icon={<Sparkles className=\"h-3.5 w-3.5\" />} label=\"필터 강도\" value={intensity} min={0} max={100} color=\"#d946ef\" disabled={!hasIntensity} onChange={setIntensity} />\n                    <ControlSlider icon={<Sun className=\"h-3.5 w-3.5\" />} label=\"밝기\" value={adjust.brightness} min={50} max={150} color=\"#fbbf24\" onChange={(value) => setAdjust((prev) => ({ ...prev, brightness: value }))} />\n                    <ControlSlider icon={<Contrast className=\"h-3.5 w-3.5\" />} label=\"대비\" value={adjust.contrast} min={50} max={150} color=\"#38bdf8\" onChange={(value) => setAdjust((prev) => ({ ...prev, contrast: value }))} />\n                    <ControlSlider icon={<Droplet className=\"h-3.5 w-3.5\" />} label=\"채도\" value={adjust.saturation} min={0} max={200} color=\"#34d399\" onChange={(value) => setAdjust((prev) => ({ ...prev, saturation: value }))} />\n                  </div>\n                </div>\n              )}\n\n              {/* 갤러리 탭 (녹화한 영상 + 사진) */}\n              {activeTab === 'gallery' && (\n                <div className=\"space-y-5\">\n                  {recordedUrl && (\n                    <div>\n                      <h2 className=\"mb-2 flex items-center gap-2 text-sm font-semibold text-slate-200\">\n                        <Film className=\"h-4 w-4 text-rose-300\" /> 녹화한 영상\n                      </h2>\n                      <video src={recordedUrl} controls className=\"w-full rounded-2xl border border-white/10 bg-black\" />\n                      <a\n                        href={recordedUrl}\n                        download=\"webcam-magic.webm\"\n                        className=\"mt-2 flex items-center justify-center gap-2 rounded-2xl bg-white/10 px-5 py-2.5 text-sm font-medium transition hover:bg-white/20\"\n                      >\n                        <Download className=\"h-4 w-4\" /> 영상 다운로드\n                      </a>\n                    </div>\n                  )}\n                  <Gallery\n                    photos={photos}\n                    onView={setViewingPhoto}\n                    onDownloadAll={downloadAllPhotos}\n                    onClear={() => setPhotos([])}\n                  />\n                </div>\n              )}\n            </div>\n          </div>\n        </div>\n      </div>\n\n      {/* 사진 크게 보기 */}\n      {viewingPhoto && (\n        <PhotoModal\n          photo={viewingPhoto}\n          onClose={() => setViewingPhoto(null)}\n          onDownload={downloadPhoto}\n          onDelete={deletePhoto}\n        />\n      )}\n    </div>\n  );\n}\n\n// 픽셀 반복문 대신 GPU가 처리하는 SVG 필터 정의 (만화·네온)\n// 캔버스에서 ctx.filter = 'url(#magic-edge)' 처럼 참조해서 쓴다.\nfunction SvgFilters() {\n  return (\n    <svg aria-hidden=\"true\" width=\"0\" height=\"0\" style={{ position: 'absolute' }}>\n      <defs>\n        {/* 만화: 색을 몇 단계로 뭉뚱그려 포스터처럼 단순화 */}\n        <filter id=\"magic-posterize\">\n          <feComponentTransfer>\n            <feFuncR type=\"discrete\" tableValues=\"0 0.25 0.5 0.75 1\" />\n            <feFuncG type=\"discrete\" tableValues=\"0 0.25 0.5 0.75 1\" />\n            <feFuncB type=\"discrete\" tableValues=\"0 0.25 0.5 0.75 1\" />\n          </feComponentTransfer>\n        </filter>\n        {/* 네온: 흑백 → 윤곽선 검출(feConvolveMatrix) → 형광색으로 강조 */}\n        <filter id=\"magic-edge\">\n          <feColorMatrix\n            type=\"matrix\"\n            values=\"0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0\"\n            result=\"gray\"\n          />\n          <feConvolveMatrix\n            in=\"gray\"\n            order=\"3\"\n            preserveAlpha=\"true\"\n            kernelMatrix=\"0 -1 0 -1 4 -1 0 -1 0\"\n            result=\"edges\"\n          />\n          <feComponentTransfer in=\"edges\">\n            <feFuncR type=\"linear\" slope=\"0.4\" />\n            <feFuncG type=\"linear\" slope=\"1.6\" />\n            <feFuncB type=\"linear\" slope=\"2.4\" />\n          </feComponentTransfer>\n        </filter>\n      </defs>\n    </svg>\n  );\n}\n\n// 전역 keyframes + 슬라이더 스타일 (Tailwind만으로 표현하기 어려운 부분)\nfunction GlobalStyles() {\n  return (\n    <style>{`\n      @keyframes bg-pan {\n        0% { background-position: 0% 50%; }\n        50% { background-position: 100% 50%; }\n        100% { background-position: 0% 50%; }\n      }\n      @keyframes flash-fade {\n        0% { opacity: 0; }\n        12% { opacity: 0.9; }\n        100% { opacity: 0; }\n      }\n      @keyframes pop-in {\n        0% { transform: scale(0.4); opacity: 0; }\n        55% { transform: scale(1.18); opacity: 1; }\n        100% { transform: scale(1); opacity: 1; }\n      }\n      @keyframes fade-up {\n        0% { transform: translateY(10px); opacity: 0; }\n        100% { transform: translateY(0); opacity: 1; }\n      }\n      @keyframes pulse-rec {\n        0%, 100% { opacity: 1; }\n        50% { opacity: 0.3; }\n      }\n      .magic-slider {\n        -webkit-appearance: none;\n        appearance: none;\n        height: 6px;\n        border-radius: 9999px;\n        outline: none;\n        cursor: pointer;\n      }\n      .magic-slider::-webkit-slider-thumb {\n        -webkit-appearance: none;\n        appearance: none;\n        width: 18px;\n        height: 18px;\n        border-radius: 50%;\n        background: #ffffff;\n        cursor: pointer;\n        box-shadow: 0 0 0 4px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.45);\n        transition: transform 0.15s ease;\n      }\n      .magic-slider::-webkit-slider-thumb:hover {\n        transform: scale(1.18);\n      }\n      .magic-slider::-moz-range-thumb {\n        width: 18px;\n        height: 18px;\n        border: none;\n        border-radius: 50%;\n        background: #ffffff;\n        cursor: pointer;\n        box-shadow: 0 0 0 4px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.45);\n      }\n      .magic-slider:disabled {\n        cursor: not-allowed;\n      }\n    `}</style>\n  );\n}\n"
+  },
+  "coding_type": "react",
+  "blockly_xml": null,
+  "blockly_flowchart": null,
+  "blockly_code_langs": null,
+  "modi_modules": null,
+  "files": "- lib/filters.ts (typescript): 14가지 필터 정의와 픽셀 가공·색 보정 함수 모음\n- components/FilterChip.tsx (typescript): 필터를 고르는 카드형 버튼 컴포넌트\n- components/ControlSlider.tsx (typescript): 강도·밝기·대비·채도 조절 슬라이더\n- components/Gallery.tsx (typescript): 찍은 사진 갤러리와 크게 보기 모달\n- App.tsx (typescript): 카메라·실시간 필터·셀카 타이머·갤러리·녹화를 담은 메인 앱",
+  "design_doc": {
+    "project_name": "웹캠 매직 필터",
+    "description": "웹캠 영상에 실시간 필터 효과를 입히고 마음에 드는 순간을 사진으로 저장하는 웹앱",
+    "users": [
+      "웹캠으로 영상 효과를 즐기는 사용자"
+    ],
+    "features": [
+      {
+        "name": "카메라 켜기/끄기",
+        "description": "navigator.mediaDevices.getUserMedia로 웹캠 스트림을 시작하고, 트랙을 정지해 카메라를 끔. 권한 거부 시 에러 메시지 표시",
+        "priority": "mvp"
+      },
+      {
+        "name": "실시간 필터 적용",
+        "description": "requestAnimationFrame 루프로 매 프레임을 캔버스에 좌우 반전(거울 모드)으로 그리고 선택한 필터 효과를 적용",
+        "priority": "mvp"
+      },
+      {
+        "name": "픽셀 색상 필터",
+        "description": "흑백(grayscale), 반전(invert), 세피아(sepia), 흑백대비(threshold), 무지개(rainbow) - 픽셀 단위 색 변환. 무지개는 프레임마다 색상이 변하는 HSL 변환 사용",
+        "priority": "mvp"
+      },
+      {
+        "name": "픽셀화 효과",
+        "description": "캔버스를 작게 축소했다가 다시 확대해 모자이크 효과 생성",
+        "priority": "mvp"
+      },
+      {
+        "name": "고스트 효과",
+        "description": "이전 프레임을 버퍼 캔버스에 저장해 현재 화면 위에 반투명하게 덧칠하여 잔상 효과 생성",
+        "priority": "mvp"
+      },
+      {
+        "name": "사진 찍기",
+        "description": "canvas.toDataURL로 현재 화면을 PNG 이미지로 캡처",
+        "priority": "mvp"
+      },
+      {
+        "name": "사진 다운로드",
+        "description": "캡처한 이미지를 webcam-magic.png 파일로 다운로드",
+        "priority": "mvp"
+      }
+    ],
+    "pages": [
+      {
+        "name": "메인 화면",
+        "description": "좌측 영상/컨트롤 영역과 우측 필터·캡처 패널로 구성된 단일 화면",
+        "components": [
+          "헤더(제목/설명)",
+          "video(숨김)+canvas 미리보기",
+          "카메라 켜기/끄기 버튼",
+          "사진 찍기 버튼",
+          "에러 메시지",
+          "필터 버튼 그리드(8종)",
+          "찍은 사진 미리보기 및 다운로드 링크"
+        ]
+      }
+    ],
+    "data_models": [
+      {
+        "name": "FilterOption",
+        "fields": [
+          "id: FilterId",
+          "label: string",
+          "emoji: string"
+        ],
+        "description": "필터 선택 버튼에 표시할 정보. none/grayscale/invert/sepia/pixelate/ghost/rainbow/threshold 8종 정의"
+      },
+      {
+        "name": "AppState",
+        "fields": [
+          "isStreaming: boolean",
+          "activeFilter: FilterId",
+          "capturedUrl: string|null",
+          "errorMessage: string|null"
+        ],
+        "description": "App 컴포넌트의 화면 상태"
+      }
+    ],
+    "user_flows": [
+      "카메라 켜기 → 필터 고르기 → 실시간 효과 확인 → 사진 찍기 → 다운로드",
+      "카메라 권한 거부 → 에러 메시지 표시"
+    ],
+    "strengths": [
+      "Canvas + requestAnimationFrame 기반 실시간 처리 구조가 명확",
+      "필터를 데이터 배열로 관리해 확장이 쉬움",
+      "ref로 애니메이션 루프 내 최신 필터값을 안전하게 참조",
+      "카메라 권한 실패에 대한 에러 처리 존재"
+    ],
+    "weaknesses": [
+      "사진을 여러 장 저장하는 갤러리 기능 없음 (캡처 1장만 유지)",
+      "영상 녹화/동영상 저장 기능 없음",
+      "필터 강도 조절 등 세부 파라미터 조정 불가",
+      "모바일 후면 카메라 전환(facingMode) 미지원"
+    ]
+  },
+  "task_plan": {
+    "tasks": [
+      {
+        "id": 1,
+        "name": "웹캠 필터 앱",
+        "description": "웹캠 영상에 실시간 효과를 적용하는 메인 앱",
+        "files": [
+          "App.tsx",
+          "components/FilterButton.tsx",
+          "lib/filters.ts"
+        ],
+        "status": "done"
+      }
+    ],
+    "progress": "진행: 1/1\n[v] 1. 웹캠 필터 앱"
+  },
+  "learning_notes": [
+    {
+      "title": "색깔도 사실은 숫자였다고?",
+      "what": "화면에 보이는 모든 그림은 아주 작은 점들이 모여서 만들어져요. 그리고 각 점은 빨강·초록·파랑이 얼마나 섞였는지를 나타내는 숫자로 되어 있어요. 그래서 이 숫자를 바꾸면 색이 바뀌어요. 흑백 필터는 이 숫자들을 적당히 섞어 회색으로 만든 거예요.",
+      "why": "색을 숫자로 다루지 못하면 사진을 흑백으로 바꾸거나 색을 반전시키는 일을 전혀 할 수 없어요. 사람이 일일이 점을 칠하는 건 불가능하니까요. 숫자로 바꿔 두면 컴퓨터가 수백만 개의 점을 순식간에 계산해서 바꿔줘요. 덕분에 버튼 한 번에 효과가 입혀지는 거예요.",
+      "where": "인스타그램이나 스노우에서 사진 필터를 누르면 순식간에 분위기가 바뀌죠. 그게 바로 점 하나하나의 색 숫자를 다시 계산하는 거예요. 갤러리 앱에서 '흑백'이나 '따뜻하게'를 누를 때도 똑같은 일이 일어나요."
+    },
+    {
+      "title": "영상은 사실 빠르게 넘기는 그림책",
+      "what": "움직이는 영상처럼 보이지만 실제로는 그림 한 장을 그리고, 지우고, 또 새로 그리는 일을 1초에 수십 번 반복하는 거예요. 마치 종이 귀퉁이에 그림을 그려 빠르게 넘기는 플립북과 똑같아요. 너무 빨라서 우리 눈에는 자연스럽게 움직이는 것처럼 보일 뿐이에요. 이 앱도 매 순간 카메라 화면을 다시 그려요.",
+      "why": "이렇게 계속 새로 그리지 않으면 화면이 멈춘 사진처럼 굳어버려요. 그러면 필터를 바꿔도 바로 반영이 안 되겠죠. 끊임없이 다시 그리기 때문에 움직임도 부드럽고 효과도 실시간으로 보여요. 이게 없으면 '실시간 카메라'라는 느낌 자체가 사라져요.",
+      "where": "유튜브 영상이나 게임 화면, 카톡 영상통화 모두 이런 식으로 그림을 빠르게 갈아끼우며 움직임을 보여줘요. 틱톡에서 얼굴에 효과가 따라붙는 것도 매 순간 새로 그리기 때문이에요."
+    },
+    {
+      "title": "카메라를 켜려면 먼저 허락을 받아야 한다",
+      "what": "앱이 마음대로 카메라를 켤 수는 없어요. 먼저 사용자에게 '카메라 써도 될까요?'라고 물어보고 허락을 받아야 해요. 허락하면 카메라 화면이 들어오고, 거절하면 안내 메시지가 뜨도록 만들어요. 마치 남의 집에 들어가기 전에 초인종을 누르는 것과 같아요.",
+      "why": "만약 허락 없이 카메라를 켤 수 있다면 누군가 몰래 내 모습을 찍을 수도 있어요. 그래서 반드시 사용자 동의를 받게 만든 거예요. 또 거절했을 때 친절한 안내가 없으면 사용자는 왜 안 되는지 몰라 답답해해요. 그래서 안 될 때 메시지를 보여주는 것도 중요해요.",
+      "where": "줌이나 카톡 영상통화를 처음 켤 때 '카메라 접근을 허용하시겠습니까?'라는 창이 뜨죠. 인스타 스토리에서 카메라를 켤 때도 똑같이 물어봐요. 이게 우리 사생활을 지켜주는 약속이에요."
+    },
+    {
+      "title": "화면 속 순간을 사진으로 저장하기",
+      "what": "버튼을 누르면 지금 보이는 화면을 그대로 한 장의 사진으로 떠서 저장해요. 움직이던 영상의 딱 그 순간을 캡처하는 거예요. 그리고 그 사진을 다운로드 버튼으로 내 기기에 내려받을 수 있어요. 마치 흐르는 시냇물에서 컵으로 물 한 잔을 떠내는 것과 비슷해요.",
+      "why": "이 기능이 없으면 멋진 효과를 입혀도 그 순간을 남길 방법이 없어요. 화면은 계속 흘러가버리니까 좋은 표정도 금방 사라지죠. 사진으로 떠서 저장할 수 있어야 친구에게 공유하거나 추억으로 간직할 수 있어요. 효과를 즐긴 결과물을 가질 수 있게 해주는 거예요.",
+      "where": "스노우나 인스타에서 필터를 입히고 셔터를 눌러 사진을 저장하는 것과 똑같아요. 게임 화면을 캡처해서 친구에게 자랑하는 것도 같은 느낌이에요."
+    },
+    {
+      "title": "모자이크는 어떻게 만들어질까",
+      "what": "픽셀 효과는 그림을 아주 작게 확 줄였다가 다시 원래 크기로 뻥튀기하는 방식이에요. 작게 줄이면 세밀한 부분이 뭉개지고, 그걸 다시 키우면 큼직한 네모 칸들로 보여요. 마치 작은 사진을 억지로 크게 늘리면 흐릿하고 각진 것과 같아요. 그래서 모자이크 같은 픽셀 느낌이 나는 거예요.",
+      "why": "이 방법이 없으면 네모 칸을 하나하나 직접 그려야 하는데 너무 오래 걸려요. 줄였다 키우는 간단한 방법으로 같은 효과를 빠르게 낼 수 있어요. 게다가 칸의 크기도 줄이는 정도만 바꾸면 쉽게 조절돼요. 똑똑한 지름길인 셈이에요.",
+      "where": "뉴스에서 얼굴을 가릴 때 쓰는 모자이크가 이런 식이에요. 게임의 '도트' 그래픽이나 사진 앱의 모자이크 가리기 기능에서도 비슷한 방식을 써요."
+    },
+    {
+      "title": "흑백 사진은 왜 그냥 평균이 아닐까?",
+      "what": "색을 흑백으로 바꿀 때 빨강, 초록, 파랑을 똑같이 평균 내는 게 아니라 각각 다른 비중을 줘요. 우리 눈은 초록색을 가장 밝게 느끼고 파랑은 어둡게 느끼기 때문이에요. 그래서 초록에 가장 큰 점수를 주고 파랑에 가장 적은 점수를 줘서 합쳐요. 그래야 사람 눈에 자연스러운 흑백이 나옵니다.",
+      "why": "그냥 단순 평균을 내면 우리 눈에 부자연스러운 회색이 나와요. 밝아야 할 부분이 칙칙하거나, 어두워야 할 부분이 떠 보이게 되죠. 사람의 눈이 색마다 다르게 느낀다는 점을 반영해야 진짜 같은 결과가 나와요. 이런 작은 배려가 결과물의 완성도를 크게 바꿔요.",
+      "where": "스마트폰 카메라의 흑백 모드, 인스타 흑백 필터가 모두 이 방식이에요. TV나 영상 편집 앱에서 컬러를 흑백으로 전환할 때도 똑같은 원리가 들어가요. 그래서 같은 흑백이라도 앱마다 미묘하게 느낌이 다른 거예요."
+    }
+  ],
+  "code_annotations": [
+    {
+      "file": "lib/filters.ts",
+      "line": 12,
+      "title": "정해진 값만 담는 타입(유니온 타입)",
+      "explanation": "필터 종류 이름을 미리 정한 글자들 중에서만 고르도록 묶어 오타를 막아요."
+    },
+    {
+      "file": "lib/filters.ts",
+      "line": 38,
+      "title": "필터 목록을 배열로 정리하기",
+      "explanation": "화면에 보여줄 14개 필터를 한 줄에 하나씩 객체로 모아둔 목록이에요."
+    },
+    {
+      "file": "lib/filters.ts",
+      "line": 69,
+      "title": "밝기·대비·채도를 한 줄로 합치기",
+      "explanation": "모든 필터에 공통으로 적용할 보정값을 CSS filter 문자열로 만들어요."
+    },
+    {
+      "file": "lib/filters.ts",
+      "line": 79,
+      "title": "필터별 효과를 GPU 문자열로 고르기",
+      "explanation": "픽셀을 직접 안 만지고 브라우저(GPU)가 처리할 CSS·SVG 필터 문자열을 골라줘요."
+    },
+    {
+      "file": "lib/filters.ts",
+      "line": 97,
+      "title": "시간에 따라 색을 돌리는 무지개",
+      "explanation": "프레임마다 색상환(hue)을 돌려 색이 흐르는 무지개 효과를 만들어요."
+    },
+    {
+      "file": "lib/filters.ts",
+      "line": 102,
+      "title": "미리 만든 SVG 필터 불러 쓰기",
+      "explanation": "url(#magic-edge)로 정의해 둔 윤곽선 검출 SVG 필터를 적용해요."
+    },
+    {
+      "file": "components/FilterChip.tsx",
+      "line": 10,
+      "title": "재사용하는 버튼 부품 만들기",
+      "explanation": "필터 하나를 고르는 버튼을 부품(컴포넌트)으로 만들어 목록에서 반복해서 써요."
+    },
+    {
+      "file": "components/FilterChip.tsx",
+      "line": 17,
+      "title": "선택된 버튼만 강조하기(조건부 스타일)",
+      "explanation": "isActive가 참이면 크기를 키우고 테두리를 둘러 지금 고른 필터를 표시해요."
+    },
+    {
+      "file": "components/ControlSlider.tsx",
+      "line": 29,
+      "title": "값을 0~100% 위치로 계산",
+      "explanation": "슬라이더의 현재 값이 전체에서 몇 %인지 구해 채워진 트랙을 그려요."
+    },
+    {
+      "file": "components/ControlSlider.tsx",
+      "line": 51,
+      "title": "입력값을 숫자로 바꿔 전달",
+      "explanation": "슬라이더에서 받은 글자값을 숫자로 바꿔 부모 컴포넌트에 알려줘요."
+    },
+    {
+      "file": "components/Gallery.tsx",
+      "line": 3,
+      "title": "사진 한 장의 정보 모양 정하기",
+      "explanation": "사진마다 id·이미지·필터이름을 담는 형태를 미리 정해둬요."
+    },
+    {
+      "file": "components/Gallery.tsx",
+      "line": 55,
+      "title": "목록을 화면 카드로 펼치기",
+      "explanation": "배열에 담긴 사진들을 map으로 하나씩 썸네일 카드로 만들어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 95,
+      "title": "카메라 권한 요청과 켜기",
+      "explanation": "getUserMedia로 카메라 사용 허락을 받고 영상을 화면에 연결해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 124,
+      "title": "매 순간 다시 그리는 애니메이션 루프",
+      "explanation": "1초에 수십 번 영상 프레임을 다시 그려 실시간으로 필터가 보이게 해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 143,
+      "title": "좌우 뒤집어 거울처럼 보이기",
+      "explanation": "좌우를 반전해 거울을 보듯 자연스럽게 만들어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 155,
+      "title": "효과를 강도만큼 덮어 합성하기",
+      "explanation": "필터를 입힌 화면을 강도만큼 반투명하게 원본 위에 얹어 강도를 조절해요(루프 없이 GPU로)."
+    },
+    {
+      "file": "App.tsx",
+      "line": 668,
+      "title": "GPU가 처리할 SVG 필터 정의",
+      "explanation": "만화·네온은 SVG 필터로 정의해 두고 캔버스가 url(#id)로 불러 GPU로 처리해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 266,
+      "title": "지금 화면을 사진으로 저장",
+      "explanation": "필터가 적용된 캔버스를 그대로 이미지 데이터로 바꿔 갤러리에 넣어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 283,
+      "title": "셀카 타이머 카운트다운",
+      "explanation": "정해진 초만큼 숫자를 세고 0이 되면 자동으로 사진을 찍어요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 302,
+      "title": "스페이스바 단축키로 촬영",
+      "explanation": "키보드 스페이스바를 누르면 바로 사진이 찍히도록 연결해요."
+    },
+    {
+      "file": "App.tsx",
+      "line": 326,
+      "title": "캔버스 화면을 영상으로 녹화",
+      "explanation": "필터가 입혀진 캔버스를 초당 30프레임 영상으로 받아 녹화해요."
+    }
+  ],
+  "app_type": "desktop",
+  "conversation": "학습자: 웹캠 영상에 실시간 필터를 입히고, 마음에 드는 순간을 사진·영상으로 저장하는 웹앱을 만들어줘\n튜터: 웹캠 매직 필터 스튜디오를 만들게요.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "웹캠 영상에 실시간 필터를 입히고, 마음에 드는 순간을 사진·영상으로 저장하는 웹앱을 만들어줘"
+    },
+    {
+      "role": "ai",
+      "content": "웹캠 매직 필터 스튜디오를 만들게요."
+    }
+  ]
+}

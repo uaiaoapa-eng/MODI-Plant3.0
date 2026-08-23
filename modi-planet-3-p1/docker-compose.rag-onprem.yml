@@ -1,0 +1,94 @@
+# 온프렘 운영 스택 — MySQL 8.0(원천) + Redis Stack(벡터) + RAG 검색 앱.
+#
+#   cp deploy/.env.example .env   # DB 자격증명·임계값 설정
+#   docker compose -f docker-compose.rag-onprem.yml up --build -d
+#   docker compose -f docker-compose.rag-onprem.yml run --rm backfill   # 최초 1회 적재(개념 centroid 포함)
+#   → http://<서버IP>:8100  (RAG_BACKEND=mysql_redis)
+#
+#   # 온프렘 검색 품질(gold 8/8) 검증 — 반드시 서버에서(#38, centroid+alias 재랭킹):
+#   docker compose -f docker-compose.rag-onprem.yml exec rag-search \
+#       env PYTHONPATH=scripts python scripts/eval_search.py --backend mysql_redis
+#
+# 설계: docs/design/rag-db-schema.md. 원천=MySQL, 벡터검색=Redis Stack(HNSW).
+# Aurora(관리형) 대신 온프렘 MySQL 컨테이너로 동일 환경 구성.
+#
+# ⚠️ 별도 프로젝트명(edu-agent-rag)으로 격리 — 같은 디렉터리의 메인 docker-compose.yml
+#    (프로젝트 edu-agent, redis 서비스 보유)과 서비스/네트워크가 섞이지 않게 한다.
+#    (섞이면 메인 세션락 redis 를 잘못 재생성하는 사고 발생 → 실측으로 확인됨)
+name: edu-agent-rag
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: edu-agent-rag-mysql   # 기존 컨테이너와 이름 충돌 방지
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE:-edu_agent}"
+      MYSQL_USER: "${MYSQL_USER:-edu}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:?set MYSQL_PASSWORD}"
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deploy/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro  # 최초 기동 시 DDL
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis/redis-stack-server:latest   # RediSearch/RedisJSON(HNSW 벡터) 포함
+    container_name: edu-agent-rag-redis   # ⚠ 기존 세션락 edu-agent-redis 와 충돌 방지
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  rag-search:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag-search
+    image: edu-agent-rag-search:latest
+    container_name: edu-agent-rag-onprem
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      - "${PORT:-8100}:8100"
+    environment:
+      RAG_BACKEND: "mysql_redis"
+      DATABASE_URL: "mysql+pymysql://${MYSQL_USER:-edu}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-edu_agent}"
+      VECTOR_REDIS_URL: "redis://redis:6379/0"
+      TAU_REUSE: "${TAU_REUSE:-0.62}"
+      TAU_NEAR: "${TAU_NEAR:-0.48}"
+    volumes:
+      - ./data:/app/data
+      - ./projects:/app/projects:ro
+    restart: unless-stopped
+
+  # 최초 1회(또는 데이터 갱신 시) 실행 — 로컬 자산을 MySQL+Redis로 적재.
+  backfill:
+    image: edu-agent-rag-search:latest
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rag-search: { condition: service_started }
+    environment:
+      DATABASE_URL: "mysql+pymysql://${MYSQL_USER:-edu}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-edu_agent}"
+      VECTOR_REDIS_URL: "redis://redis:6379/0"
+    volumes:
+      - ./data:/app/data
+      - ./projects:/app/projects:ro
+    entrypoint: ["python", "scripts/backfill_onprem.py"]
+    profiles: ["backfill"]     # 기본 up 에선 안 뜨고, run 으로 명시 실행
+
+volumes:
+  mysql_data:
+  redis_data:

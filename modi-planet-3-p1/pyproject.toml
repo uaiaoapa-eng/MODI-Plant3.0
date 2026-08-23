@@ -1,0 +1,64 @@
+[project]
+name = "edu-agent"
+version = "0.1.0"
+description = "AI-powered educational agent for system design & vibe coding"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.42.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "langfuse>=4.0.0",
+    "redis>=5.0.0",
+    "sentry-sdk[fastapi]>=2.0.0",
+    "numpy>=1.26",    # RAG 하이브리드 검색(search_lib/registry_lib) 벡터 연산
+    "tzdata>=2024.1; platform_system == 'Windows'",  # zoneinfo("Asia/Seoul") Windows 지원
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "httpx",          # fastapi.testclient 용
+    "fakeredis",      # RedisSessionLock 단위테스트(실제 서버 불필요)
+    # docker-compose.yml / 배포 워크플로의 배선 정합성 검사용.
+    # ⚠ 없으면 그 테스트가 importorskip 으로 **조용히 건너뛰어진다** — 정작 레플리카
+    #   목록이 어긋났을 때 CI 가 통과해 버린다(2026-08-21 실제로 그 사고가 있었다).
+    "pyyaml",
+]
+
+[tool.setuptools.packages.find]
+include = ["agent*", "curriculum*"]
+
+[tool.setuptools.package-data]
+curriculum = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# 레포 루트를 import 경로에 추가한다. tests/ 에 __init__.py 가 없고 패키지 설치도 안 하므로
+# 이게 없으면 `from agent...`/`import server` 가 ModuleNotFoundError 로 수집 단계에서 실패한다.
+pythonpath = ["."]
+
+[tool.ruff]
+# 코드규칙 강제화: E4/E7/E9 + F 를 CI 에서 그린으로 유지.
+# line-length(E501)는 select 에 없어 기존 긴 줄을 건드리지 않는다.
+target-version = "py311"
+line-length = 100
+# docs/ 는 설계·분석용 일회성 스크립트 보관소(앱/테스트 아님) → lint 대상 제외.
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+# ⚠ select 를 '명시'하는 것이 핵심 — 예전엔 이 값을 안 적고 ruff 의 암묵적 기본값에
+# 의존했다. ruff 0.16.x 가 기본 룰셋을 확장하면서(UP006/BLE001/I001/S110 등) 기존 코드
+# 457건이 한꺼번에 붉어져 CI 가 코드 변경 없이 깨졌다(2026-08-21, PR #173).
+# 게이트 기준을 ruff 릴리스에 맡기지 않도록 여기서 고정한다.
+# 추가 룰(타이핑 현대화 UP, import 정렬 I 등) 도입은 일괄 수정과 함께 별도 작업으로.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# server.py 는 scripts/ 경로 추가(sys.path.insert) + load_dotenv() 이후에 import 해야 하므로 E402 불가피.
+"server.py" = ["E402"]
+
+[project.scripts]
+edu-agent = "main:main"
