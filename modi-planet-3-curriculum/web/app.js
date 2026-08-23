@@ -111,6 +111,7 @@
     streamError: "",
     activeAssistantIndex: -1,
     abortController: null,
+    mobileWorkspacePanel: "conversation",
     artifactTab: "design",
     resultView: "code",
     activeCodeFile: "",
@@ -577,16 +578,20 @@
       "</span></div>",
       "</header>",
       '<div class="workspace-grid">',
-      '<section class="conversation-panel" aria-labelledby="conversationTitle">',
+      '<nav class="mobile-workspace-switch" aria-label="모바일 작업실 보기">',
+      '<button type="button" data-workspace-panel="conversation" aria-controls="conversationPanel" aria-pressed="', state.mobileWorkspacePanel === "conversation" ? "true" : "false", '" class="', state.mobileWorkspacePanel === "conversation" ? "active" : "", '">대화</button>',
+      '<button type="button" data-workspace-panel="artifact" aria-controls="artifactPanel" aria-pressed="', state.mobileWorkspacePanel === "artifact" ? "true" : "false", '" class="', state.mobileWorkspacePanel === "artifact" ? "active" : "", '">결과</button>',
+      "</nav>",
+      '<section class="conversation-panel', state.mobileWorkspacePanel === "conversation" ? "" : " mobile-panel-hidden", '" id="conversationPanel" tabindex="-1" aria-labelledby="conversationTitle">',
       '<header class="panel-header"><h2 id="conversationTitle">AI와 함께 만들기</h2>',
       '<span class="panel-chip">설계 · 구현 · 검증</span></header>',
-      '<div class="chat-scroll" id="chatScroll" aria-live="polite">',
+      '<div class="chat-scroll" id="chatScroll" role="log" aria-live="polite" aria-relevant="additions text">',
       renderMessagesMarkup(),
       renderStreamFeedback(),
       "</div>",
       renderComposer(),
       "</section>",
-      '<section class="artifact-panel" aria-labelledby="artifactPanelTitle">',
+      '<section class="artifact-panel', state.mobileWorkspacePanel === "artifact" ? "" : " mobile-panel-hidden", '" id="artifactPanel" tabindex="-1" aria-labelledby="artifactPanelTitle">',
       '<h2 id="artifactPanelTitle" class="sr-only">프로젝트 작업 결과</h2>',
       renderArtifactTabs(),
       '<div class="artifact-body" id="artifactBody">',
@@ -692,7 +697,7 @@
         '<button class="artifact-tab', state.artifactTab === tab[0] ? " active" : "",
         '" type="button" role="tab" data-artifact-tab="', tab[0],
         '" aria-selected="', state.artifactTab === tab[0] ? "true" : "false",
-        '" aria-controls="artifactBody">', tab[1], "</button>"
+        '" tabindex="', state.artifactTab === tab[0] ? "0" : "-1", '" aria-controls="artifactBody">', tab[1], "</button>"
       ].join("")).join(""),
       "</div>"
     ].join("");
@@ -1019,7 +1024,24 @@
       const active = button.getAttribute("data-artifact-tab") === state.artifactTab;
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", active ? "true" : "false");
+      button.setAttribute("tabindex", active ? "0" : "-1");
     });
+  }
+
+  function setMobileWorkspacePanel(panel) {
+    state.mobileWorkspacePanel = panel === "artifact" ? "artifact" : "conversation";
+    document.querySelectorAll("[data-workspace-panel]").forEach((button) => {
+      const active = button.dataset.workspacePanel === state.mobileWorkspacePanel;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    const conversation = document.getElementById("conversationPanel");
+    const artifact = document.getElementById("artifactPanel");
+    if (conversation && artifact) {
+      conversation.classList.toggle("mobile-panel-hidden", state.mobileWorkspacePanel !== "conversation");
+      artifact.classList.toggle("mobile-panel-hidden", state.mobileWorkspacePanel !== "artifact");
+      (state.mobileWorkspacePanel === "conversation" ? conversation : artifact).focus({ preventScroll: true });
+    }
   }
 
   function updateWorkspaceChrome() {
@@ -1078,6 +1100,7 @@
     }];
     state.artifacts = emptyArtifacts();
     state.artifactTab = "design";
+    state.mobileWorkspacePanel = "conversation";
     state.streamStatus = "";
     state.streamError = "";
     state.view = "workspace";
@@ -1150,6 +1173,7 @@
       state.messages = [];
       state.artifacts = emptyArtifacts();
       state.artifactTab = "design";
+      state.mobileWorkspacePanel = "conversation";
       state.resultView = state.createType === "blockly" ? "blockly" : "code";
       state.activeCodeFile = "";
       state.streamStatus = "";
@@ -1505,6 +1529,12 @@
   }
 
   document.addEventListener("click", (event) => {
+    const workspacePanelButton = event.target.closest("[data-workspace-panel]");
+    if (workspacePanelButton) {
+      setMobileWorkspacePanel(workspacePanelButton.dataset.workspacePanel);
+      return;
+    }
+
     const exampleCategoryButton = event.target.closest("[data-example-category]");
     if (exampleCategoryButton) {
       state.exampleCategory = exampleCategoryButton.dataset.exampleCategory;
@@ -1624,12 +1654,25 @@
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.target.id === "ideaInput" && event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+    const artifactTab = event.target.closest && event.target.closest("[data-artifact-tab]");
+    if (artifactTab && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      const tabs = Array.from(document.querySelectorAll("[data-artifact-tab]"));
+      const current = tabs.indexOf(artifactTab);
+      const next = event.key === "Home" ? 0
+        : event.key === "End" ? tabs.length - 1
+          : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      event.preventDefault();
+      state.artifactTab = tabs[next].dataset.artifactTab;
+      renderArtifactBody();
+      tabs[next].focus();
+      return;
+    }
+    if (event.target.id === "ideaInput" && event.key === "Enter" && (event.ctrlKey || event.metaKey) && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       startProject();
       return;
     }
-    if (event.target.id === "chatInput" && event.key === "Enter" && !event.shiftKey) {
+    if (event.target.id === "chatInput" && event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       const form = document.getElementById("chatForm");
       if (form && event.target.value.trim() && !state.streaming) {

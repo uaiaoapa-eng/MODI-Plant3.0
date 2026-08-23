@@ -245,6 +245,33 @@ def test_lms_route_serves_the_curriculum_player(client):
     assert "data-start-lesson" in player_script.text
 
 
+def test_mobile_ux_contract_keeps_lms_and_ai_lab_touch_ready(client):
+    lms_html = client.get("/lms").text
+    app_html = client.get("/").text
+    lms_css = client.get("/static/lms.css").text
+    app_css = client.get("/static/app.css").text
+    lms_script = client.get("/static/lms.js").text
+    app_script = client.get("/static/app.js").text
+
+    assert "viewport-fit=cover" in lms_html
+    assert "interactive-widget=resizes-content" in app_html
+    assert '<dialog class="lesson-player"' in lms_html
+    assert 'id="studioToggle"' in lms_html
+    assert 'role="progressbar"' in lms_html
+    assert "100dvh" in lms_css
+    assert ".learning-studio.mobile-open" in lms_css
+    assert ".mobile-player-actions" in lms_css
+    assert "state.quizAnswers" in lms_script
+    assert "event.isComposing" in lms_script
+
+    assert "mobile-workspace-switch" in app_script
+    assert "mobile-panel-hidden" in app_script
+    assert "event.isComposing" in app_script
+    assert "100dvh" in app_css
+    assert ".mobile-workspace-switch" in app_css
+    assert "min-height: 44px" in app_css
+
+
 def test_create_page_bundles_the_official_example_catalog(client):
     script = client.get("/static/app.js")
 

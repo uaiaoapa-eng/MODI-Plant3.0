@@ -7,6 +7,10 @@
   const planTitle = document.getElementById("planTitle");
   const planBody = document.getElementById("planBody");
   const lessonPlayer = document.getElementById("lessonPlayer");
+  const learningStudio = document.getElementById("learningStudio");
+  const studioToggle = document.getElementById("studioToggle");
+  const studioBackdrop = document.getElementById("studioBackdrop");
+  const mobileTeacherToggle = document.getElementById("mobileTeacherToggle");
   const toastElement = document.getElementById("toast");
 
   const LEVELS = [
@@ -31,7 +35,10 @@
     planLesson: null,
     slideIndex: 0,
     studioTab: "activity",
+    studioOpen: false,
     teacherNoteOpen: false,
+    quizAnswers: {},
+    checklistAnswers: {},
     lessonStartedAt: 0,
     timerId: null,
     chatMessages: [],
@@ -78,10 +85,10 @@
       return "";
     }
     return [
-      '<div class="rubric-wrap"><table class="rubric-table"><thead><tr><th>평가 기준</th><th>기초</th><th>도달</th><th>심화</th></tr></thead><tbody>',
+      '<div class="rubric-wrap"><table class="rubric-table"><caption class="sr-only">평가 기준별 기초·도달·심화 수준</caption><thead><tr><th scope="col">평가 기준</th><th scope="col">기초</th><th scope="col">도달</th><th scope="col">심화</th></tr></thead><tbody>',
       values.map((row) => [
-        "<tr><th>", escapeHtml(row.criterion), "</th><td>", escapeHtml(row.basic), "</td><td>",
-        escapeHtml(row.proficient), "</td><td>", escapeHtml(row.advanced), "</td></tr>"
+        '<tr><th scope="row">', escapeHtml(row.criterion), '</th><td data-label="기초">', escapeHtml(row.basic), '</td><td data-label="도달">',
+        escapeHtml(row.proficient), '</td><td data-label="심화">', escapeHtml(row.advanced), "</td></tr>"
       ].join("")).join(""),
       "</tbody></table></div>"
     ].join("");
@@ -313,10 +320,10 @@
       { id: "webhw", label: "Web + 하드웨어 · 7~9차시" }
     ];
     return [
-      '<div class="mode-tabs" role="tablist" aria-label="수업 유형 필터">',
+      '<div class="mode-tabs" role="group" aria-label="수업 유형 필터">',
       tabs.map((tab) => [
-        '<button type="button" role="tab" data-mode-filter="', tab.id, '" class="', state.modeFilter === tab.id ? "active" : "",
-        '" aria-selected="', state.modeFilter === tab.id ? "true" : "false", '">', tab.label, "</button>"
+        '<button type="button" data-mode-filter="', tab.id, '" class="', state.modeFilter === tab.id ? "active" : "",
+        '" aria-pressed="', state.modeFilter === tab.id ? "true" : "false", '">', tab.label, "</button>"
       ].join("")).join(""),
       "</div>"
     ].join("");
@@ -341,7 +348,7 @@
     const completed = Boolean(state.progress[lessonKey(catalog.level, lesson.no)]);
     return [
       '<article class="lesson-card"><div class="lesson-topline"><span class="lesson-number">',
-      completed ? "✓" : String(lesson.no).padStart(2, "0"), '</span><span class="mode-chip ', escapeHtml(lesson.projectType), '">',
+      String(lesson.no).padStart(2, "0"), completed ? '<span class="completion-mark" aria-label="완료">✓</span>' : "", '</span><span class="mode-chip ', escapeHtml(lesson.projectType), '">',
       escapeHtml(mode.label), "</span></div><h3>", escapeHtml(lesson.title), "</h3><p>", escapeHtml(lesson.summary), "</p>",
       '<div class="standard-list">', asList(lesson.standards).map((standard) => (
         '<span class="standard-chip">' + escapeHtml(standard.code) + "</span>"
@@ -405,6 +412,7 @@
       "</div></section></div>"
     ].join("");
 
+    planBody.scrollTop = 0;
     planDialog.showModal();
   }
 
@@ -412,6 +420,53 @@
     if (planDialog.open) {
       planDialog.close();
     }
+  }
+
+  function usesMobileStudio() {
+    return window.matchMedia("(max-width: 980px)").matches;
+  }
+
+  function syncStudioAccessibility() {
+    const mobile = usesMobileStudio();
+    const open = mobile && state.studioOpen;
+    learningStudio.classList.toggle("mobile-open", open);
+    studioBackdrop.classList.toggle("open", open);
+    studioToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    studioToggle.textContent = open ? "활동실 닫기" : "활동실 열기";
+    learningStudio.setAttribute("aria-hidden", mobile && !open ? "true" : "false");
+    if (mobile && !open) {
+      learningStudio.setAttribute("inert", "");
+    } else {
+      learningStudio.removeAttribute("inert");
+    }
+  }
+
+  function openStudio() {
+    if (!state.activeLesson || !usesMobileStudio()) {
+      return;
+    }
+    state.studioOpen = true;
+    syncStudioAccessibility();
+    document.getElementById("closeStudioButton").focus();
+  }
+
+  function closeStudio(options) {
+    const settings = options || {};
+    const wasOpen = state.studioOpen;
+    state.studioOpen = false;
+    syncStudioAccessibility();
+    if (wasOpen && settings.restoreFocus !== false && usesMobileStudio()) {
+      studioToggle.focus();
+    }
+  }
+
+  function setTeacherNoteOpen(next) {
+    state.teacherNoteOpen = Boolean(next);
+    [document.getElementById("teacherToggle"), mobileTeacherToggle].forEach((button) => {
+      button.classList.toggle("active", state.teacherNoteOpen);
+      button.setAttribute("aria-pressed", state.teacherNoteOpen ? "true" : "false");
+    });
+    document.getElementById("teacherNote").classList.toggle("open", state.teacherNoteOpen);
   }
 
   function startLesson(lesson) {
@@ -423,7 +478,10 @@
     state.activeLesson = lesson;
     state.slideIndex = 0;
     state.studioTab = "activity";
+    state.studioOpen = false;
     state.teacherNoteOpen = false;
+    state.quizAnswers = {};
+    state.checklistAnswers = {};
     state.lessonStartedAt = Date.now();
     state.chatMessages = [{ type: "assistant", text: "수업 활동의 예시 문장을 눌러 시작하거나, 만들고 싶은 내용을 직접 설명해 보세요." }];
     state.files = {};
@@ -433,10 +491,13 @@
     document.body.classList.add("player-open");
     lessonPlayer.classList.add("open");
     lessonPlayer.setAttribute("aria-hidden", "false");
+    if (!lessonPlayer.open) {
+      lessonPlayer.showModal();
+    }
     document.getElementById("playerMeta").textContent = getLevelMeta(catalog.level).difficulty + " · " + catalog.label + " " + catalog.subject + " · " + catalog.classMinutes + "분";
     document.getElementById("playerTitle").textContent = lesson.no + "차시 · " + lesson.title;
-    document.getElementById("teacherToggle").classList.remove("active");
-    document.getElementById("teacherToggle").setAttribute("aria-pressed", "false");
+    setTeacherNoteOpen(false);
+    syncStudioAccessibility();
     renderSlideRail();
     renderSlide();
     window.clearInterval(state.timerId);
@@ -458,6 +519,7 @@
       return;
     }
     const catalog = getActiveCatalog();
+    const lessonNumber = state.activeLesson.no;
     if (completed) {
       state.progress[lessonKey(catalog.level, state.activeLesson.no)] = {
         completedAt: new Date().toISOString(),
@@ -470,9 +532,19 @@
     state.timerId = null;
     lessonPlayer.classList.remove("open");
     lessonPlayer.setAttribute("aria-hidden", "true");
+    closeStudio({ restoreFocus: false });
+    if (lessonPlayer.open) {
+      lessonPlayer.close();
+    }
     document.body.classList.remove("player-open");
     state.activeLesson = null;
     renderCourse();
+    window.requestAnimationFrame(() => {
+      const startButton = document.querySelector('[data-start-lesson="' + String(lessonNumber) + '"]');
+      if (startButton) {
+        startButton.focus({ preventScroll: true });
+      }
+    });
     showToast(completed ? "차시를 완료했어요. 진도가 저장되었습니다." : "수업 화면을 닫았습니다.");
   }
 
@@ -485,7 +557,7 @@
     const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
     const seconds = String(elapsed % 60).padStart(2, "0");
     const timer = document.getElementById("classTimer");
-    timer.textContent = minutes + ":" + seconds + " · " + catalog.classMinutes + "분";
+    timer.innerHTML = "<span>" + minutes + ":" + seconds + '</span><span class="class-duration"> · ' + String(catalog.classMinutes) + "분</span>";
     timer.classList.toggle("warning", elapsed >= Math.max(0, catalog.classMinutes - 5) * 60);
   }
 
@@ -495,7 +567,7 @@
       '<p class="slide-rail-summary">', escapeHtml(MODES[lesson.projectType].label), " · ", String(totalMinutes(lesson)), "분 · ", String(lesson.slides.length), "단계</p>",
       asList(lesson.slides).map((slide, index) => [
         '<button type="button" class="slide-step ', index === state.slideIndex ? "active" : "", " ", index < state.slideIndex ? "completed" : "",
-        '" data-slide-index="', String(index), '"><span class="step-index">', index < state.slideIndex ? "✓" : String(index + 1),
+        '" data-slide-index="', String(index), '"', index === state.slideIndex ? ' aria-current="step"' : "", '><span class="step-index">', index < state.slideIndex ? "✓" : String(index + 1),
         "</span><span><strong>", escapeHtml(slide.title), "</strong><small>", escapeHtml(slide.phase), " · ", String(slide.minutes || 0), "분</small></span></button>"
       ].join("")).join("")
     ].join("");
@@ -503,12 +575,20 @@
 
   function renderQuizContent(slide) {
     const takeaways = asList(slide.takeaways);
+    const answerKey = String(state.slideIndex);
+    const answered = Object.prototype.hasOwnProperty.call(state.quizAnswers, answerKey);
+    const selected = answered ? Number(state.quizAnswers[answerKey]) : -1;
     return [
       "<h2>", escapeHtml(slide.title), "</h2>",
       '<p class="quiz-question">Q. ', escapeHtml(slide.question), "</p>",
       '<div class="quiz-choices">', asList(slide.choices).map((choice, index) => [
-        '<button type="button" class="quiz-choice" data-quiz-choice="', String(index), '"><b>', String(index + 1), "</b><span>", escapeHtml(choice), "</span></button>"
-      ].join("")).join(""), '</div><div class="quiz-feedback" id="quizFeedback" aria-live="polite"></div>',
+        '<button type="button" class="quiz-choice', answered && index === Number(slide.answer) ? " correct" : "", answered && index === selected && index !== Number(slide.answer) ? " wrong" : "",
+        '" data-quiz-choice="', String(index), '" aria-pressed="', index === selected ? "true" : "false", '"', answered ? " disabled" : "", '><b>', String(index + 1), "</b><span>", escapeHtml(choice), "</span></button>"
+      ].join("")).join(""), '</div><div class="quiz-feedback" id="quizFeedback" aria-live="polite">',
+      answered
+        ? escapeHtml((selected === Number(slide.answer) ? "정답입니다. " : "정답을 함께 표시했습니다. ") + String(slide.explanation || "핵심 개념을 다시 확인해 보세요."))
+        : slide.type === "exit" ? "답을 선택하면 이 차시를 완료할 수 있어요." : "",
+      "</div>",
       takeaways.length ? '<div class="exit-takeaways"><strong>오늘 가져갈 것</strong>' + renderBulletList(takeaways, "mini-list") + "</div>" : ""
     ].join("");
   }
@@ -644,6 +724,7 @@
       content += renderRichSlideContent(slide);
     }
     slideCard.innerHTML = content;
+    slideCard.scrollTop = 0;
 
     const note = document.getElementById("teacherNote");
     note.innerHTML = '<strong>교사 노트</strong>' + escapeHtml(slide.teacherNote || "이 단계에는 별도 교사 노트가 없습니다.");
@@ -655,11 +736,27 @@
     )).join("");
 
     document.getElementById("previousSlideButton").disabled = state.slideIndex === 0;
-    document.getElementById("nextSlideButton").textContent = state.slideIndex === lesson.slides.length - 1 ? "수업 완료" : "다음";
+    const finalSlide = state.slideIndex === lesson.slides.length - 1;
+    const exitAnswered = slide.type !== "exit" || Object.prototype.hasOwnProperty.call(state.quizAnswers, String(state.slideIndex));
+    const nextButton = document.getElementById("nextSlideButton");
+    nextButton.textContent = finalSlide ? "수업 완료" : "다음";
+    nextButton.disabled = finalSlide && !exitAnswered;
     document.getElementById("slideCounter").textContent = String(state.slideIndex + 1) + " / " + String(lesson.slides.length);
-    document.querySelector("#slideProgress span").style.width = String(((state.slideIndex + 1) / lesson.slides.length) * 100) + "%";
+    const progress = document.getElementById("slideProgress");
+    progress.setAttribute("aria-valuemax", String(lesson.slides.length));
+    progress.setAttribute("aria-valuenow", String(state.slideIndex + 1));
+    progress.querySelector("span").style.width = String(((state.slideIndex + 1) / lesson.slides.length) * 100) + "%";
+    document.getElementById("lessonLive").textContent = String(state.slideIndex + 1) + "단계, " + slide.title + ", " + slide.phase;
     renderSlideRail();
     renderStudio();
+  }
+
+  function focusCurrentSlide() {
+    const heading = document.querySelector("#slideCard h2");
+    if (heading) {
+      heading.setAttribute("tabindex", "-1");
+      heading.focus({ preventScroll: true });
+    }
   }
 
   function moveSlide(direction) {
@@ -671,11 +768,21 @@
       return;
     }
     if (next >= state.activeLesson.slides.length) {
+      const currentSlide = state.activeLesson.slides[state.slideIndex];
+      if (currentSlide.type === "exit" && !Object.prototype.hasOwnProperty.call(state.quizAnswers, String(state.slideIndex))) {
+        showToast("마무리 문항에 답한 뒤 차시를 완료해 주세요.");
+        const firstChoice = document.querySelector("[data-quiz-choice]");
+        if (firstChoice) {
+          firstChoice.focus();
+        }
+        return;
+      }
       exitLesson(true);
       return;
     }
     state.slideIndex = next;
     renderSlide();
+    focusCurrentSlide();
   }
 
   function chooseQuiz(index) {
@@ -683,13 +790,17 @@
     if (!isQuizSlide(slide)) {
       return;
     }
+    state.quizAnswers[String(state.slideIndex)] = Number(index);
     document.querySelectorAll("[data-quiz-choice]").forEach((button) => {
       const choice = Number(button.dataset.quizChoice);
       button.classList.toggle("correct", choice === Number(slide.answer));
       button.classList.toggle("wrong", choice === Number(index) && choice !== Number(slide.answer));
+      button.setAttribute("aria-pressed", choice === Number(index) ? "true" : "false");
+      button.disabled = true;
     });
     const correct = Number(index) === Number(slide.answer);
     document.getElementById("quizFeedback").textContent = (correct ? "정답입니다. " : "정답을 함께 표시했습니다. ") + String(slide.explanation || "핵심 개념을 다시 확인해 보세요.");
+    document.getElementById("nextSlideButton").disabled = false;
   }
 
   function renderStudio() {
@@ -698,14 +809,21 @@
       const active = button.dataset.studioTab === state.studioTab;
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", active ? "true" : "false");
+      button.setAttribute("tabindex", active ? "0" : "-1");
     });
     const studio = document.getElementById("studioBody");
+    const activeTabButton = document.querySelector('[data-studio-tab="' + state.studioTab + '"]');
+    if (activeTabButton) {
+      studio.setAttribute("aria-labelledby", activeTabButton.id);
+    }
     if (state.studioTab === "preview") {
       studio.innerHTML = renderPreview();
+      syncTutorComposerState();
       return;
     }
     if (state.studioTab === "modi") {
       studio.innerHTML = renderModiPanel();
+      syncTutorComposerState();
       return;
     }
 
@@ -718,7 +836,7 @@
       '<div class="activity-panel"><h3>', escapeHtml(activityTitle), "</h3>",
       "<p>", escapeHtml(slide.title), "</p>",
       body.length ? '<div class="activity-checklist">' + body.map((line, index) => [
-        '<label><input type="checkbox" data-checkpoint="', String(index), '"><span>', escapeHtml(line), "</span></label>"
+        '<label><input type="checkbox" data-checkpoint="', String(index), '"', asList(state.checklistAnswers[String(state.slideIndex)]).includes(index) ? " checked" : "", '><span>', escapeHtml(line), "</span></label>"
       ].join("")).join("") + "</div>" : "",
       prompts.length ? '<div class="prompt-list">' + prompts.map((prompt) => (
         '<button class="prompt-button" type="button" data-prompt="' + escapeHtml(prompt) + '">' + escapeHtml(prompt) + "</button>"
@@ -728,6 +846,18 @@
       renderChatThread(),
       "</div>"
     ].join("");
+    syncTutorComposerState();
+  }
+
+  function syncTutorComposerState() {
+    const input = document.getElementById("tutorInput");
+    const button = document.querySelector("#tutorForm button[type='submit']");
+    if (!input || !button) {
+      return;
+    }
+    input.disabled = state.streaming;
+    button.disabled = state.streaming;
+    button.setAttribute("aria-busy", state.streaming ? "true" : "false");
   }
 
   function renderChatThread() {
@@ -744,7 +874,7 @@
     const htmlName = names.find((name) => name.toLowerCase().endsWith(".html"));
     if (htmlName) {
       const safeSource = escapeHtml(state.files[htmlName]);
-      return '<div class="preview-window"><div class="preview-bar"><i></i><i></i><i></i></div><iframe sandbox="allow-scripts" srcdoc="' + safeSource + '"></iframe></div>';
+      return '<div class="preview-window"><div class="preview-bar"><i></i><i></i><i></i></div><iframe title="AI가 만든 웹 작품 미리보기" sandbox="allow-scripts" srcdoc="' + safeSource + '"></iframe></div>';
     }
     const firstName = names[0];
     return "<pre class=\"code-output\">" + escapeHtml(firstName + "\n\n" + state.files[firstName]) + "</pre>";
@@ -773,6 +903,10 @@
 
   function usePrompt(prompt) {
     const input = document.getElementById("tutorInput");
+    if (state.streaming || input.disabled) {
+      showToast("AI 응답이 끝난 뒤 다음 요청을 입력해 주세요.");
+      return;
+    }
     input.value = prompt;
     input.focus();
     input.setSelectionRange(prompt.length, prompt.length);
@@ -802,10 +936,11 @@
     const slide = state.activeLesson.slides[state.slideIndex];
     const codingType = slide.codingType || (state.activeLesson.projectType === "hw" ? "blockly" : state.activeLesson.projectType === "webhw" ? "hybrid" : "react");
     state.studioTab = "activity";
+    state.streaming = true;
     updateChatMessage("user", message, false);
     updateChatMessage("status", "AI가 수업 활동을 확인하고 있어요…", false);
-    state.streaming = true;
     state.abortController = new AbortController();
+    syncTutorComposerState();
 
     try {
       const response = await fetch("/chat?user_id=" + encodeURIComponent(state.userId), {
@@ -854,6 +989,7 @@
     } finally {
       state.streaming = false;
       state.abortController = null;
+      syncTutorComposerState();
     }
   }
 
@@ -916,6 +1052,13 @@
     if (filterButton) {
       state.modeFilter = filterButton.dataset.modeFilter;
       renderCourse();
+      window.requestAnimationFrame(() => {
+        const activeFilter = document.querySelector('[data-mode-filter="' + state.modeFilter + '"]');
+        if (activeFilter) {
+          activeFilter.focus({ preventScroll: true });
+          activeFilter.scrollIntoView({ block: "nearest", inline: "center" });
+        }
+      });
       return;
     }
 
@@ -935,6 +1078,7 @@
     if (slideButton && state.activeLesson) {
       state.slideIndex = Number(slideButton.dataset.slideIndex);
       renderSlide();
+      focusCurrentSlide();
       return;
     }
 
@@ -956,18 +1100,33 @@
     }
   });
 
+  document.addEventListener("change", (event) => {
+    const checkpoint = event.target.closest("[data-checkpoint]");
+    if (!checkpoint || !state.activeLesson) {
+      return;
+    }
+    const key = String(state.slideIndex);
+    const current = new Set(asList(state.checklistAnswers[key]));
+    const index = Number(checkpoint.dataset.checkpoint);
+    if (checkpoint.checked) {
+      current.add(index);
+    } else {
+      current.delete(index);
+    }
+    state.checklistAnswers[key] = Array.from(current);
+  });
+
   document.getElementById("closePlanButton").addEventListener("click", closePlan);
   document.getElementById("closePlanFooterButton").addEventListener("click", closePlan);
   document.getElementById("startFromPlanButton").addEventListener("click", () => startLesson(state.planLesson));
   document.getElementById("exitLessonButton").addEventListener("click", () => exitLesson(false));
   document.getElementById("previousSlideButton").addEventListener("click", () => moveSlide(-1));
   document.getElementById("nextSlideButton").addEventListener("click", () => moveSlide(1));
-  document.getElementById("teacherToggle").addEventListener("click", () => {
-    state.teacherNoteOpen = !state.teacherNoteOpen;
-    document.getElementById("teacherToggle").classList.toggle("active", state.teacherNoteOpen);
-    document.getElementById("teacherToggle").setAttribute("aria-pressed", state.teacherNoteOpen ? "true" : "false");
-    document.getElementById("teacherNote").classList.toggle("open", state.teacherNoteOpen);
-  });
+  document.getElementById("teacherToggle").addEventListener("click", () => setTeacherNoteOpen(!state.teacherNoteOpen));
+  mobileTeacherToggle.addEventListener("click", () => setTeacherNoteOpen(!state.teacherNoteOpen));
+  studioToggle.addEventListener("click", () => state.studioOpen ? closeStudio() : openStudio());
+  document.getElementById("closeStudioButton").addEventListener("click", () => closeStudio());
+  studioBackdrop.addEventListener("click", () => closeStudio());
 
   document.getElementById("tutorForm").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -976,15 +1135,36 @@
     if (!message) {
       return;
     }
+    if (state.streaming) {
+      showToast("AI 응답이 끝난 뒤 다음 요청을 보내 주세요.");
+      return;
+    }
     input.value = "";
     sendTutorMessage(message);
   });
 
   document.getElementById("tutorInput").addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       document.getElementById("tutorForm").requestSubmit();
     }
+  });
+
+  document.querySelector(".studio-tabs").addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      return;
+    }
+    const tabs = Array.from(document.querySelectorAll("[data-studio-tab]"));
+    const current = tabs.indexOf(document.activeElement);
+    if (current < 0) {
+      return;
+    }
+    event.preventDefault();
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? tabs.length - 1
+        : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    setStudioTab(tabs[next].dataset.studioTab);
+    tabs[next].focus();
   });
 
   document.addEventListener("keydown", (event) => {
@@ -998,15 +1178,29 @@
       moveSlide(-1);
     } else if (event.key.toLowerCase() === "t") {
       document.getElementById("teacherToggle").click();
-    } else if (event.key === "Escape") {
-      exitLesson(false);
     }
+  });
+
+  lessonPlayer.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    if (state.studioOpen && usesMobileStudio()) {
+      closeStudio();
+      return;
+    }
+    exitLesson(false);
   });
 
   planDialog.addEventListener("click", (event) => {
     if (event.target === planDialog) {
       closePlan();
     }
+  });
+
+  window.addEventListener("resize", () => {
+    if (!usesMobileStudio()) {
+      state.studioOpen = false;
+    }
+    syncStudioAccessibility();
   });
 
   window.addEventListener("hashchange", route);

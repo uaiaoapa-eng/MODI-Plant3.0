@@ -2,12 +2,12 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="theme-color" content="#ff4547">
     <meta name="description" content="2022 개정 교육과정과 연계한 MODI Planet Web·하드웨어 프로젝트 수업 27차시">
     <title>교육과정 · MODI Planet</title>
     <link rel="icon" href="/static/assets/brand/favicon.ico">
-    <link rel="stylesheet" href="/static/lms.css">
+    <link rel="stylesheet" href="/static/lms.css?v=20260823-mobile">
   </head>
   <body>
     <a class="skip-link" href="#lmsMain">본문으로 바로가기</a>
@@ -101,7 +101,7 @@
       </div>
     </dialog>
 
-    <section class="lesson-player" id="lessonPlayer" aria-hidden="true">
+    <dialog class="lesson-player" id="lessonPlayer" aria-hidden="true" aria-labelledby="playerTitle" aria-describedby="playerMeta">
       <header class="player-header">
         <button class="player-exit" id="exitLessonButton" type="button" aria-label="수업 나가기">
           <span aria-hidden="true">←</span><span>과정으로</span>
@@ -121,25 +121,43 @@
         <aside class="slide-rail" id="slideRail" aria-label="차시 진행 순서"></aside>
 
         <section class="slide-stage" aria-label="수업 슬라이드">
-          <div class="slide-card" id="slideCard"></div>
+          <div class="slide-card" id="slideCard" tabindex="-1"></div>
+          <div class="sr-only" id="lessonLive" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div class="mobile-player-actions" aria-label="모바일 수업 도구">
+            <button class="mobile-tool-button" id="mobileTeacherToggle" type="button" aria-pressed="false">
+              교사 노트
+            </button>
+            <button class="mobile-tool-button primary" id="studioToggle" type="button" aria-controls="learningStudio" aria-expanded="false">
+              활동실 열기
+            </button>
+          </div>
           <aside class="teacher-note" id="teacherNote" aria-live="polite"></aside>
           <nav class="slide-controls" aria-label="슬라이드 이동">
             <button class="secondary-button" id="previousSlideButton" type="button">이전</button>
             <div class="slide-progress-wrap">
-              <div class="slide-progress" id="slideProgress"><span></span></div>
+              <div class="slide-progress" id="slideProgress" role="progressbar" aria-label="차시 진행률" aria-valuemin="1" aria-valuemax="1" aria-valuenow="1"><span></span></div>
               <span id="slideCounter"></span>
             </div>
             <button class="primary-button" id="nextSlideButton" type="button">다음</button>
           </nav>
         </section>
 
-        <aside class="learning-studio" aria-label="활동 작업실">
-          <div class="studio-tabs" role="tablist" aria-label="작업실 탭">
-            <button class="active" type="button" role="tab" data-studio-tab="activity" aria-selected="true">활동</button>
-            <button type="button" role="tab" data-studio-tab="preview" aria-selected="false">미리보기</button>
-            <button type="button" role="tab" data-studio-tab="modi" aria-selected="false">MODI</button>
+        <button class="studio-backdrop" id="studioBackdrop" type="button" tabindex="-1" aria-label="활동실 닫기"></button>
+
+        <aside class="learning-studio" id="learningStudio" aria-labelledby="studioMobileTitle">
+          <div class="studio-mobile-header">
+            <div>
+              <strong id="studioMobileTitle">수업 활동실</strong>
+              <span>체크리스트·AI 예시·결과 확인</span>
+            </div>
+            <button id="closeStudioButton" type="button" aria-label="활동실 닫기">×</button>
           </div>
-          <div class="studio-body" id="studioBody"></div>
+          <div class="studio-tabs" role="tablist" aria-label="작업실 탭">
+            <button class="active" id="studioTabActivity" type="button" role="tab" data-studio-tab="activity" aria-controls="studioBody" aria-selected="true" tabindex="0">활동</button>
+            <button id="studioTabPreview" type="button" role="tab" data-studio-tab="preview" aria-controls="studioBody" aria-selected="false" tabindex="-1">미리보기</button>
+            <button id="studioTabModi" type="button" role="tab" data-studio-tab="modi" aria-controls="studioBody" aria-selected="false" tabindex="-1">MODI</button>
+          </div>
+          <div class="studio-body" id="studioBody" role="tabpanel" aria-live="polite"></div>
           <form class="tutor-composer" id="tutorForm">
             <label class="sr-only" for="tutorInput">AI 튜터에게 입력</label>
             <textarea id="tutorInput" rows="2" placeholder="수업 활동을 AI에게 구체적으로 말해보세요"></textarea>
@@ -147,9 +165,9 @@
           </form>
         </aside>
       </div>
-    </section>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="/static/lms.js" defer></script>
+    <script src="/static/lms.js?v=20260823-mobile" defer></script>
   </body>
 </html>
