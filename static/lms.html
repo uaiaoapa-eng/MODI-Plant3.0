@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+<title>교육과정 — MODI Plant 3.0</title>
+<style>
+  :root{
+    --bg:#f6f8f7; --panel:#fff; --line:#e3e8e5; --txt:#182420; --dim:#5f6f68;
+    --green:#16a06a; --green-d:#0d7a4f; --blue:#2f6fed; --purple:#7a5cff; --amber:#c47f0e; --bad:#d64545;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh}
+  header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+  header a.home{text-decoration:none;color:var(--txt);font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+  header a.home .dot{width:11px;height:11px;border-radius:3px;background:var(--green)}
+  .crumb{color:var(--dim);font-size:13px}
+  .crumb b{color:var(--txt)}
+  main{max-width:1080px;margin:0 auto;padding:30px 20px 80px}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:14.5px;margin:0 0 26px;line-height:1.6}
+  /* 학교급 선택 */
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+  .lvcard{background:var(--panel);border:1.5px solid var(--line);border-radius:16px;padding:24px;cursor:pointer;
+    transition:transform .15s,box-shadow .15s,border-color .15s}
+  .lvcard:hover{transform:translateY(-3px);border-color:var(--green);box-shadow:0 10px 26px rgba(20,50,40,.09)}
+  .lvcard .em{font-size:30px}
+  .lvcard h2{margin:10px 0 2px;font-size:20px}
+  .lvcard .meta{color:var(--dim);font-size:13px;margin-bottom:10px}
+  .lvcard .theme{font-size:14px;line-height:1.55}
+  .lvcard .mins{display:inline-block;margin-top:12px;background:#e5f6ee;color:var(--green-d);
+    font-weight:800;font-size:12.5px;border-radius:99px;padding:4px 12px}
+  /* 차시 목록 */
+  .phasehead{margin:26px 0 10px;font-size:14px;font-weight:800;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .phasehead .bar{flex:1;height:1px;background:var(--line)}
+  .lessons{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .lcard{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;
+    transition:border-color .15s,box-shadow .15s}
+  .lcard:hover{border-color:var(--green);box-shadow:0 8px 20px rgba(20,50,40,.08)}
+  .lcard .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .no{width:30px;height:30px;border-radius:9px;background:#eef3f0;font-weight:800;font-size:14px;
+    display:flex;align-items:center;justify-content:center}
+  .ptype{font-size:11.5px;font-weight:800;border-radius:99px;padding:3px 10px}
+  .ptype.web{background:#e9f0ff;color:var(--blue)}
+  .ptype.hw{background:#f0ebff;color:var(--purple)}
+  .ptype.webhw{background:#fff3e0;color:var(--amber)}
+  .lcard h3{margin:0 0 6px;font-size:15.5px;line-height:1.4}
+  .lcard p{margin:0;color:var(--dim);font-size:13px;line-height:1.55}
+  .lcard .foot{margin-top:12px;display:flex;gap:8px}
+  .lcard .foot button{flex:1;border:1px solid var(--line);background:#fbfcfb;border-radius:8px;padding:7px 0;
+    font-size:12.5px;font-weight:700;cursor:pointer;color:var(--dim);font-family:var(--sans)}
+  .lcard .foot button.play{background:var(--green);border-color:var(--green);color:#fff}
+  /* 교안 모달 */
+  .modal{position:fixed;inset:0;background:rgba(10,20,15,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.open{display:flex}
+  .mbox{background:var(--panel);border-radius:16px;max-width:680px;width:100%;max-height:86vh;overflow:auto;padding:28px}
+  .mbox h2{margin:0 0 4px;font-size:20px}
+  .mbox .meta{color:var(--dim);font-size:13px;margin-bottom:16px}
+  .mbox h4{font-size:13.5px;margin:18px 0 6px;color:var(--green-d)}
+  .mbox ul{margin:0;padding-left:20px;font-size:14px;line-height:1.7}
+  .std{background:#fbfcfb;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;margin:6px 0;line-height:1.55}
+  .std b{font-family:var(--mono);font-size:12px;color:var(--green-d)}
+  .flowtb{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+  .flowtb th,.flowtb td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top;line-height:1.5}
+  .flowtb th{background:#fbfcfb;font-size:12px}
+  .mact{display:flex;gap:10px;margin-top:22px}
+  .mact button{flex:1;border:0;border-radius:10px;padding:12px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:var(--sans)}
+  .mact .start{background:var(--green);color:#fff}
+  .mact .close{background:#eef3f0;color:var(--dim)}
+
+  /* ───────── 수업 플레이어 (프로젝션 모드: 다크·큰 글씨) ───────── */
+  #player{position:fixed;inset:0;background:#0f1613;color:#eef5f1;display:none;flex-direction:column;z-index:100}
+  #player.open{display:flex}
+  .pbar{display:flex;align-items:center;gap:14px;padding:10px 18px;background:#131c18;border-bottom:1px solid #22302a;font-size:13px}
+  .pbar .ttl{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .phases{display:flex;gap:6px;margin-left:auto}
+  .phases span{padding:4px 12px;border-radius:99px;background:#1b2620;color:#7d8f86;font-weight:700;font-size:12px}
+  .phases span.cur{background:var(--green);color:#fff}
+  .timer{font-family:var(--mono);font-weight:700;font-size:15px;background:#1b2620;border-radius:9px;padding:5px 12px;min-width:110px;text-align:center}
+  .timer.warn{color:#ffb43a}
+  .timer.over{color:#ff6b6b}
+  .pbar button{border:1px solid #2c3b33;background:#1b2620;color:#aebbb4;border-radius:8px;padding:5px 12px;
+    font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans)}
+  .pbar button.on{border-color:var(--green);color:var(--green)}
+  .stage{flex:1;display:flex;min-height:0}
+  .slidewrap{flex:1;display:flex;flex-direction:column;min-width:0}
+  .slide{flex:1;overflow:auto;display:flex;flex-direction:column;justify-content:center;padding:4vh 6vw}
+  .s-phase{font-size:clamp(13px,1.4vw,16px);font-weight:800;color:var(--green);letter-spacing:.06em;margin-bottom:10px}
+  .s-phase .mins{color:#7d8f86;font-weight:600;margin-left:10px}
+  .slide h2{font-size:clamp(26px,4vw,48px);margin:0 0 3vh;line-height:1.25;letter-spacing:-.01em}
+  .slide.titleslide{text-align:center;align-items:center}
+  .slide.titleslide h2{font-size:clamp(34px,5.5vw,64px)}
+  .slide.titleslide .subtitle{font-size:clamp(16px,2vw,24px);color:#93a69d}
+  .slide ul.body{margin:0;padding:0;list-style:none;max-width:960px}
+  .slide ul.body li{font-size:clamp(17px,2.2vw,27px);line-height:1.65;padding:1.1vh 0 1.1vh 44px;position:relative}
+  .slide ul.body li::before{content:"";position:absolute;left:8px;top:calc(1.1vh + .72em);width:10px;height:10px;border-radius:3px;background:var(--green)}
+  .slide.activity ul.body li::before{background:var(--amber)}
+  .badge-act{display:inline-flex;align-items:center;gap:8px;background:#2a2113;color:#ffb43a;font-weight:800;
+    border-radius:99px;padding:6px 16px;font-size:clamp(13px,1.5vw,16px);margin-bottom:2vh;width:fit-content}
+  .badge-ai{display:inline-flex;align-items:center;gap:8px;background:#14222e;color:#5eb0ff;font-weight:800;
+    border-radius:99px;padding:6px 16px;font-size:clamp(13px,1.5vw,16px);margin-bottom:2vh;width:fit-content}
+  .promptchips{display:flex;flex-wrap:wrap;gap:10px;margin-top:3vh}
+  .promptchips button{border:1.5px solid #2f4a5e;background:#152430;color:#9fd0ff;border-radius:12px;
+    padding:12px 18px;font-size:clamp(13px,1.6vw,17px);cursor:pointer;font-family:var(--sans);text-align:left;line-height:1.4}
+  .promptchips button:hover{border-color:#5eb0ff}
+  .quizchoices{display:grid;gap:12px;max-width:860px;margin-top:1vh}
+  .quizchoices button{border:1.5px solid #2c3b33;background:#151f1a;color:#eef5f1;border-radius:12px;padding:14px 18px;
+    font-size:clamp(15px,1.9vw,22px);cursor:pointer;text-align:left;font-family:var(--sans);line-height:1.45}
+  .quizchoices button .num{display:inline-block;width:28px;font-weight:800;color:#7d8f86}
+  .quizchoices button.correct{border-color:var(--green);background:#12271d;color:#7ee2b0}
+  .quizchoices button.wrong{border-color:#5e2c2c;background:#271515;color:#ff9c9c}
+  .qq{font-size:clamp(18px,2.4vw,30px);font-weight:700;line-height:1.5;margin-bottom:2.5vh;max-width:960px}
+  /* 하단 내비 */
+  .pnav{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#131c18;border-top:1px solid #22302a}
+  .pnav .prog{flex:1;display:flex;gap:4px}
+  .pnav .prog i{flex:1;height:5px;border-radius:3px;background:#22302a}
+  .pnav .prog i.doip{background:#2e6350}
+  .pnav .prog i.on{background:var(--green)}
+  .pnav button{border:1px solid #2c3b33;background:#1b2620;color:#dfe9e4;border-radius:9px;padding:9px 20px;
+    font-size:14px;font-weight:800;cursor:pointer;font-family:var(--sans)}
+  .pnav button:disabled{opacity:.35;cursor:default}
+  .pnav .cnt{font-family:var(--mono);font-size:13px;color:#7d8f86;min-width:56px;text-align:center}
+  /* 교사 노트 */
+  #tnote{display:none;background:#1c2413;border-top:1px solid #3a4a22;padding:12px 20px;font-size:14px;line-height:1.6;color:#d9e8b8}
+  #tnote.on{display:block}
+  #tnote b{color:#b6d95e}
+  /* AI 드로어 */
+  #drawer{width:0;transition:width .2s ease;background:#111a16;border-left:1px solid #22302a;display:flex;flex-direction:column;overflow:hidden}
+  #drawer.open{width:min(440px,42vw)}
+  .dhead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #22302a;font-weight:800;font-size:14px;white-space:nowrap}
+  .dhead .x{margin-left:auto;cursor:pointer;color:#7d8f86;border:0;background:none;font-size:16px}
+  .dmsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .dmsg{max-width:92%;padding:9px 13px;border-radius:11px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .dmsg.me{align-self:flex-end;background:#1c3a2c;border:1px solid #2c5a42}
+  .dmsg.ai{align-self:flex-start;background:#182420;border:1px solid #22302a}
+  .dmsg.sys{align-self:center;color:#7d8f86;font-size:12px;background:none}
+  .dstatus{color:var(--green);font-size:12.5px;display:flex;gap:7px;align-items:center}
+  .dstatus .sp{width:10px;height:10px;border:2px solid var(--green);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dinput{display:flex;gap:8px;padding:10px;border-top:1px solid #22302a}
+  .dinput textarea{flex:1;resize:none;background:#182420;border:1px solid #2c3b33;border-radius:9px;color:#eef5f1;
+    padding:9px 11px;font-size:13.5px;font-family:var(--sans);min-height:40px;max-height:100px;outline:none}
+  .dinput button{border:0;background:var(--green);color:#fff;border-radius:9px;padding:0 16px;font-weight:800;cursor:pointer;font-family:var(--sans)}
+  .dout{border-top:1px solid #22302a;max-height:34%;overflow:auto;padding:10px 14px;display:none}
+  .dout.on{display:block}
+  .dout h5{margin:0 0 6px;font-size:12px;color:#7d8f86}
+  .dout pre{background:#0a0f0c;border:1px solid #22302a;border-radius:8px;padding:10px;font-family:var(--mono);
+    font-size:11.5px;line-height:1.5;color:#c9d8cf;white-space:pre-wrap;word-break:break-word;margin:0 0 8px}
+  @media (max-width:800px){ #drawer.open{width:100vw;position:fixed;right:0;top:0;bottom:0;z-index:120} }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="/"><span class="dot"></span>MODI Plant</a>
+  <span class="crumb" id="crumb">› 교육과정</span>
+</header>
+
+<main id="main"></main>
+
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+
+<!-- 수업 플레이어 -->
+<div id="player">
+  <div class="pbar">
+    <span class="ttl" id="pTitle"></span>
+    <span class="timer" id="pTimer">00:00</span>
+    <div class="phases" id="pPhases"></div>
+    <button id="btnNote">📋 교사 노트 (T)</button>
+    <button id="btnAI">🤖 AI 패널 (A)</button>
+    <button id="btnExit">✕ 종료</button>
+  </div>
+  <div class="stage">
+    <div class="slidewrap">
+      <div class="slide" id="slide"></div>
+      <div id="tnote"></div>
+      <div class="pnav">
+        <button id="btnPrev">← 이전</button>
+        <div class="prog" id="prog"></div>
+        <span class="cnt" id="cnt"></span>
+        <button id="btnNext">다음 →</button>
+      </div>
+    </div>
+    <div id="drawer">
+      <div class="dhead">🤖 AI와 함께 만들기 <span id="dmode" style="color:#7d8f86;font-weight:600;font-size:12px"></span>
+        <button class="x" id="dclose">✕</button></div>
+      <div class="dmsgs" id="dmsgs"><div class="dmsg sys">수업 활동 프롬프트를 누르거나 직접 입력해 보세요.</div></div>
+      <div class="dout" id="dout"></div>
+      <div class="dinput">
+        <textarea id="dinput" placeholder="AI에게 말해 보세요…" rows="1"></textarea>
+        <button id="dsend">전송</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LEVELS = [
+  {id:'elementary', em:'🌱', color:'#16a06a'},
+  {id:'middle', em:'🌿', color:'#2f6fed'},
+  {id:'high', em:'🌳', color:'#7a5cff'}
+];
+const PTLABEL = {web:'Web 만들기', hw:'H/W 만들기', webhw:'Web + H/W'};
+const cache = {};
+let cur = null;   // 현재 커리큘럼 데이터
+let lesson = null, slideIdx = 0, classTimer = null, classStart = null, noteOn = false;
+
+async function loadLevel(id){
+  if (cache[id]) return cache[id];
+  const r = await fetch('/curriculum/' + id).catch(() => null);
+  if (r && r.ok){ cache[id] = await r.json(); return cache[id]; }
+  const r2 = await fetch('curriculum/' + id + '.json'); // 정적 미리보기 폴백
+  cache[id] = await r2.json(); return cache[id];
+}
+
+// ── 화면 1: 학교급 선택 ──
+async function renderLevels(){
+  $('#crumb').innerHTML = '› 교육과정';
+  const metas = await Promise.all(LEVELS.map(l => loadLevel(l.id)));
+  $('#main').innerHTML = `
+    <h1>교육과정 선택</h1>
+    <p class="sub">우리나라 교과 과정에 맞춘 학교급별 9차시 프로젝트 수업입니다.<br>
+    PPT 없이 이 화면을 프로젝터에 그대로 띄워 수업을 진행하세요.</p>
+    <div class="levels">` +
+    metas.map((d,i) => `
+      <div class="lvcard" data-lv="${LEVELS[i].id}">
+        <div class="em">${LEVELS[i].em}</div>
+        <h2>${esc(d.label)}</h2>
+        <div class="meta">${esc(d.grade)} · ${esc(d.subject)}</div>
+        <div class="theme">${esc(d.theme)}</div>
+        <span class="mins">${d.classMinutes}분 수업 × 9차시</span>
+      </div>`).join('') + `</div>`;
+  document.querySelectorAll('.lvcard').forEach(c => c.onclick = () => { location.hash = '#' + c.dataset.lv; });
+}
+
+// ── 화면 2: 차시 목록 ──
+async function renderLessons(levelId){
+  const d = await loadLevel(levelId); cur = d;
+  $('#crumb').innerHTML = `› <a href="#" style="color:inherit">교육과정</a> › <b>${esc(d.label)}</b>`;
+  const groups = [
+    {label:'1~3차시 · Web 만들기', items:d.lessons.filter(l => l.projectType === 'web')},
+    {label:'4~6차시 · H/W 만들기 (MODI)', items:d.lessons.filter(l => l.projectType === 'hw')},
+    {label:'7~9차시 · Web + H/W — ' + esc(d.finalGoal), items:d.lessons.filter(l => l.projectType === 'webhw')}
+  ];
+  $('#main').innerHTML = `
+    <h1>${esc(d.label)} · ${esc(d.subject)} <span style="color:var(--dim);font-size:16px;font-weight:600">${esc(d.grade)} · ${d.classMinutes}분 수업</span></h1>
+    <p class="sub">${esc(d.overview)}</p>` +
+    groups.map(g => `
+      <div class="phasehead">${g.label}<span class="bar"></span></div>
+      <div class="lessons">` + g.items.map(l => `
+        <div class="lcard" data-no="${l.no}">
+          <div class="top"><span class="no">${l.no}</span>
+            <span class="ptype ${l.projectType}">${PTLABEL[l.projectType]}</span></div>
+          <h3>${esc(l.title)}</h3>
+          <p>${esc(l.summary)}</p>
+          <div class="foot">
+            <button data-act="plan">📋 교안 보기</button>
+            <button data-act="play" class="play">▶ 수업 시작</button>
+          </div>
+        </div>`).join('') + `</div>`).join('');
+  document.querySelectorAll('.lcard').forEach(c => {
+    const l = d.lessons.find(x => x.no == c.dataset.no);
+    c.querySelector('[data-act=plan]').onclick = e => { e.stopPropagation(); openPlan(l); };
+    c.querySelector('[data-act=play]').onclick = e => { e.stopPropagation(); startLesson(l); };
+    c.onclick = () => openPlan(l);
+  });
+}
+
+// ── 교안(수업 계획) 모달 ──
+function openPlan(l){
+  const phases = ['도입','전개','정리'];
+  const rows = phases.map(ph => {
+    const ss = l.slides.filter(s => s.phase === ph);
+    const min = ss.reduce((a,s) => a + (s.minutes||0), 0);
+    return `<tr><th style="width:64px">${ph}<br><span style="color:var(--dim)">${min}분</span></th>
+      <td>${ss.map(s => esc(s.title)).join(' → ')}</td></tr>`;
+  }).join('');
+  $('#mbox').innerHTML = `
+    <h2>${l.no}차시 · ${esc(l.title)}</h2>
+    <div class="meta">${esc(cur.label)} ${esc(cur.subject)} · ${cur.classMinutes}분 · ${PTLABEL[l.projectType]}</div>
+    <h4>학습 목표</h4><ul>${l.objectives.map(o => `<li>${esc(o)}</li>`).join('')}</ul>
+    <h4>성취기준</h4>${l.standards.map(s => `<div class="std"><b>${esc(s.code)}</b> ${esc(s.text)}</div>`).join('')}
+    <h4>준비물</h4><ul>${l.materials.map(m => `<li>${esc(m)}</li>`).join('')}</ul>
+    <h4>수업 흐름 (${cur.classMinutes}분)</h4>
+    <table class="flowtb">${rows}</table>
+    <div class="mact">
+      <button class="close" onclick="document.getElementById('modal').classList.remove('open')">닫기</button>
+      <button class="start" id="mstart">▶ 이 차시 수업 시작</button>
+    </div>`;
+  $('#mstart').onclick = () => { $('#modal').classList.remove('open'); startLesson(l); };
+  $('#modal').classList.add('open');
+}
+$('#modal').onclick = e => { if (e.target.id === 'modal') $('#modal').classList.remove('open'); };
+
+// ── 화면 3: 수업 플레이어 ──
+function startLesson(l){
+  lesson = l; slideIdx = 0; noteOn = false; $('#tnote').classList.remove('on'); $('#btnNote').classList.remove('on');
+  $('#player').classList.add('open');
+  $('#pTitle').textContent = `${cur.label} ${l.no}차시 · ${l.title}`;
+  resetChat();
+  classStart = Date.now();
+  clearInterval(classTimer);
+  classTimer = setInterval(tick, 1000); tick();
+  renderSlide();
+}
+function exitLesson(){
+  $('#player').classList.remove('open');
+  clearInterval(classTimer);
+  stopStream();
+}
+$('#btnExit').onclick = exitLesson;
+
+function tick(){
+  const el = Math.floor((Date.now() - classStart) / 1000);
+  const mm = String(Math.floor(el/60)).padStart(2,'0'), ss = String(el%60).padStart(2,'0');
+  const t = $('#pTimer'); t.textContent = mm + ':' + ss + ' / ' + cur.classMinutes + '분';
+  t.className = 'timer' + (el >= cur.classMinutes*60 ? ' over' : (el >= (cur.classMinutes-5)*60 ? ' warn' : ''));
+}
+
+function renderSlide(){
+  const s = lesson.slides[slideIdx];
+  const sl = $('#slide');
+  sl.className = 'slide' + (s.type === 'title' ? ' titleslide' : '') + (s.type === 'activity' ? ' activity' : '');
+  let h = '';
+  const phaseTag = `<div class="s-phase">${s.phase}${s.minutes ? `<span class="mins">⏱ ${s.minutes}분</span>` : ''}</div>`;
+  if (s.type === 'title'){
+    h = `<div class="s-phase">${cur.label} · ${cur.subject}</div><h2>${esc(s.title)}</h2>
+         <div class="subtitle">${esc(s.subtitle||'')}</div>`;
+  } else if (s.type === 'quiz'){
+    h = phaseTag + `<h2>${esc(s.title)}</h2><div class="qq">Q. ${esc(s.question)}</div>
+      <div class="quizchoices">` + s.choices.map((c,i) =>
+        `<button data-i="${i}"><span class="num">${i+1}</span>${esc(c)}</button>`).join('') + `</div>`;
+  } else if (s.type === 'ai'){
+    h = phaseTag + `<div class="badge-ai">🤖 AI와 함께 만들기 · ${s.codingType === 'blockly' ? 'MODI 블록' : 'Web'}</div>
+      <h2>${esc(s.title)}</h2><ul class="body">${(s.body||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+      <div class="promptchips">` + (s.prompts||[]).map(p =>
+        `<button data-p="${esc(p)}">💬 ${esc(p)}</button>`).join('') + `</div>`;
+  } else {
+    const badge = s.type === 'activity' ? `<div class="badge-act">✋ 학생 활동${s.minutes ? ` · ${s.minutes}분` : ''}</div>` : '';
+    h = phaseTag + badge + `<h2>${esc(s.title)}</h2>
+      <ul class="body">${(s.body||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
+  }
+  sl.innerHTML = h;
+  // 퀴즈 클릭
+  if (s.type === 'quiz') sl.querySelectorAll('.quizchoices button').forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.i;
+      sl.querySelectorAll('.quizchoices button').forEach(x => {
+        if (+x.dataset.i === s.answer) x.classList.add('correct');
+      });
+      if (i !== s.answer) b.classList.add('wrong');
+    };
+  });
+  // AI 프롬프트 칩 → 드로어 열고 입력 채움
+  if (s.type === 'ai'){
+    sl.querySelectorAll('.promptchips button').forEach(b => {
+      b.onclick = () => { openDrawer(s.codingType || (lesson.projectType === 'hw' ? 'blockly' : 'react'));
+        $('#dinput').value = b.dataset.p; $('#dinput').focus(); };
+    });
+  }
+  // 교사 노트
+  $('#tnote').innerHTML = s.teacherNote ? `<b>👩‍🏫 교사 노트</b> — ${esc(s.teacherNote)}` : `<b>👩‍🏫 교사 노트</b> — 이 슬라이드에는 별도 노트가 없습니다.`;
+  // 진행 표시
+  $('#cnt').textContent = (slideIdx+1) + ' / ' + lesson.slides.length;
+  $('#prog').innerHTML = lesson.slides.map((x,i) =>
+    `<i class="${i < slideIdx ? 'doip' : ''} ${i === slideIdx ? 'on' : ''}"></i>`).join('');
+  $('#pPhases').innerHTML = ['도입','전개','정리'].map(p =>
+    `<span class="${s.phase === p ? 'cur' : ''}">${p}</span>`).join('');
+  $('#btnPrev').disabled = slideIdx === 0;
+  $('#btnNext').textContent = slideIdx === lesson.slides.length - 1 ? '수업 종료' : '다음 →';
+}
+function nav(d){
+  if (!lesson) return;
+  const n = slideIdx + d;
+  if (n < 0) return;
+  if (n >= lesson.slides.length){ exitLesson(); return; }
+  slideIdx = n; renderSlide();
+}
+$('#btnPrev').onclick = () => nav(-1);
+$('#btnNext').onclick = () => nav(1);
+$('#btnNote').onclick = toggleNote;
+function toggleNote(){ noteOn = !noteOn; $('#tnote').classList.toggle('on', noteOn); $('#btnNote').classList.toggle('on', noteOn); }
+document.addEventListener('keydown', e => {
+  if (!$('#player').classList.contains('open')) return;
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nav(1); }
+  else if (e.key === 'ArrowLeft') nav(-1);
+  else if (e.key === 't' || e.key === 'T' || e.key === 'ㅅ') toggleNote();
+  else if (e.key === 'a' || e.key === 'A' || e.key === 'ㅁ') $('#drawer').classList.contains('open') ? closeDrawer() : openDrawer();
+  else if (e.key === 'Escape') exitLesson();
+});
+
+// ── AI 드로어 (/chat SSE) ──
+let chatType = 'react', streaming = false, abortCtl = null;
+let userId = localStorage.getItem('mp_uid') || ('u-' + Math.random().toString(36).slice(2,12));
+localStorage.setItem('mp_uid', userId);
+function chatSession(){ return `lms-${cur.level}-${lesson.no}-${userId.slice(2,8)}`; }
+function openDrawer(type){
+  if (type) chatType = type;
+  $('#dmode').textContent = chatType === 'blockly' ? '· MODI 블록' : '· Web';
+  $('#drawer').classList.add('open');
+}
+function closeDrawer(){ $('#drawer').classList.remove('open'); }
+$('#btnAI').onclick = () => openDrawer(lesson && lesson.projectType === 'hw' ? 'blockly' : chatType);
+$('#dclose').onclick = closeDrawer;
+function resetChat(){
+  $('#dmsgs').innerHTML = '<div class="dmsg sys">수업 활동 프롬프트를 누르거나 직접 입력해 보세요.</div>';
+  $('#dout').classList.remove('on'); $('#dout').innerHTML = ''; closeDrawer();
+}
+function dEl(cls, t){ const d = document.createElement('div'); d.className = 'dmsg ' + cls; d.textContent = t;
+  $('#dmsgs').appendChild(d); $('#dmsgs').scrollTop = 1e9; return d; }
+let dStatus = null;
+function dSetStatus(t){
+  if (!t){ if (dStatus){ dStatus.remove(); dStatus = null; } return; }
+  if (!dStatus){ dStatus = document.createElement('div'); dStatus.className = 'dstatus';
+    dStatus.innerHTML = '<span class="sp"></span><span class="tx"></span>'; }
+  dStatus.querySelector('.tx').textContent = t; $('#dmsgs').appendChild(dStatus); $('#dmsgs').scrollTop = 1e9;
+}
+function stopStream(){ if (abortCtl){ abortCtl.abort(); abortCtl = null; } streaming = false; }
+async function dSend(){
+  const text = $('#dinput').value.trim();
+  if (!text || streaming) return;
+  $('#dinput').value = ''; dEl('me', text);
+  streaming = true; let aiEl = null;
+  abortCtl = new AbortController();
+  try {
+    const res = await fetch('/chat?user_id=' + encodeURIComponent(userId), {
+      method:'POST', headers:{'Content-Type':'application/json'}, signal: abortCtl.signal,
+      body: JSON.stringify({session_id: chatSession(), message: text, mode: 'design', coding_type: chatType})
+    });
+    if (!res.ok || !res.body) throw new Error('서버 응답 오류 (' + res.status + ')');
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    while (true){
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0){
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i+1);
+        if (!line.startsWith('data:')) continue;
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+        if (ev.type === 'token'){ dSetStatus(null); if (!aiEl) aiEl = dEl('ai',''); aiEl.textContent += ev.text||''; $('#dmsgs').scrollTop = 1e9; }
+        else if (ev.type === 'status') dSetStatus(ev.message||'');
+        else if (ev.type === 'code_validated' && ev.generated_code){
+          const names = Object.keys(ev.generated_code);
+          $('#dout').innerHTML = '<h5>📄 생성된 코드</h5>' + names.map(n =>
+            `<div style="font-size:11px;color:#7d8f86;margin:4px 0">${esc(n)}</div><pre>${esc(ev.generated_code[n])}</pre>`).join('');
+          $('#dout').classList.add('on');
+        }
+        else if (ev.type === 'blockly_ready' && ev.blockly_xml){
+          $('#dout').innerHTML = '<h5>🤖 MODI 블록 XML</h5><pre>' + esc(ev.blockly_xml) + '</pre>';
+          $('#dout').classList.add('on');
+        }
+        else if (ev.type === 'error') { dSetStatus(null); dEl('sys', '⚠️ ' + (ev.user_message || ev.message || '오류')); }
+        else if (ev.type === 'done' || ev.type === 'cancelled') dSetStatus(null);
+      }
+    }
+  } catch (err){
+    if (err.name !== 'AbortError')
+      dEl('sys', '⚠️ 서버에 연결할 수 없어요. (프로토타입 미리보기에서는 AI 응답이 제공되지 않습니다)');
+  } finally { streaming = false; dSetStatus(null); abortCtl = null; }
+}
+$('#dsend').onclick = dSend;
+$('#dinput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); dSend(); } });
+
+// ── 해시 라우팅 ──
+function route(){
+  const h = location.hash.replace('#','');
+  if (LEVELS.some(l => l.id === h)) renderLessons(h);
+  else renderLevels();
+}
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
