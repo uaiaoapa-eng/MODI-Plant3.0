@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+<title>MODI Plant 3.0</title>
+<style>
+  :root{
+    --bg:#f6f8f7; --panel:#fff; --line:#e3e8e5; --txt:#182420; --dim:#5f6f68;
+    --green:#16a06a; --green-d:#0d7a4f; --blue:#2f6fed; --purple:#7a5cff; --amber:#c47f0e; --bad:#d64545;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh}
+  header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+  header a.home{text-decoration:none;color:var(--txt);font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+  header a.home .dot{width:11px;height:11px;border-radius:3px;background:var(--green)}
+  .crumb{color:var(--dim);font-size:13px}
+  .crumb b{color:var(--txt)}
+  main{max-width:1080px;margin:0 auto;padding:30px 20px 80px}
+  h1{font-size:26px;margin:8px 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:14.5px;margin:0 0 26px;line-height:1.6}
+  /* 학교급 선택 */
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+  .lvcard{background:var(--panel);border:1.5px solid var(--line);border-radius:16px;padding:24px;cursor:pointer;
+    transition:transform .15s,box-shadow .15s,border-color .15s}
+  .lvcard:hover{transform:translateY(-3px);border-color:var(--green);box-shadow:0 10px 26px rgba(20,50,40,.09)}
+  .lvcard .em{font-size:30px}
+  .lvcard h2{margin:10px 0 2px;font-size:20px}
+  .lvcard .meta{color:var(--dim);font-size:13px;margin-bottom:10px}
+  .lvcard .theme{font-size:14px;line-height:1.55}
+  .lvcard .mins{display:inline-block;margin-top:12px;background:#e5f6ee;color:var(--green-d);
+    font-weight:800;font-size:12.5px;border-radius:99px;padding:4px 12px}
+  /* 차시 목록 */
+  .phasehead{margin:26px 0 10px;font-size:14px;font-weight:800;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .phasehead .bar{flex:1;height:1px;background:var(--line)}
+  .lessons{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .lcard{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;
+    transition:border-color .15s,box-shadow .15s}
+  .lcard:hover{border-color:var(--green);box-shadow:0 8px 20px rgba(20,50,40,.08)}
+  .lcard .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .no{width:30px;height:30px;border-radius:9px;background:#eef3f0;font-weight:800;font-size:14px;
+    display:flex;align-items:center;justify-content:center}
+  .ptype{font-size:11.5px;font-weight:800;border-radius:99px;padding:3px 10px}
+  .ptype.web{background:#e9f0ff;color:var(--blue)}
+  .ptype.hw{background:#f0ebff;color:var(--purple)}
+  .ptype.webhw{background:#fff3e0;color:var(--amber)}
+  .lcard h3{margin:0 0 6px;font-size:15.5px;line-height:1.4}
+  .lcard p{margin:0;color:var(--dim);font-size:13px;line-height:1.55}
+  .lcard .foot{margin-top:12px;display:flex;gap:8px}
+  .lcard .foot button{flex:1;border:1px solid var(--line);background:#fbfcfb;border-radius:8px;padding:7px 0;
+    font-size:12.5px;font-weight:700;cursor:pointer;color:var(--dim);font-family:var(--sans)}
+  .lcard .foot button.play{background:var(--green);border-color:var(--green);color:#fff}
+  /* 교안 모달 */
+  .modal{position:fixed;inset:0;background:rgba(10,20,15,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.open{display:flex}
+  .mbox{background:var(--panel);border-radius:16px;max-width:680px;width:100%;max-height:86vh;overflow:auto;padding:28px}
+  .mbox h2{margin:0 0 4px;font-size:20px}
+  .mbox .meta{color:var(--dim);font-size:13px;margin-bottom:16px}
+  .mbox h4{font-size:13.5px;margin:18px 0 6px;color:var(--green-d)}
+  .mbox ul{margin:0;padding-left:20px;font-size:14px;line-height:1.7}
+  .std{background:#fbfcfb;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;margin:6px 0;line-height:1.55}
+  .std b{font-family:var(--mono);font-size:12px;color:var(--green-d)}
+  .flowtb{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+  .flowtb th,.flowtb td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top;line-height:1.5}
+  .flowtb th{background:#fbfcfb;font-size:12px}
+  .mact{display:flex;gap:10px;margin-top:22px}
+  .mact button{flex:1;border:0;border-radius:10px;padding:12px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:var(--sans)}
+  .mact .start{background:var(--green);color:#fff}
+  .mact .close{background:#eef3f0;color:var(--dim)}
+
+  /* ───────── 수업 플레이어 (프로젝션 모드: 다크·큰 글씨) ───────── */
+  #player{position:fixed;inset:0;background:#0f1613;color:#eef5f1;display:none;flex-direction:column;z-index:100}
+  #player.open{display:flex}
+  .pbar{display:flex;align-items:center;gap:14px;padding:10px 18px;background:#131c18;border-bottom:1px solid #22302a;font-size:13px}
+  .pbar .ttl{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .phases{display:flex;gap:6px;margin-left:auto}
+  .phases span{padding:4px 12px;border-radius:99px;background:#1b2620;color:#7d8f86;font-weight:700;font-size:12px}
+  .phases span.cur{background:var(--green);color:#fff}
+  .timer{font-family:var(--mono);font-weight:700;font-size:15px;background:#1b2620;border-radius:9px;padding:5px 12px;min-width:110px;text-align:center}
+  .timer.warn{color:#ffb43a}
+  .timer.over{color:#ff6b6b}
+  .pbar button{border:1px solid #2c3b33;background:#1b2620;color:#aebbb4;border-radius:8px;padding:5px 12px;
+    font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans)}
+  .pbar button.on{border-color:var(--green);color:var(--green)}
+  .stage{flex:1;display:flex;min-height:0}
+  .slidewrap{flex:1;display:flex;flex-direction:column;min-width:0}
+  .slide{flex:1;overflow:auto;display:flex;flex-direction:column;justify-content:center;padding:4vh 6vw}
+  .s-phase{font-size:clamp(13px,1.4vw,16px);font-weight:800;color:var(--green);letter-spacing:.06em;margin-bottom:10px}
+  .s-phase .mins{color:#7d8f86;font-weight:600;margin-left:10px}
+  .slide h2{font-size:clamp(26px,4vw,48px);margin:0 0 3vh;line-height:1.25;letter-spacing:-.01em}
+  .slide.titleslide{text-align:center;align-items:center}
+  .slide.titleslide h2{font-size:clamp(34px,5.5vw,64px)}
+  .slide.titleslide .subtitle{font-size:clamp(16px,2vw,24px);color:#93a69d}
+  .slide ul.body{margin:0;padding:0;list-style:none;max-width:960px}
+  .slide ul.body li{font-size:clamp(17px,2.2vw,27px);line-height:1.65;padding:1.1vh 0 1.1vh 44px;position:relative}
+  .slide ul.body li::before{content:"";position:absolute;left:8px;top:calc(1.1vh + .72em);width:10px;height:10px;border-radius:3px;background:var(--green)}
+  .slide.activity ul.body li::before{background:var(--amber)}
+  .badge-act{display:inline-flex;align-items:center;gap:8px;background:#2a2113;color:#ffb43a;font-weight:800;
+    border-radius:99px;padding:6px 16px;font-size:clamp(13px,1.5vw,16px);margin-bottom:2vh;width:fit-content}
+  .badge-ai{display:inline-flex;align-items:center;gap:8px;background:#14222e;color:#5eb0ff;font-weight:800;
+    border-radius:99px;padding:6px 16px;font-size:clamp(13px,1.5vw,16px);margin-bottom:2vh;width:fit-content}
+  .promptchips{display:flex;flex-wrap:wrap;gap:10px;margin-top:3vh}
+  .promptchips button{border:1.5px solid #2f4a5e;background:#152430;color:#9fd0ff;border-radius:12px;
+    padding:12px 18px;font-size:clamp(13px,1.6vw,17px);cursor:pointer;font-family:var(--sans);text-align:left;line-height:1.4}
+  .promptchips button:hover{border-color:#5eb0ff}
+  .quizchoices{display:grid;gap:12px;max-width:860px;margin-top:1vh}
+  .quizchoices button{border:1.5px solid #2c3b33;background:#151f1a;color:#eef5f1;border-radius:12px;padding:14px 18px;
+    font-size:clamp(15px,1.9vw,22px);cursor:pointer;text-align:left;font-family:var(--sans);line-height:1.45}
+  .quizchoices button .num{display:inline-block;width:28px;font-weight:800;color:#7d8f86}
+  .quizchoices button.correct{border-color:var(--green);background:#12271d;color:#7ee2b0}
+  .quizchoices button.wrong{border-color:#5e2c2c;background:#271515;color:#ff9c9c}
+  .qq{font-size:clamp(18px,2.4vw,30px);font-weight:700;line-height:1.5;margin-bottom:2.5vh;max-width:960px}
+  /* 하단 내비 */
+  .pnav{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#131c18;border-top:1px solid #22302a}
+  .pnav .prog{flex:1;display:flex;gap:4px}
+  .pnav .prog i{flex:1;height:5px;border-radius:3px;background:#22302a}
+  .pnav .prog i.doip{background:#2e6350}
+  .pnav .prog i.on{background:var(--green)}
+  .pnav button{border:1px solid #2c3b33;background:#1b2620;color:#dfe9e4;border-radius:9px;padding:9px 20px;
+    font-size:14px;font-weight:800;cursor:pointer;font-family:var(--sans)}
+  .pnav button:disabled{opacity:.35;cursor:default}
+  .pnav .cnt{font-family:var(--mono);font-size:13px;color:#7d8f86;min-width:56px;text-align:center}
+  /* 교사 노트 */
+  #tnote{display:none;background:#1c2413;border-top:1px solid #3a4a22;padding:12px 20px;font-size:14px;line-height:1.6;color:#d9e8b8}
+  #tnote.on{display:block}
+  #tnote b{color:#b6d95e}
+  /* AI 드로어 */
+  #drawer{width:0;transition:width .2s ease;background:#111a16;border-left:1px solid #22302a;display:flex;flex-direction:column;overflow:hidden}
+  #drawer.open{width:min(440px,42vw)}
+  .dhead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #22302a;font-weight:800;font-size:14px;white-space:nowrap}
+  .dhead .x{margin-left:auto;cursor:pointer;color:#7d8f86;border:0;background:none;font-size:16px}
+  .dmsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .dmsg{max-width:92%;padding:9px 13px;border-radius:11px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .dmsg.me{align-self:flex-end;background:#1c3a2c;border:1px solid #2c5a42}
+  .dmsg.ai{align-self:flex-start;background:#182420;border:1px solid #22302a}
+  .dmsg.sys{align-self:center;color:#7d8f86;font-size:12px;background:none}
+  .dstatus{color:var(--green);font-size:12.5px;display:flex;gap:7px;align-items:center}
+  .dstatus .sp{width:10px;height:10px;border:2px solid var(--green);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dinput{display:flex;gap:8px;padding:10px;border-top:1px solid #22302a}
+  .dinput textarea{flex:1;resize:none;background:#182420;border:1px solid #2c3b33;border-radius:9px;color:#eef5f1;
+    padding:9px 11px;font-size:13.5px;font-family:var(--sans);min-height:40px;max-height:100px;outline:none}
+  .dinput button{border:0;background:var(--green);color:#fff;border-radius:9px;padding:0 16px;font-weight:800;cursor:pointer;font-family:var(--sans)}
+  .dout{border-top:1px solid #22302a;max-height:34%;overflow:auto;padding:10px 14px;display:none}
+  .dout.on{display:block}
+  .dout h5{margin:0 0 6px;font-size:12px;color:#7d8f86}
+  .dout pre{background:#0a0f0c;border:1px solid #22302a;border-radius:8px;padding:10px;font-family:var(--mono);
+    font-size:11.5px;line-height:1.5;color:#c9d8cf;white-space:pre-wrap;word-break:break-word;margin:0 0 8px}
+  @media (max-width:800px){ #drawer.open{width:100vw;position:fixed;right:0;top:0;bottom:0;z-index:120} }
+
+  /* ── 미리보기 전용: 랜딩·만들기 뷰 ── */
+  .hero{margin-top:2vh}
+  .homecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:22px;max-width:820px;margin:0 auto}
+  .hcard{display:block;background:var(--panel);border:1.5px solid var(--line);border-radius:18px;padding:26px;
+    text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s,border-color .15s}
+  .hcard:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(20,50,40,.1)}
+  .hcard.lmsc:hover{border-color:var(--green)} .hcard.mkc:hover{border-color:var(--blue)}
+  .hic{width:50px;height:50px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px}
+  .htag{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .hcard h2{margin:0 0 6px;font-size:20px}
+  .hcard p{margin:0 0 14px;color:var(--dim);font-size:13.5px;line-height:1.6}
+  .hcard ul{margin:0 0 16px;padding:0;list-style:none;font-size:13px}
+  .hcard li{padding:4px 0 4px 22px;position:relative}
+  .hcard li::before{content:"✓";position:absolute;left:2px;font-weight:800;color:var(--green)}
+  .hcard.mkc li::before{color:var(--blue)}
+  .hgo{font-weight:800;font-size:14.5px}
+  .pvnote{text-align:center;color:var(--dim);font-size:12.5px;margin-top:26px}
+  .mkbar{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+  .mkseg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+  .mkseg button{border:0;background:transparent;padding:8px 16px;font-size:13.5px;font-weight:700;color:var(--dim);cursor:pointer;font-family:var(--sans)}
+  .mkseg button.on{background:var(--green);color:#fff}
+  .mkgrid{display:grid;grid-template-columns:1.05fr 1fr;gap:16px;min-height:60vh}
+  @media (max-width:860px){ .mkgrid{grid-template-columns:1fr} }
+  .mkchat{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:56vh}
+  .mkmsgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+  .mkmsg{max-width:88%;padding:11px 15px;border-radius:13px;font-size:14px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+  .mkmsg.me{align-self:flex-end;background:#e5f6ee;border:1px solid #cdeadc;border-bottom-right-radius:4px}
+  .mkmsg.ai{align-self:flex-start;background:#fbfcfb;border:1px solid var(--line);border-bottom-left-radius:4px}
+  .mkwel{align-self:center;text-align:center;color:var(--dim);margin-top:6vh;font-size:14px;line-height:1.8}
+  .mkwel h2{color:var(--txt);font-size:20px;margin:0 0 6px}
+  .mkex{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  .mkex button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:var(--sans)}
+  .mkex button:hover{border-color:var(--green)}
+  .mkinput{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+  .mkinput textarea{flex:1;resize:none;border:1.5px solid var(--line);border-radius:11px;padding:10px 13px;
+    font-size:14px;font-family:var(--sans);min-height:42px;outline:none}
+  .mkinput textarea:focus{border-color:var(--green)}
+  .mkinput button{border:0;border-radius:11px;padding:0 20px;font-weight:800;font-size:14px;cursor:pointer;background:var(--green);color:#fff;font-family:var(--sans)}
+  .mkout{background:#fbfcfb;border:1.5px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+  .mkouthead{padding:11px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:13.5px;background:var(--panel)}
+  .mkoutbody{flex:1;overflow:auto;padding:14px}
+  .mkempty{color:var(--dim);font-size:13px;text-align:center;margin-top:8vh;line-height:1.8}
+  .mkfile{font-size:12.5px;font-weight:700;color:var(--dim);margin-bottom:6px;font-family:var(--mono)}
+  .mkfile span{color:var(--green-d);margin-left:8px}
+  .mkpre{background:#101714;color:#d7e4dc;border-radius:10px;padding:13px;font-family:var(--mono);
+    font-size:12px;line-height:1.55;overflow:auto;white-space:pre-wrap;word-break:break-word;margin:0}
+  .mknote{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13px;line-height:1.65}
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="#"><span class="dot"></span>MODI Plant <small style="font-weight:600;color:var(--dim);font-size:11px">3.0 미리보기</small></a>
+  <span class="crumb" id="crumb">› 교육과정</span>
+</header>
+
+<main id="main"></main>
+
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+
+<!-- 수업 플레이어 -->
+<div id="player">
+  <div class="pbar">
+    <span class="ttl" id="pTitle"></span>
+    <span class="timer" id="pTimer">00:00</span>
+    <div class="phases" id="pPhases"></div>
+    <button id="btnNote">📋 교사 노트 (T)</button>
+    <button id="btnAI">🤖 AI 패널 (A)</button>
+    <button id="btnExit">✕ 종료</button>
+  </div>
+  <div class="stage">
+    <div class="slidewrap">
+      <div class="slide" id="slide"></div>
+      <div id="tnote"></div>
+      <div class="pnav">
+        <button id="btnPrev">← 이전</button>
+        <div class="prog" id="prog"></div>
+        <span class="cnt" id="cnt"></span>
+        <button id="btnNext">다음 →</button>
+      </div>
+    </div>
+    <div id="drawer">
+      <div class="dhead">🤖 AI와 함께 만들기 <span id="dmode" style="color:#7d8f86;font-weight:600;font-size:12px"></span>
+        <button class="x" id="dclose">✕</button></div>
+      <div class="dmsgs" id="dmsgs"><div class="dmsg sys">수업 활동 프롬프트를 누르거나 직접 입력해 보세요.</div></div>
+      <div class="dout" id="dout"></div>
+      <div class="dinput">
+        <textarea id="dinput" placeholder="AI에게 말해 보세요…" rows="1"></textarea>
+        <button id="dsend">전송</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LEVELS = [
+  {id:'elementary', em:'🌱', color:'#16a06a'},
+  {id:'middle', em:'🌿', color:'#2f6fed'},
+  {id:'high', em:'🌳', color:'#7a5cff'}
+];
+const PTLABEL = {web:'Web 만들기', hw:'H/W 만들기', webhw:'Web + H/W'};
+const cache = {};
+let cur = null;   // 현재 커리큘럼 데이터
+let lesson = null, slideIdx = 0, classTimer = null, classStart = null, noteOn = false;
+
+const CURRICULUM = {"elementary": {"level": "elementary", "label": "초등", "grade": "5~6학년", "subject": "실과", "classMinutes": 40, "theme": "차시마다 새로운 작품 — 마지막엔 나의 로봇카", "overview": "AI와 한국어로 대화하며 매 차시 서로 다른 작품을 완성하는 9차시 과정입니다. 1~3차시는 Web 작품 3개, 4~6차시는 MODI H/W 작품 3개를 각각 완성하고, 7~9차시는 배운 것을 모두 모아 '웹 리모컨으로 조종하는 자율주행 로봇카'를 단계별로 완성합니다.", "curriculumNote": "2022 개정 교육과정 초등 실과(5~6학년) 디지털 영역 성취기준을 기반으로 구성했습니다. 성취기준 코드·문구는 학교 교육과정 편성 시 최신 고시본과 대조하여 검수해 주세요.", "finalGoal": "웹 리모컨과 연동된 나만의 자율주행 로봇카 완성 (7~9차시 프로젝트)", "lessons": [{"no": 1, "title": "AI와 첫 만남 — 말로 만드는 나의 소개 카드", "projectType": "web", "projectLabel": "Web 만들기", "summary": "AI에게 한국어로 말해서 나를 소개하는 웹 카드를 완성하며, '컴퓨터에게 일 시키기'의 새로운 방법(바이브코딩)을 경험한다.", "objectives": ["AI와 대화하여 간단한 웹 화면을 만들 수 있다.", "내가 원하는 것을 구체적으로 말로 설명할 수 있다.", "AI를 사용할 때 지켜야 할 약속(바른 말, 개인정보 보호)을 말할 수 있다."], "standards": [{"code": "[6실05-01]", "text": "컴퓨터를 활용한 생활 속 문제 해결 사례를 탐색하고 소프트웨어가 생활에 미치는 영향을 이해한다."}, {"code": "[6실05-03]", "text": "인공지능이 만들어지는 과정과 활용 사례를 탐색하고 인공지능을 체험한다."}], "materials": ["교사용 대형 화면(TV/프로젝터)", "학생용 태블릿 또는 PC(2인 1대 가능)", "MODI Plant 접속 주소"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "AI와 첫 만남", "subtitle": "말로 만드는 나의 소개 카드 · 1/9차시", "teacherNote": "수업 전 학생 기기에서 MODI Plant 접속을 미리 확인하세요. 이 화면을 그대로 띄워 두고 시작하면 됩니다."}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "컴퓨터에게 일을 시키는 방법이 바뀌고 있어요", "body": ["옛날: 어려운 코드(영어 명령어)를 한 글자도 틀리지 않게 써야 했어요.", "지금: 한국어로 '이렇게 만들어 줘'라고 말하면 AI가 코드를 대신 써 줘요.", "이렇게 말로 원하는 것을 만드는 것을 '바이브코딩'이라고 불러요.", "이번 9차시 동안 매시간 새로운 작품을 만들고, 마지막엔 진짜 달리는 로봇카까지 만들 거예요!"], "teacherNote": "동기유발: '여러분이 로봇 사장님이라면 일을 어떻게 시킬까요?'라고 물어보세요. 9차시 로드맵(오늘부터 로봇카까지)을 간단히 소개하면 기대감이 커집니다."}, {"phase": "전개", "minutes": 8, "type": "talk", "title": "잘 말해야 잘 만들어요 — 주문하기 연습", "body": ["떡볶이 주문: \"떡볶이 주세요\" 보다 \"덜 맵게, 치즈 추가, 2인분 주세요\"가 정확해요.", "AI에게도 똑같아요. ① 무엇을 ② 어떤 모양으로 ③ 어떤 내용으로 만들지 말해요.", "예시: \"내 별명과 좋아하는 것 3가지가 나오는 소개 카드를 만들어 줘. 배경은 하늘색으로!\"", "짝과 함께: 내 소개 카드를 어떻게 주문할지 말로 연습해 보세요. (2분)"], "teacherNote": "실명·전화번호 등 개인정보는 쓰지 않도록 미리 약속하세요. 별명을 쓰게 하면 좋습니다."}, {"phase": "전개", "minutes": 15, "type": "ai", "title": "AI와 함께 만들기 — 나의 소개 카드", "codingType": "react", "body": ["오른쪽 AI 대화창에 여러분의 '주문'을 말해 보세요.", "AI가 되물으면 대답해 주세요. 대화할수록 더 멋진 카드가 돼요.", "다 만들면 색깔·글자 크기를 바꿔 달라고 말해 보세요."], "prompts": ["내 별명과 좋아하는 것 3가지가 나오는 소개 카드 만들어 줘", "배경을 하늘색으로 바꾸고 글자를 더 크게 해 줘", "카드에 움직이는 이모지를 넣어 줘"], "teacherNote": "순회 지도하며 '더 구체적으로 말해 보라'고 코칭하세요. 결과가 이상하게 나온 학생에게는 '무엇이 다른지 AI에게 말해 주라'고 안내하면 수정 턴을 자연스럽게 경험합니다."}, {"phase": "전개", "minutes": 5, "type": "activity", "title": "짝과 작품 바꿔 보기", "body": ["짝의 소개 카드를 보고 칭찬 한 가지를 말해 주세요.", "짝의 카드에서 바꾸고 싶은 것 한 가지를 제안해 보세요.", "제안받은 것을 AI에게 말해서 바꿔 보세요."]}, {"phase": "정리", "minutes": 3, "type": "quiz", "title": "오늘의 확인 문제", "question": "AI에게 원하는 것을 만들게 하려면 어떻게 말해야 할까요?", "choices": ["아무 말이나 짧게 한다", "무엇을·어떤 모양으로·어떤 내용으로 만들지 구체적으로 말한다", "영어로만 말한다", "말하지 않고 기다린다"], "answer": 1}, {"phase": "정리", "minutes": 2, "type": "wrapup", "title": "오늘 배운 것", "body": ["말로 원하는 것을 만드는 '바이브코딩'을 처음 경험했어요.", "구체적으로 말할수록 AI가 잘 알아들어요.", "다음 시간: 순서의 힘! 단계별로 주문해서 '우리 반 소개 페이지'를 만들어요."], "teacherNote": "기기 정리 시간을 2분 확보하세요. 학생 작품은 세션에 자동 저장됩니다."}]}, {"no": 2, "title": "순서대로 말하기 — 우리 반 소개 페이지", "projectType": "web", "projectLabel": "Web 만들기", "summary": "절차적 사고(순서대로 생각하기)를 배우고, 단계를 나누어 AI에게 말하며 우리 반 소개 페이지를 완성한다.", "objectives": ["문제를 작은 단계로 나누어 순서대로 설명할 수 있다.", "단계를 나눈 계획에 따라 AI와 대화하며 웹 페이지를 만들 수 있다."], "standards": [{"code": "[6실05-02]", "text": "절차적 사고에 따라 문제 해결의 순서를 생각하고 일상생활의 문제를 해결한다."}], "materials": ["대형 화면", "학생용 기기", "활동지(단계 나누기 계획표) 또는 공책"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "순서대로 말하기", "subtitle": "우리 반 소개 페이지 · 2/9차시"}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "라면 끓이기도 순서가 있어요", "body": ["물 끓이기 → 면과 수프 넣기 → 3분 기다리기 → 그릇에 담기.", "순서가 바뀌면? 맛이 이상해져요. 컴퓨터 일도 똑같아요.", "큰 일을 작은 단계로 나누어 순서대로 생각하는 것 = '절차적 사고'.", "오늘은 '우리 반 소개 페이지'를 단계로 나누어 만들어요."], "teacherNote": "학생에게 라면 끓이는 순서를 직접 말하게 하고, 일부러 순서를 섞어 보여 주면 웃으면서 개념을 익힙니다."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "계획 세우기 — 페이지를 3단계로 나누기", "body": ["1단계: 페이지에 들어갈 내용 정하기 (반 이름, 급훈, 친구 자랑 등)", "2단계: 어떤 순서로 보여 줄지 정하기 (위에서 아래로)", "3단계: 꾸미기 계획 (색깔, 글씨, 그림)", "모둠별로 계획표에 3단계를 적어 보세요."], "teacherNote": "모둠(3~4인)으로 진행하면 좋습니다. 계획표는 칠판에 예시를 함께 적어 주세요."}, {"phase": "전개", "minutes": 16, "type": "ai", "title": "AI와 함께 만들기 — 단계대로 주문하기", "codingType": "react", "body": ["계획한 1단계부터 순서대로 AI에게 말하세요.", "한꺼번에 다 말고, 한 단계씩! 만들어진 것을 확인하고 다음 단계로.", "단계마다 화면이 어떻게 변하는지 관찰하세요."], "prompts": ["우리 반 이름과 급훈이 크게 나오는 페이지를 만들어 줘", "그 아래에 우리 반 자랑 3가지를 목록으로 넣어 줘", "전체 배경을 연두색으로 하고 제목에 별 이모지를 붙여 줘"], "teacherNote": "'한 번에 다 주문'한 모둠과 '단계별로 주문'한 모둠의 결과를 비교해 보여 주면 절차적 사고의 장점이 분명해집니다."}, {"phase": "정리", "minutes": 4, "type": "quiz", "title": "오늘의 확인 문제", "question": "큰 문제를 해결할 때 가장 좋은 방법은 무엇일까요?", "choices": ["한 번에 전부 해결한다", "작은 단계로 나누어 순서대로 해결한다", "어려우면 포기한다", "순서 없이 아무거나 먼저 한다"], "answer": 1}, {"phase": "정리", "minutes": 4, "type": "wrapup", "title": "오늘 배운 것", "body": ["큰 일을 작은 단계로 나누는 '절차적 사고'를 배웠어요.", "AI에게도 단계별로 말하면 훨씬 정확하게 만들어져요.", "다음 시간: 버튼을 누르면 오늘의 운세가 나오는 '운세 뽑기 머신'을 만들어요!"]}]}, {"no": 3, "title": "오늘의 운세 뽑기 머신", "projectType": "web", "projectLabel": "Web 만들기", "summary": "버튼을 누르면 무작위(랜덤)로 오늘의 운세가 나오는 웹 뽑기 머신을 만들며, '무작위'와 '버튼을 누르면 반응한다'는 개념을 경험한다.", "objectives": ["버튼 입력에 반응하는 웹 작품을 AI와 함께 만들 수 있다.", "무작위(랜덤)가 쓰이는 생활 속 예를 찾을 수 있다.", "만든 작품을 스스로 바꾸고 발전시킬 수 있다."], "standards": [{"code": "[6실05-02]", "text": "절차적 사고에 따라 문제 해결의 순서를 생각하고 일상생활의 문제를 해결한다."}, {"code": "[6실05-03]", "text": "인공지능이 만들어지는 과정과 활용 사례를 탐색하고 인공지능을 체험한다."}], "materials": ["대형 화면", "학생용 기기", "운세 문구 아이디어 활동지"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "오늘의 운세 뽑기 머신", "subtitle": "3/9차시"}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "뽑기 기계의 비밀 — 무작위", "body": ["뽑기 기계, 주사위, 사다리타기의 공통점은? 무엇이 나올지 모른다는 것!", "컴퓨터는 '무작위(랜덤)'로 여러 개 중 하나를 골라낼 수 있어요.", "게임 아이템 뽑기, 노래 셔플 재생도 모두 무작위예요.", "오늘: 버튼을 누르면 오늘의 운세가 무작위로 나오는 뽑기 머신을 만들어요."], "teacherNote": "'주사위를 던지기 전에 결과를 알 수 있나요?'라는 질문으로 무작위 개념을 잡아 주세요."}, {"phase": "전개", "minutes": 7, "type": "activity", "title": "운세 문구 만들기", "body": ["짝과 함께 운세 문구를 5개 이상 만들어 적으세요.", "규칙: 기분 좋아지는 말만! (예: '오늘 급식이 두 배로 맛있을 운세')", "특별 운세 1개를 정하세요. 아주 가끔만 나오는 대박 운세!"], "teacherNote": "친구를 놀리거나 기분 나쁘게 하는 문구는 금지라고 미리 약속하세요. 디지털 예절 교육의 좋은 기회입니다."}, {"phase": "전개", "minutes": 16, "type": "ai", "title": "AI와 함께 만들기 — 뽑기 머신", "codingType": "react", "body": ["만든 운세 문구를 AI에게 알려 주고 뽑기 머신을 주문하세요.", "버튼을 눌러 실험! 매번 다른 운세가 나오나요?", "성공하면: 뽑는 순간 두구두구 효과, 대박 운세엔 폭죽 효과를 추가해 보세요."], "prompts": ["버튼을 누르면 오늘의 운세가 무작위로 나오는 뽑기 머신 만들어 줘. 운세 문구는 내가 알려 줄게", "뽑기 전에 두구두구 하는 느낌이 나게 해 줘", "대박 운세가 나오면 화면에 폭죽이 터지게 해 줘"], "teacherNote": "학생이 만든 문구가 실제 작품 속에 들어가는 순간이 이 차시의 핵심 경험입니다. '내 데이터가 프로그램이 된다'는 감각을 짚어 주세요."}, {"phase": "정리", "minutes": 5, "type": "activity", "title": "운세 뽑기 축제", "body": ["자리를 옮겨 다니며 친구의 뽑기 머신에서 운세를 뽑아 보세요. (3곳 이상)", "가장 재미있는 운세 문구를 하나 기억해 두세요.", "제자리로 돌아와 기억한 문구를 발표해 봅시다."]}, {"phase": "정리", "minutes": 3, "type": "quiz", "title": "오늘의 확인 문제", "question": "버튼을 누를 때마다 다른 운세가 나오는 것은 컴퓨터의 어떤 기능 덕분일까요?", "choices": ["무작위(랜덤)", "복사하기", "저장하기", "인쇄하기"], "answer": 0}, {"phase": "정리", "minutes": 2, "type": "wrapup", "title": "Web 만들기 3차시 마무리", "body": ["소개 카드, 우리 반 페이지, 뽑기 머신 — 벌써 웹 작품이 3개!", "다음 시간부터는 진짜 만질 수 있는 하드웨어, MODI를 만나요.", "예고: 버튼을 누르면 불이 켜지는 나만의 신호등!"]}]}, {"no": 4, "title": "MODI와 인사해요 — 교통 신호등 만들기", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "MODI 모듈의 종류와 역할을 입력·출력으로 구분해 알아보고, 버튼을 누르면 색이 바뀌는 교통 신호등을 완성한다.", "objectives": ["MODI 모듈(버튼, LED, 스피커 등)의 역할을 입력과 출력으로 구분할 수 있다.", "AI와 대화하여 버튼으로 LED를 제어하는 블록을 만들고 실행할 수 있다."], "standards": [{"code": "[6실05-02]", "text": "절차적 사고에 따라 문제 해결의 순서를 생각하고 일상생활의 문제를 해결한다."}, {"code": "[6실04-06]", "text": "생활 속 로봇(하드웨어)의 구조와 작동 원리를 이해하고 간단한 로봇을 만들어 작동시킨다."}], "materials": ["MODI 키트(모둠당 1세트: 네트워크·버튼·LED·스피커 모듈)", "대형 화면", "학생용 기기"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "MODI와 인사해요", "subtitle": "교통 신호등 만들기 · 4/9차시", "teacherNote": "수업 전 MODI 키트 충전 상태와 모듈 개수를 확인하세요. 모둠당 최소 네트워크+버튼+LED 3개 모듈이 필요합니다."}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "우리 주변의 입력과 출력", "body": ["엘리베이터: 버튼을 누르면(입력) → 문이 열려요(출력).", "횡단보도: 버튼을 누르면(입력) → 잠시 후 초록불(출력).", "MODI는 이런 입력·출력 부품을 자석처럼 붙여 만드는 블록이에요.", "입력 모듈: 버튼, 다이얼, 거리 센서 / 출력 모듈: LED, 모터, 스피커, 디스플레이."], "teacherNote": "실물 모듈을 들어 보여 주며 입력인지 출력인지 학생에게 퀴즈로 물어보세요."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "MODI 조립하기", "body": ["모둠별로: 네트워크 모듈 + 버튼 모듈 + LED 모듈을 자석으로 연결하세요.", "네트워크 모듈을 기기와 연결하세요 (선생님 안내에 따라).", "연결되면 모듈에 불이 들어오는지 확인!"], "teacherNote": "연결 방식(USB/블루투스)은 교실 환경에 맞게 안내하세요. 연결이 안 되는 모둠은 모듈을 다시 붙였다 떼게 하면 대부분 해결됩니다."}, {"phase": "전개", "minutes": 14, "type": "ai", "title": "AI와 함께 만들기 — 나만의 신호등", "codingType": "blockly", "body": ["AI에게 '버튼을 누르면 LED가 켜지게 해 줘'라고 말해 보세요.", "성공하면 진짜 신호등으로 업그레이드: 빨강 → 노랑 → 초록 순서로!", "초록불일 때 스피커에서 횡단보도 소리가 나면 최고!"], "prompts": ["버튼을 누르면 LED가 켜지게 해 줘", "버튼을 누를 때마다 LED가 빨강, 노랑, 초록 순서로 바뀌게 해 줘", "초록불이 되면 스피커에서 횡단보도 알림 소리가 나게 해 줘"], "teacherNote": "첫 성공의 환호가 나오는 차시입니다. 모둠별 성공 여부를 칠판에 체크하며 성취감을 키워 주세요."}, {"phase": "정리", "minutes": 4, "type": "quiz", "title": "오늘의 확인 문제", "question": "다음 중 '입력 모듈'은 무엇일까요?", "choices": ["LED 모듈", "스피커 모듈", "버튼 모듈", "모터 모듈"], "answer": 2}, {"phase": "정리", "minutes": 6, "type": "wrapup", "title": "오늘 배운 것 + 정리 정돈", "body": ["입력(버튼) → 출력(LED·스피커)의 원리로 신호등을 만들었어요.", "MODI 모듈을 분리해서 바구니에 정리해 주세요.", "다음 시간: 스스로 느끼는 '센서'로 도둑 잡는 경보기를 만들어요!"], "teacherNote": "모듈 정리 시간을 충분히(4분 이상) 확보하세요. 모듈 개수를 확인하고 반납받으세요."}]}, {"no": 5, "title": "도둑 잡는 경보기 — 센서와 조건", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "거리 센서의 원리를 알아보고, '만약 ~라면' 조건을 사용해 누군가 가까이 오면 경보가 울리는 보물 지킴이 경보기를 완성한다.", "objectives": ["센서가 주변 정보를 숫자로 읽는다는 것을 이해할 수 있다.", "'만약 ~라면 ~한다' 조건을 사용한 블록을 AI와 함께 만들 수 있다."], "standards": [{"code": "[6실05-02]", "text": "절차적 사고에 따라 문제 해결의 순서를 생각하고 일상생활의 문제를 해결한다."}, {"code": "[6실04-06]", "text": "생활 속 로봇(하드웨어)의 구조와 작동 원리를 이해하고 간단한 로봇을 만들어 작동시킨다."}], "materials": ["MODI 키트(네트워크·거리(ToF) 센서·LED·스피커)", "대형 화면", "학생용 기기", "보물 역할 물건(지우개 등)"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "도둑 잡는 경보기", "subtitle": "센서와 조건 · 5/9차시"}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "박물관은 보물을 어떻게 지킬까?", "body": ["박물관 보물에 손이 가까이 가면? 삐— 경보가 울려요!", "비밀은 '센서'. 박쥐가 소리로 어둠 속 거리를 재듯, 거리 센서는 빛으로 거리를 재요.", "센서는 거리를 '숫자'로 읽어요. 가까우면 작은 수, 멀면 큰 수.", "규칙: 만약 거리가 10cm보다 가까우면 → 경보! 이것이 '조건'이에요."], "teacherNote": "손을 눈앞에 가까이/멀리 하며 '지금 몇 cm일까?'를 맞히게 해 보세요. 거리를 숫자로 잰다는 감각이 생깁니다."}, {"phase": "전개", "minutes": 6, "type": "activity", "title": "센서 값 관찰하기", "body": ["네트워크 + 거리 센서 + LED + 스피커를 연결하세요.", "손을 센서 앞에서 가까이, 멀리 움직여 보세요.", "거리 숫자가 어떻게 변하는지 관찰하고, '도둑이 왔다'의 기준 숫자를 모둠에서 정하세요."], "teacherNote": "모둠이 정한 기준 숫자(예: 10cm)가 다음 활동의 조건값이 됩니다. 숫자를 활동지나 칠판에 적어 두게 하세요."}, {"phase": "전개", "minutes": 16, "type": "ai", "title": "AI와 함께 만들기 — 보물 지킴이 경보기", "codingType": "blockly", "body": ["AI에게 조건을 말로 설명해 보세요: '가까이 오면 경보를 울려 줘'.", "센서 앞에 보물(지우개)을 놓고, 손을 뻗어 실험해 보세요.", "성공하면: 가까울수록 경보음이 빨라지게 업그레이드!"], "prompts": ["거리가 10cm보다 가까우면 LED가 빨간색이 되고 경보음이 나게 해 줘", "평소에는 LED가 초록색으로 지킴이 모드 표시를 하게 해 줘", "가까울수록 경보음이 더 빨라지게 해 줘"], "teacherNote": "'만약 ~라면'이라는 말을 학생이 직접 쓰도록 유도하세요. 이 조건 개념이 7~9차시 로봇카의 '벽 앞 자동 멈춤'으로 그대로 이어집니다."}, {"phase": "정리", "minutes": 4, "type": "quiz", "title": "오늘의 확인 문제", "question": "'가까이 오면 경보가 울린다'에서 조건은 무엇일까요?", "choices": ["경보가 울린다", "가까이 오면", "보물", "센서"], "answer": 1}, {"phase": "정리", "minutes": 6, "type": "wrapup", "title": "오늘 배운 것 + 정리 정돈", "body": ["센서는 주변을 숫자로 읽고, 조건에 따라 반응해요.", "모듈을 정리하고 개수를 확인해 주세요.", "다음 시간: 빙글빙글 모터로 나만의 미니 선풍기를 만들어요!"]}]}, {"no": 6, "title": "빙글빙글 미니 선풍기 — 다이얼로 속도 조절", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "모터로 움직임을 만들고 다이얼 입력과 연결하여, 돌리는 만큼 바람 세기가 변하는 나만의 미니 선풍기를 완성한다.", "objectives": ["모터 모듈을 사용해 움직이는 장치를 만들 수 있다.", "입력 값(다이얼)의 크기에 따라 출력(모터 속도)이 변하는 원리를 설명할 수 있다."], "standards": [{"code": "[6실04-06]", "text": "생활 속 로봇(하드웨어)의 구조와 작동 원리를 이해하고 간단한 로봇을 만들어 작동시킨다."}, {"code": "[6실05-02]", "text": "절차적 사고에 따라 문제 해결의 순서를 생각하고 일상생활의 문제를 해결한다."}], "materials": ["MODI 키트(네트워크·다이얼·모터·LED)", "종이 날개 재료(색종이·테이프)", "가위", "대형 화면", "학생용 기기"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "빙글빙글 미니 선풍기", "subtitle": "다이얼로 속도 조절 · 6/9차시"}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "선풍기 버튼의 비밀 — 세기 조절", "body": ["선풍기에는 약풍·중풍·강풍이 있어요. 헤어드라이어도, 믹서기도!", "지금까지는 켜기/끄기(둘 중 하나)였다면, 오늘은 '얼마나'를 조절해요.", "다이얼을 돌리면 숫자가 커지고 → 그 숫자만큼 모터가 빨리 돌아요.", "입력의 크기가 출력의 크기로 이어지는 것 — 오늘의 핵심이에요."], "teacherNote": "볼륨 다이얼, 샤워기 수도꼭지 등 '크기를 조절하는 입력'의 예를 학생에게 찾게 해 보세요."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "선풍기 만들기 — 조립과 날개", "body": ["네트워크 + 다이얼 + 모터를 연결하세요.", "색종이로 바람개비 날개를 만들어 모터에 붙이세요.", "다이얼을 돌려 보고 숫자가 변하는지 확인!"], "teacherNote": "날개는 크고 무겁지 않게 안내하세요. 손가락이 날개에 닿지 않도록 안전 지도가 필요합니다."}, {"phase": "전개", "minutes": 15, "type": "ai", "title": "AI와 함께 만들기 — 속도 조절 선풍기", "codingType": "blockly", "body": ["AI에게 주문하세요: '다이얼을 돌린 만큼 모터가 빨리 돌게 해 줘'.", "다이얼을 천천히 돌리며 바람 세기를 실험!", "성공하면: 세기에 따라 LED 색이 변하게(약풍=초록, 강풍=빨강) 업그레이드."], "prompts": ["다이얼을 돌린 만큼 모터가 빨리 돌게 해 줘", "다이얼이 절반보다 크면 LED가 빨간색, 작으면 초록색이 되게 해 줘", "다이얼을 끝까지 돌리면 터보 모드로 LED가 깜빡이게 해 줘"], "teacherNote": "'다이얼 숫자'와 '모터 속도'가 함께 변하는 것을 말로 설명하게 하세요. 입력↔출력의 크기 관계가 이 차시의 평가 포인트입니다."}, {"phase": "정리", "minutes": 5, "type": "activity", "title": "바람 대결", "body": ["모둠별로 선풍기를 들고 나와 휴지 조각 날리기 대결!", "누구 바람이 가장 셀까요? 왜 그럴까요? (날개 모양? 속도?)"]}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "H/W 만들기 3차시 마무리", "body": ["신호등, 경보기, 선풍기 — H/W 작품도 3개 완성!", "이제 버튼·센서·다이얼(입력)과 LED·스피커·모터(출력)를 모두 다룰 수 있어요.", "다음 시간부터 대망의 최종 프로젝트: 웹으로 조종하는 자율주행 로봇카! (3차시 대장정)"]}]}, {"no": 7, "title": "로봇카 프로젝트 ① — 설계하고 조립하기", "projectType": "webhw", "projectLabel": "Web + H/W (블록 1/3)", "summary": "최종 프로젝트 시작. 웹 리모컨으로 조종하는 자율주행 로봇카를 설계하고, 모터·거리 센서로 로봇카 본체를 조립해 기본 주행까지 성공한다.", "objectives": ["웹 화면과 하드웨어가 연결된 시스템의 구조(버튼→모터, 센서→화면)를 그림으로 표현할 수 있다.", "설계에 따라 로봇카를 조립하고 기본 주행 블록을 만들 수 있다."], "standards": [{"code": "[6실04-06]", "text": "생활 속 로봇(하드웨어)의 구조와 작동 원리를 이해하고 간단한 로봇을 만들어 작동시킨다."}, {"code": "[6실05-02]", "text": "절차적 사고에 따라 문제 해결의 순서를 생각하고 일상생활의 문제를 해결한다."}], "materials": ["MODI 키트(네트워크·버튼·거리 센서·모터·바퀴)", "로봇카 프레임(키트 또는 상자)", "설계 활동지", "대형 화면", "학생용 기기"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "로봇카 프로젝트 ①", "subtitle": "설계하고 조립하기 · 7/9차시 (프로젝트 1/3)", "teacherNote": "7~9차시는 하나의 프로젝트입니다. 오늘 만든 로봇카를 분해하지 않고 3차시 동안 이어 갑니다. 모둠별 보관함을 준비하세요."}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "최종 미션: 웹으로 조종하는 자율주행 로봇카", "body": ["지금까지 배운 모든 것이 이 프로젝트에 들어가요!", "버튼·조건·센서(4~5차시) + 모터(6차시) + 웹 만들기(1~3차시).", "3차시 계획: 오늘 설계·조립 → 다음 시간 웹 리모컨 → 마지막 레이싱 발표회.", "오늘의 목표: 달리는 로봇카 + 벽 앞에서 스스로 멈추기!"], "teacherNote": "자율주행차 영상(짧게)을 보여 주면 몰입도가 높아집니다. '우리가 오늘 그 원리를 그대로 만든다'고 연결하세요."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "설계하고 조립하기", "body": ["설계 활동지: 우리 차의 모습을 그리고, 모듈 위치를 표시하세요. (거리 센서는 앞!)", "네트워크 + 버튼 + 거리 센서 + 모터(바퀴)를 연결하고 프레임에 고정하세요.", "바퀴가 바닥에 잘 닿는지, 센서가 앞을 보는지 확인!"], "teacherNote": "센서가 바닥을 보면 항상 '가깝다'로 읽혀 출발하자마자 멈춥니다. 센서 방향이 앞을 향하는지 꼭 확인시키세요."}, {"phase": "전개", "minutes": 14, "type": "ai", "title": "AI와 함께 만들기 — 달리고, 스스로 멈추기", "codingType": "blockly", "body": ["1단계: 버튼을 누르면 달리게. 바닥에서 첫 주행!", "2단계: 5차시 경보기의 조건을 떠올려요 — 벽이 가까우면 멈추게!", "3단계: 몇 cm에서 멈추는 게 좋을까? 숫자를 바꿔 가며 실험하세요."], "prompts": ["버튼을 누르면 모터가 돌아서 자동차가 앞으로 달리게 해 줘", "달리다가 벽이 15cm보다 가까워지면 스스로 멈추게 해 줘", "멈출 때 LED가 빨간색이 되게 해 줘"], "teacherNote": "'경보기 만들 때 배운 조건과 똑같다'는 것을 학생이 스스로 발견하게 유도하세요. 배움의 전이를 확인하는 순간입니다."}, {"phase": "정리", "minutes": 5, "type": "activity", "title": "주행 점검", "body": ["모둠별 점검: 달리기 성공? 자동 멈춤 성공?", "우리 차의 멈춤 거리(cm)를 활동지에 기록하세요.", "다음 시간 만들 웹 리모컨에 넣고 싶은 버튼을 미리 3개 적어 보세요."]}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "오늘 배운 것", "body": ["설계 → 조립 → 주행 → 자동 멈춤까지, 로봇카 본체 완성!", "로봇카에 모둠 이름표를 붙여 보관해요.", "다음 시간: 이 차를 화면으로 조종하는 웹 리모컨을 만들어요."], "teacherNote": "로봇카를 분해하지 말고 보관하세요. 8~9차시에서 그대로 사용합니다."}]}, {"no": 8, "title": "로봇카 프로젝트 ② — 웹 리모컨 만들기", "projectType": "webhw", "projectLabel": "Web + H/W (블록 2/3)", "summary": "웹 리모컨·계기판 화면을 만들고 로봇카와 연결해, 화면 버튼으로 조종하고 거리 값을 화면에서 확인한다.", "objectives": ["리모컨 화면을 설계하고 AI와 함께 만들 수 있다.", "화면 버튼이 로봇카를 움직이고 센서 값이 화면에 표시되는 것을 확인하고 설명할 수 있다."], "standards": [{"code": "[6실05-02]", "text": "절차적 사고에 따라 문제 해결의 순서를 생각하고 일상생활의 문제를 해결한다."}, {"code": "[6실05-01]", "text": "컴퓨터를 활용한 생활 속 문제 해결 사례를 탐색하고 소프트웨어가 생활에 미치는 영향을 이해한다."}], "materials": ["7차시 완성 로봇카", "학생용 기기", "7차시 설계 활동지", "대형 화면"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "로봇카 프로젝트 ②", "subtitle": "웹 리모컨 만들기 · 8/9차시 (프로젝트 2/3)"}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "게임 컨트롤러처럼, 화면으로 조종해요", "body": ["드론도, 로봇청소기도 핸드폰 화면으로 조종해요.", "화면(웹)과 기계(하드웨어)가 정보를 주고받기 때문이에요.", "화면 버튼 → 모터 (출발·정지) / 거리 센서 → 화면 (계기판 숫자).", "오늘의 미션: 지난 시간 적어 둔 버튼 3개가 들어간 나만의 리모컨!"], "teacherNote": "'화살표의 방향'(정보가 가는 길)을 칠판에 그려 강조하세요. 로봇카 연결이 어려운 환경은 교사 시연 세트로 전체 흐름을 보여 주는 방식을 권장합니다."}, {"phase": "전개", "minutes": 13, "type": "ai", "title": "AI와 함께 만들기 ① — 리모컨 화면", "codingType": "react", "body": ["지난 시간 적은 버튼 계획대로 화면을 단계별로 주문하세요.", "출발 버튼, 정지 버튼, 거리 계기판… 하나씩!", "우리 팀만의 특별 버튼(경적? 헤드라이트?)도 넣어 보세요."], "prompts": ["로봇카 리모컨 화면 만들어 줘. 큰 출발 버튼과 빨간 정지 버튼, 아래에 거리 계기판", "거리 숫자가 15보다 작아지면 화면이 빨갛게 깜빡이며 '위험!' 글자가 나오게 해 줘", "경적 버튼을 누르면 화면에 빵빵 표시가 나오게 해 줘"]}, {"phase": "전개", "minutes": 12, "type": "ai", "title": "AI와 함께 만들기 ② — 로봇카 연결", "codingType": "blockly", "body": ["로봇카를 연결하고, AI에게 연결 블록을 주문하세요.", "화면의 출발 버튼을 눌러 보세요. 차가 달리나요?", "도전: 거리 센서 값이 화면 계기판에 나오게 해 보세요."], "prompts": ["웹 화면의 출발 버튼을 누르면 모터가 돌고, 정지 버튼을 누르면 멈추게 해 줘", "거리 센서 값을 웹 화면 계기판으로 계속 보내 줘"], "teacherNote": "화면 버튼으로 차가 처음 움직이는 순간이 이 프로젝트 최고의 순간입니다. 성공 모둠 화면을 대형 화면에 미러링해 함께 축하하세요."}, {"phase": "정리", "minutes": 4, "type": "activity", "title": "중간 점검", "body": ["우리 팀 진행 상황: 리모컨 완성? 조종 성공? 계기판 도전?", "다음 시간 레이싱 발표회에서 보여 줄 것 한 가지를 정하세요.", "작품이 저장되었는지 확인하세요."]}, {"phase": "정리", "minutes": 4, "type": "wrapup", "title": "오늘 배운 것", "body": ["버튼 정보가 모터까지, 센서 정보가 화면까지 오가는 길을 직접 만들었어요.", "다음 시간: 대망의 로봇카 레이싱 발표회!", "우리 차 이름과 응원 구호를 정해 오세요."]}]}, {"no": 9, "title": "로봇카 프로젝트 ③ — 레이싱 발표회", "projectType": "webhw", "projectLabel": "Web + H/W (블록 3/3)", "summary": "완성한 웹 리모컨 로봇카를 팀별로 발표·시연하고, 미니 레이싱과 함께 9차시 동안의 배움을 되돌아본다.", "objectives": ["작품의 구조(입력→조건→출력)를 넣어 작품을 발표할 수 있다.", "친구의 작품에서 잘한 점을 찾아 칭찬할 수 있다.", "AI와 함께 만드는 과정에서 배운 점을 말할 수 있다."], "standards": [{"code": "[6실05-01]", "text": "컴퓨터를 활용한 생활 속 문제 해결 사례를 탐색하고 소프트웨어가 생활에 미치는 영향을 이해한다."}, {"code": "[6실05-03]", "text": "인공지능이 만들어지는 과정과 활용 사례를 탐색하고 인공지능을 체험한다."}], "materials": ["완성 작품(웹 리모컨+로봇카)", "4차시 신호등(출발 신호용)", "주행 트랙(책상 사이 통로나 테이프 라인)", "칭찬 포스트잇", "배움 일기 활동지"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "로봇카 프로젝트 ③", "subtitle": "레이싱 발표회 · 9/9차시 (마지막)"}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "발표회 안내", "body": ["팀별 발표 2분 + 주행 시연 1분.", "발표에 꼭 넣기: ① 우리 차의 특별한 기능 ② 어떤 입력→조건→출력인가 ③ AI에게 어떻게 말했나 ④ 가장 뿌듯한 점.", "주행 시연: 4차시에 만든 신호등의 초록불에 맞춰 출발! 벽 앞 자동 멈춤까지 보여 주면 만점.", "듣는 사람: 잘한 점 한 가지를 포스트잇에 적어 전달해요."], "teacherNote": "타이머를 화면에 띄워 발표 시간을 관리하세요. 트랙은 책상 사이 통로에 테이프로 결승선만 붙여도 충분합니다. 발표 부담이 큰 학생은 시연(운전) 역할만 맡겨도 좋습니다."}, {"phase": "전개", "minutes": 24, "type": "activity", "title": "팀 발표 + 레이싱 시연 (팀당 3분)", "body": ["발표 팀: 리모컨 화면과 로봇카 주행을 보여 주며 설명하세요.", "신호등 초록불 → 출발 → 벽 앞 자동 멈춤 시연!", "듣는 팀: 칭찬 포스트잇 작성. 질문 예시: '왜 그 거리에서 멈추게 했나요?'"], "teacherNote": "8팀 기준 팀당 3분입니다. 각 팀 발표 후 교사가 '입력→조건→출력' 구조를 한 문장으로 정리해 주면 개념이 강화됩니다. 시연 실패도 괜찮아요 — 왜 안 되는지 추측하게 하면 그것도 훌륭한 발표입니다."}, {"phase": "정리", "minutes": 6, "type": "activity", "title": "배움 일기 쓰기", "body": ["9차시 동안 가장 기억에 남는 작품은? (소개 카드·반 페이지·뽑기 머신·신호등·경보기·선풍기·로봇카)", "AI와 함께 만들 때 가장 중요한 것은 무엇이라고 생각하나요?", "더 만들어 보고 싶은 것은? (만들기 모드에서 언제든 이어서 만들 수 있어요!)"]}, {"phase": "정리", "minutes": 3, "type": "wrapup", "title": "9차시 여정 완주를 축하해요! 🏁", "body": ["웹 작품 3개 + H/W 작품 3개 + 웹으로 조종하는 자율주행 로봇카까지, 총 7개의 작품!", "여러분은 이제 '아이디어를 현실로 만드는 방법'을 알아요.", "홈 화면의 '만들기' 모드에서 나만의 작품에 계속 도전해 보세요!"], "teacherNote": "칭찬 포스트잇을 로봇카 옆에 붙여 미니 모터쇼를 열면 훌륭한 마무리가 됩니다."}]}]}, "middle": {"level": "middle", "label": "중등", "grade": "중학교 1~3학년", "subject": "정보", "classMinutes": 45, "theme": "차시마다 새로운 문제 해결 — 최종 프로젝트는 자율주행 로봇카 관제", "overview": "매 차시 서로 다른 생활 속 문제를 소프트웨어와 피지컬 컴퓨팅으로 해결하는 9차시 과정입니다. 1~3차시는 Web 앱 3개, 4~6차시는 MODI 장치 3개를 각각 완성하고, 7~9차시는 '자율주행 로봇카와 실시간 관제 대시보드'를 3차시 프로젝트로 완성합니다.", "curriculumNote": "2022 개정 교육과정 중학교 정보 성취기준(컴퓨팅 시스템·데이터·알고리즘과 프로그래밍·인공지능 영역)을 기반으로 구성했습니다. 성취기준 코드·문구는 학교 교육과정 편성 시 최신 고시본과 대조하여 검수해 주세요.", "finalGoal": "장애물을 피해 달리는 MODI 로봇카 + 실시간 관제 웹 대시보드 (7~9차시 프로젝트)", "lessons": [{"no": 1, "title": "요구사항의 힘 — 우리 반 D-day 알림 앱", "projectType": "web", "projectLabel": "Web 만들기", "summary": "요구사항을 정의하는 방법을 배우고, 수행평가·행사 D-day를 관리하는 우리 반 알림 앱을 AI와 함께 완성한다.", "objectives": ["해결할 문제를 정의하고 요구사항을 구체적인 문장으로 표현할 수 있다.", "LLM 기반 도구와 협업하여 요구사항에 맞는 웹 화면을 제작할 수 있다.", "생성형 AI 활용 시의 윤리(저작권, 개인정보, 검증 책임)를 설명할 수 있다."], "standards": [{"code": "[9정03-01]", "text": "문제를 분석하여 해결에 필요한 요소를 파악하고 문제 해결 과정을 설계한다."}, {"code": "[9정04-01]", "text": "인공지능 기술의 활용 사례를 탐색하고 인공지능을 문제 해결에 적용한다."}], "materials": ["대형 화면", "학생용 PC/태블릿", "요구사항 정의 활동지"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "요구사항의 힘", "subtitle": "우리 반 D-day 알림 앱 · 1/9차시", "teacherNote": "수업 전 학생 계정 접속을 확인하세요. 이 슬라이드 화면을 그대로 띄워 두고 수업을 진행합니다."}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "개발자는 이제 이렇게 일한다", "body": ["현업 개발자들도 AI에게 요구사항을 말하고 코드를 함께 만드는 시대입니다.", "그런데 AI의 결과물 품질은 '요구사항의 품질'이 결정합니다.", "나쁜 요구: \"앱 만들어 줘\" / 좋은 요구: \"과목별 수행평가 일정을 등록하면 D-day가 자동 계산되어 임박한 순서로 보이는 앱\".", "이번 9차시: 매시간 다른 문제를 해결하고, 마지막엔 자율주행 로봇카 관제 시스템까지 만듭니다."], "teacherNote": "'프롬프트 엔지니어링'을 소개해도 좋지만, 핵심은 '요구사항 명세'라는 소프트웨어 공학 개념과 연결하는 것입니다. 9차시 로드맵을 간단히 보여 주세요."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "요구사항 정의하기", "body": ["오늘의 문제: '수행평가 일정을 자꾸 잊어버린다.'", "활동지에 작성: ① 누가 쓰나요? ② 무엇을 할 수 있어야 하나요? (기능 3가지) ③ 화면에 무엇이 보여야 하나요?", "작성한 요구사항을 짝과 바꿔 읽고, 모호한 부분에 밑줄을 그어 주세요."], "teacherNote": "'모호한 부분 밑줄 긋기'가 핵심 활동입니다. '편하게', '예쁘게' 같은 말이 왜 모호한지 토론하게 하세요."}, {"phase": "전개", "minutes": 18, "type": "ai", "title": "AI와 함께 만들기 — 요구사항대로 D-day 앱", "codingType": "react", "body": ["작성한 요구사항을 AI에게 그대로 전달해 보세요.", "AI가 설계에 대해 되물으면 구체적으로 답하세요. 대화가 곧 설계 과정입니다.", "화면이 나오면 요구사항과 비교: 빠진 기능은 무엇인가요? 추가로 요청하세요."], "prompts": ["과목별 수행평가 일정을 등록하면 D-day가 자동으로 보이는 앱을 만들고 싶어", "D-day가 3일 이하면 빨간색으로 강조되게 해 줘", "지금 화면에서 빠진 기능이 있는지 내 요구사항과 비교해서 알려 줘"], "teacherNote": "요구사항과 결과물을 '대조'하는 습관이 이 차시의 평가 포인트입니다. 순회하며 '요구사항에 있는데 화면에 없는 것'을 찾게 하세요."}, {"phase": "정리", "minutes": 6, "type": "quiz", "title": "확인 문제", "question": "AI와 협업할 때 결과물의 품질을 가장 크게 좌우하는 것은?", "choices": ["타자 속도", "요구사항의 구체성과 명확성", "영어 실력", "컴퓨터 사양"], "answer": 1}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리", "body": ["소프트웨어 개발은 요구사항 정의에서 시작합니다.", "AI 협업의 핵심 = 명확한 요구 + 결과 검증. 검증의 책임은 사람에게 있습니다.", "다음 시간: 새로운 문제 — 기록을 '기억'하는 스톱워치 앱과 변수를 배웁니다."]}]}, {"no": 2, "title": "변수와 상태 — 체육대회 기록 스톱워치", "projectType": "web", "projectLabel": "Web 만들기", "summary": "변수와 상태 개념을 이해하고, 시간을 재고 기록을 저장·비교하는 스톱워치 기록판 앱을 완성하며 생성된 코드에서 변수를 찾아 읽는다.", "objectives": ["변수와 상태의 개념을 실제 앱 동작과 연결하여 설명할 수 있다.", "입력에 따라 상태가 변하는 기능을 AI와 함께 구현할 수 있다.", "생성된 코드에서 변수(상태)가 쓰인 부분을 찾아 역할을 설명할 수 있다."], "standards": [{"code": "[9정03-03]", "text": "변수의 개념을 이해하고 변수를 활용하여 프로그램을 작성한다."}, {"code": "[9정02-01]", "text": "데이터의 수집·관리가 문제 해결에 미치는 영향을 이해한다."}], "materials": ["대형 화면", "학생용 기기"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "변수와 상태", "subtitle": "체육대회 기록 스톱워치 · 2/9차시"}, {"phase": "도입", "minutes": 7, "type": "talk", "title": "스톱워치는 시간을 어디에 기억할까?", "body": ["달리는 시간, 최고 기록, 몇 번째 시도인지 — 앱은 어떻게 '기억'할까요? → 변수(variable)!", "변수 = 이름 붙은 상자. time이라는 상자에 12.3을 넣고, 필요하면 꺼내 보고, 바꿔 넣습니다.", "화면에 보이는 값이 변하는 것 = 상태(state)가 바뀌고 화면이 따라 바뀌는 것.", "오늘의 문제: 체육대회 계주 연습 기록을 재고, 최고 기록을 관리하고 싶다!"], "teacherNote": "칠판에 상자 그림을 그리고 best ← 12.3, '새 기록이 더 빠르면 best를 바꾼다'를 단계로 보여 주면 직관적입니다."}, {"phase": "전개", "minutes": 18, "type": "ai", "title": "AI와 함께 만들기 — 스톱워치 기록판", "codingType": "react", "body": ["AI에게 스톱워치를 주문하고, 기록 저장 기능을 단계적으로 추가하세요.", "시작/정지/기록 저장/최고 기록 표시 — 하나씩!", "기능이 생기면 AI에게 물어보세요: \"이 기능에서 변수가 뭐야? 코드 어디에 있어?\""], "prompts": ["시작·정지 버튼이 있는 스톱워치 만들어 줘", "기록 버튼을 누르면 시간이 목록에 저장되고, 최고 기록이 위에 크게 보이게 해 줘", "이 앱에서 변수(상태)가 어떤 것들인지, 코드 어느 부분인지 설명해 줘"], "teacherNote": "'AI에게 코드 설명을 요청'하는 활동이 핵심입니다. 학습 노트·코드 주석 기능을 활용해 변수 부분을 함께 읽으세요."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "코드 읽기 — 변수 찾기 미션", "body": ["결과물 코드에서 변수가 선언된 줄을 찾아 번호를 적으세요.", "그 변수의 값이 '바뀌는' 줄도 찾아보세요.", "짝에게 설명하기: \"이 변수는 ___를 기억하고, ___할 때 바뀐다.\""], "teacherNote": "코드를 다 이해할 필요는 없습니다. useState 같은 패턴에서 '이름'과 '바꾸는 함수'만 찾아도 성공으로 인정하세요."}, {"phase": "정리", "minutes": 5, "type": "quiz", "title": "확인 문제", "question": "'새 기록이 최고 기록보다 빠르면 최고 기록을 바꾼다'에서 최고 기록은 무엇에 저장될까요?", "choices": ["변수", "프린터", "마우스", "저장되지 않는다"], "answer": 0}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리", "body": ["변수는 프로그램의 기억 장치이고, 상태가 바뀌면 화면이 바뀝니다.", "AI가 만든 코드도 '읽고 검증'할 수 있어야 진짜 내 것이 됩니다.", "다음 시간: 새로운 문제 — 밸런스 게임 투표 앱, 그리고 디버깅을 배웁니다."]}]}, {"no": 3, "title": "디버깅은 개발의 절반 — 밸런스 게임 투표 앱", "projectType": "web", "projectLabel": "Web 만들기", "summary": "밸런스 게임 투표 앱을 완성한 뒤 의도적으로 오류를 찾아내고, 재현 조건과 함께 AI에게 설명하며 고치는 디버깅 과정을 경험한다.", "objectives": ["의도적으로 다양한 입력을 시도하여 프로그램의 오류를 찾을 수 있다.", "발견한 오류를 재현 조건과 함께 설명하고 AI와 협업해 수정할 수 있다."], "standards": [{"code": "[9정03-04]", "text": "프로그램 작성 과정에서 발생하는 오류를 찾아 수정한다."}, {"code": "[9정03-01]", "text": "문제를 분석하여 해결에 필요한 요소를 파악하고 문제 해결 과정을 설계한다."}], "materials": ["대형 화면", "학생용 기기", "버그 리포트 활동지"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "디버깅은 개발의 절반", "subtitle": "밸런스 게임 투표 앱 · 3/9차시"}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "버그는 부끄러운 게 아니다", "body": ["세계 최고 개발자들도 하루 종일 버그를 잡습니다. 디버깅은 개발의 절반입니다.", "좋은 버그 리포트: ① 무엇을 했더니(재현 방법) ② 무엇이 나왔고(실제 결과) ③ 무엇이 나와야 했나(기대 결과).", "테스터의 눈: 빈 값을 넣으면? 아주 긴 글자를 넣으면? 100번 연타하면?", "오늘: '민트초코 vs 하와이안 피자' 같은 밸런스 게임 투표 앱을 만들고, 서로 괴롭혀서 버그를 찾습니다."], "teacherNote": "'버그를 많이 찾은 사람이 오늘의 승자'라는 프레임을 만들면 실패 경험이 즐거운 활동으로 바뀝니다."}, {"phase": "전개", "minutes": 12, "type": "ai", "title": "AI와 함께 만들기 — 밸런스 게임 투표 앱", "codingType": "react", "body": ["밸런스 게임 질문 2~3개를 정하고 AI에게 투표 앱을 주문하세요.", "투표하면 실시간으로 퍼센트 막대가 변하게!", "완성하면 새 질문 추가 기능까지 도전하세요."], "prompts": ["두 선택지 중 하나에 투표하면 득표수와 퍼센트 막대가 보이는 밸런스 게임 앱 만들어 줘", "투표 후에는 결과 화면이 보이고, 다음 질문으로 넘어가게 해 줘", "내가 새 밸런스 질문을 추가할 수 있게 해 줘"]}, {"phase": "전개", "minutes": 10, "type": "activity", "title": "버그 헌팅 — 짝 앱 테스트", "body": ["짝과 기기를 바꿔 서로의 앱을 테스트하세요. (7분)", "시도할 것: 빈 입력, 긴 입력, 빠른 연타, 이상한 순서로 조작.", "찾은 버그를 버그 리포트 양식(재현/실제/기대)으로 적어 주인에게 전달하세요."], "teacherNote": "버그가 안 나오는 앱도 있습니다. 그 경우 '추가하고 싶은 기능'을 리포트로 쓰게 하세요."}, {"phase": "전개", "minutes": 8, "type": "ai", "title": "AI와 함께 고치기 — 버그 리포트로 대화", "codingType": "react", "body": ["받은 버그 리포트를 AI에게 그대로 전달하며 수정을 요청하세요.", "수정 후 같은 방법으로 다시 테스트 — 정말 고쳐졌나요?"], "prompts": ["질문을 빈 칸으로 추가하면 빈 카드가 생겨. 빈 입력이면 추가되지 않게 고쳐 줘", "투표 버튼을 연타하면 표가 여러 번 들어가. 한 번만 투표되게 고쳐 줘"], "teacherNote": "'재현 조건을 정확히 전달하면 AI가 잘 고친다'는 인과를 경험하게 하는 것이 목표입니다. 막연히 '안 돼요'라고 말하는 학생을 버그 리포트 양식으로 안내하세요."}, {"phase": "정리", "minutes": 4, "type": "quiz", "title": "확인 문제", "question": "좋은 버그 리포트에 반드시 들어가야 하는 것은?", "choices": ["개발자에 대한 항의", "재현 방법·실제 결과·기대 결과", "버그와 상관없는 칭찬", "새 기능 아이디어 10개"], "answer": 1}, {"phase": "정리", "minutes": 3, "type": "wrapup", "title": "Web 만들기 3차시 마무리", "body": ["D-day 앱, 스톱워치, 투표 앱 — 요구사항 → 구현 → 검증의 개발 사이클로 3개 완성!", "다음 시간부터 피지컬 컴퓨팅: 코드가 현실 세계를 움직입니다.", "예고: 방 분위기를 바꿔 주는 스마트 무드등."]}]}, {"no": 4, "title": "피지컬 컴퓨팅 — 스마트 무드등", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "피지컬 컴퓨팅의 입력-처리-출력 구조를 이해하고, 주변 밝기에 따라 스스로 켜지고 색이 변하는 스마트 무드등을 완성한다.", "objectives": ["피지컬 컴퓨팅 시스템의 입력-처리-출력 구조를 설명할 수 있다.", "센서 데이터를 수집하여 출력 장치를 제어하는 시스템을 구성할 수 있다."], "standards": [{"code": "[9정01-03]", "text": "피지컬 컴퓨팅의 개념을 이해하고 센서와 액추에이터로 시스템을 구성한다."}, {"code": "[9정02-02]", "text": "데이터를 수집·분류·표현하여 의미를 해석한다."}], "materials": ["MODI 키트(모둠당: 네트워크·환경 센서·LED·디스플레이)", "대형 화면", "학생용 기기", "종이컵(무드등 갓 만들기)"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "피지컬 컴퓨팅", "subtitle": "스마트 무드등 · 4/9차시", "teacherNote": "MODI 키트 충전·모듈 수량을 사전 점검하세요. 모둠당 네트워크+환경 센서+LED가 기본입니다."}, {"phase": "도입", "minutes": 7, "type": "talk", "title": "밤이 되면 저절로 켜지는 가로등의 비밀", "body": ["가로등은 누가 켤까요? 사람이 아니라 밝기 센서와 프로그램이 켭니다.", "이렇게 현실 세계와 상호작용하는 컴퓨팅 = 피지컬 컴퓨팅.", "구조는 언제나: 입력(센서) → 처리(프로그램) → 출력(액추에이터).", "오늘의 문제: 어두워지면 스스로 켜지고, 분위기 따라 색이 변하는 무드등을 만들자!"], "teacherNote": "교실 불을 잠깐 꺼서 '어둡다는 것을 숫자로 어떻게 알까?'라는 질문을 던져 보세요. 입력→처리→출력 구조는 7~9차시 로봇카에서 다시 등장합니다."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "밝기 데이터 관찰하기", "body": ["네트워크 + 환경 센서 + LED + 디스플레이를 연결하세요.", "교실 3곳(창가, 사물함 아래, 손으로 가린 곳)의 밝기 값을 기록하세요.", "'어둡다'의 기준 숫자를 모둠에서 정하고 근거를 말해 보세요."], "teacherNote": "'같은 교실인데 값이 다르다'는 발견이 데이터 해석의 시작입니다. 모둠이 정한 기준값이 다음 활동의 조건값이 됩니다."}, {"phase": "전개", "minutes": 17, "type": "ai", "title": "AI와 함께 만들기 — 스마트 무드등", "codingType": "blockly", "body": ["AI에게 요청: 어두워지면 LED가 켜지고 밝아지면 꺼지게.", "종이컵을 씌워 무드등 갓을 만들고, 손으로 센서를 가려 실험!", "심화: 온도에 따라 색이 변하게(더우면 시원한 파랑, 추우면 따뜻한 주황)."], "prompts": ["어두워지면 LED가 켜지고 밝아지면 꺼지게 해 줘", "온도가 높으면 파란색, 낮으면 주황색으로 무드가 바뀌게 해 줘", "이 블록에서 입력·처리·출력이 각각 어느 부분인지 설명해 줘"], "teacherNote": "블록이 생성되면 '입력·처리·출력이 어디인가'를 반드시 짚으세요. 이 구조 인식이 4~6차시의 뼈대입니다."}, {"phase": "정리", "minutes": 6, "type": "quiz", "title": "확인 문제", "question": "피지컬 컴퓨팅 시스템에서 '환경 센서'의 역할은?", "choices": ["출력", "입력", "처리", "저장"], "answer": 1}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리", "body": ["센서는 현실을 데이터로 바꾸는 입력 장치입니다.", "입력→처리→출력 구조는 모든 피지컬 컴퓨팅의 공통 뼈대입니다.", "다음 시간: 새로운 문제 — 다가가면 스스로 열리는 자동문을 만듭니다."]}]}, {"no": 5, "title": "제어 구조 — 다가가면 열리는 자동문", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "선택(조건)과 반복 구조를 이해하고, 사람이 다가오면 열리고 지나가면 닫히는 자동문을 거리 센서와 모터로 완성한다.", "objectives": ["선택 구조와 반복 구조가 자동화에서 하는 역할을 설명할 수 있다.", "조건에 따라 액추에이터를 제어하는 자동화 시스템을 구현할 수 있다."], "standards": [{"code": "[9정03-05]", "text": "순차·선택·반복 구조를 활용하여 프로그램을 작성한다."}, {"code": "[9정01-03]", "text": "피지컬 컴퓨팅의 개념을 이해하고 센서와 액추에이터로 시스템을 구성한다."}], "materials": ["MODI 키트(네트워크·거리 센서·모터·LED·디스플레이)", "문짝 재료(두꺼운 종이·테이프)", "대형 화면", "학생용 기기"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "제어 구조", "subtitle": "다가가면 열리는 자동문 · 5/9차시"}, {"phase": "도입", "minutes": 7, "type": "talk", "title": "편의점 문은 어떻게 나를 알아볼까", "body": ["편의점 자동문: 사람이 다가오면 열리고, 지나가면 닫힌다 → 선택(조건) 구조.", "그리고 이 판단을 계속 반복한다 → 반복 구조.", "자동화 = 반복 속에서 조건을 검사하고 행동하는 것.", "오늘의 문제: 다가가면 열리고, 잠시 후 닫히는 미니 자동문을 만들자!"], "teacherNote": "순서도(반복 안에 조건이 든 구조)를 칠판에 그려 주세요. 7~9차시 로봇카의 '장애물 감지 반복 검사'가 같은 구조입니다."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "자동문 규칙 설계와 조립", "body": ["모둠 토론: 우리 자동문의 규칙을 문장으로 완성하세요.", "\"만약 거리가 ___cm보다 가까우면 문을 ___, 아니면 ___.\"", "네트워크 + 거리 센서 + 모터를 연결하고, 종이 문짝을 모터에 붙이세요.", "심화 질문: 문이 열렸다 닫혔다를 너무 자주 반복하지 않으려면?"], "teacherNote": "심화 질문은 고등 과정 히스테리시스의 씨앗입니다. '열림 유지 시간을 둔다' 정도의 아이디어면 충분합니다."}, {"phase": "전개", "minutes": 17, "type": "ai", "title": "AI와 함께 만들기 — 미니 자동문", "codingType": "blockly", "body": ["설계한 규칙 문장을 AI에게 그대로 전달하세요.", "손을 가까이 가져가면 문이 열리는지 실험!", "심화: 문 상태(열림/닫힘)를 디스플레이에 표시하고, 열릴 때 알림음 추가."], "prompts": ["거리가 15cm보다 가까우면 모터가 돌아 문이 열리고, 멀어지면 3초 후 닫히게 해 줘", "문이 열릴 때 디스플레이에 OPEN, 닫히면 CLOSE가 보이게 해 줘", "이 블록에서 조건(선택 구조)과 반복 구조가 어디인지 알려 줘"], "teacherNote": "'3초 후 닫힘'이 들어가면 시간 개념(대기)까지 자연스럽게 배웁니다. 문짝이 손에 부딪히지 않게 안전 지도하세요."}, {"phase": "정리", "minutes": 6, "type": "quiz", "title": "확인 문제", "question": "'거리가 15cm보다 가까우면 문을 연다'는 어떤 제어 구조일까요?", "choices": ["순차 구조", "선택(조건) 구조", "반복 구조", "저장 구조"], "answer": 1}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리", "body": ["선택과 반복이 합쳐지면 '스스로 판단하는 자동화'가 됩니다.", "경계값(15cm)은 실험과 근거로 정하는 것임을 배웠습니다.", "다음 시간: 새로운 문제 — 나만의 전자 드럼 키트를 만들고 테스트합니다."]}]}, {"no": 6, "title": "통합과 테스트 — 나만의 전자 드럼 키트", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "버튼·다이얼 입력과 스피커 출력을 통합해 연주할 수 있는 전자 드럼 키트를 만들고, 테스트 시나리오로 체계적으로 검증한다.", "objectives": ["여러 입력과 출력을 하나의 시스템으로 통합할 수 있다.", "테스트 시나리오를 작성하여 시스템을 체계적으로 검증할 수 있다."], "standards": [{"code": "[9정01-03]", "text": "피지컬 컴퓨팅의 개념을 이해하고 센서와 액추에이터로 시스템을 구성한다."}, {"code": "[9정03-04]", "text": "프로그램 작성 과정에서 발생하는 오류를 찾아 수정한다."}], "materials": ["MODI 키트(네트워크·버튼 2개·다이얼·스피커·LED)", "테스트 시나리오 활동지", "대형 화면", "학생용 기기"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "통합과 테스트", "subtitle": "나만의 전자 드럼 키트 · 6/9차시"}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "악기도 시스템이다", "body": ["전자 드럼: 패드를 치면(입력) → 소리가 난다(출력). 볼륨 노브(입력) → 크기 조절.", "오늘은 입력 여러 개 + 출력 여러 개를 '하나의 시스템'으로 통합합니다.", "통합하면 꼭 생기는 일: 따로는 되던 게 합치면 안 된다! → 그래서 테스트가 필요해요.", "오늘의 완성 조건: ① 버튼마다 다른 소리 ② 다이얼로 볼륨 ③ 소리에 맞춰 LED 반짝."], "teacherNote": "완성 조건을 체크리스트로 제시하는 것 자체가 요구사항 명세 교육입니다. 1차시와 연결해 주세요."}, {"phase": "전개", "minutes": 17, "type": "ai", "title": "AI와 함께 만들기 — 드럼 키트 통합", "codingType": "blockly", "body": ["완성 조건 3가지를 AI에게 한 번에 요청하지 말고, 하나씩 추가하며 통합하세요.", "기능이 하나 늘 때마다 이전 기능이 여전히 되는지 확인! (회귀 테스트)", "심화: 버튼을 빠르게 연타하면 비트가 되도록 소리 길이를 조절해 보세요."], "prompts": ["버튼 1을 누르면 북소리, 버튼 2를 누르면 심벌즈 소리가 나게 해 줘", "다이얼로 소리 크기를 조절하게 해 줘", "소리가 날 때마다 LED가 무작위 색으로 반짝이게 해 줘"], "teacherNote": "'기능을 합치면 뭔가 깨진다'는 통합의 어려움을 겪는 것이 정상이며 학습 목표입니다. 회귀 테스트라는 말을 가볍게 소개하세요."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "테스트 시나리오 실행", "body": ["활동지의 시나리오대로 검증: ① 버튼 1·2 각각 다른 소리? ② 다이얼 최소→최대 볼륨 변화? ③ 연타해도 정상 동작?", "각 항목에 통과/실패를 기록하세요.", "실패 항목은 재현 조건을 적어 AI와 수정하세요."]}, {"phase": "전개", "minutes": 6, "type": "activity", "title": "미니 합주회", "body": ["옆 모둠과 드럼 키트를 바꿔 상대 팀 테스트 시나리오를 실행해 주세요.", "통과 사인을 받으면 완성 인증!", "마지막 2분: 다 함께 4박자 합주에 도전!"], "teacherNote": "교차 검증(남의 눈이 더 정확하다)이 목적입니다. 합주는 소란스러워도 괜찮은 마무리 이벤트입니다."}, {"phase": "정리", "minutes": 3, "type": "quiz", "title": "확인 문제", "question": "기능을 추가한 뒤 '이전 기능이 여전히 잘 되는지' 확인하는 것을 무엇이라 할까요?", "choices": ["회귀 테스트", "설치", "배포", "백업"], "answer": 0}, {"phase": "정리", "minutes": 3, "type": "wrapup", "title": "H/W 만들기 3차시 마무리", "body": ["무드등, 자동문, 드럼 키트 — 입력·처리·출력을 자유자재로 다루게 됐어요.", "다음 시간부터 최종 프로젝트: 자율주행 로봇카와 실시간 관제 대시보드! (3차시)", "지금까지 배운 모든 것(조건·반복·센서·모터·웹)이 총출동합니다."]}]}, {"no": 7, "title": "로봇카 관제 프로젝트 ① — 자율주행 로봇카 만들기", "projectType": "webhw", "projectLabel": "Web + H/W (블록 1/3)", "summary": "최종 프로젝트 시작. 장애물을 감지하면 스스로 멈추는 자율주행 로봇카를 조립·구현하고, 관제 대시보드로 보낼 데이터를 설계한다.", "objectives": ["센서와 액추에이터를 통합하여 자율주행 로봇카를 구현할 수 있다.", "시스템이 만드는 데이터(거리, 속도, 상태)를 정의하고 데이터 흐름을 설계할 수 있다."], "standards": [{"code": "[9정01-03]", "text": "피지컬 컴퓨팅의 개념을 이해하고 센서와 액추에이터로 시스템을 구성한다."}, {"code": "[9정03-05]", "text": "순차·선택·반복 구조를 활용하여 프로그램을 작성한다."}], "materials": ["MODI 키트(네트워크·거리 센서·모터·바퀴·LED·버튼)", "로봇카 프레임", "장애물(책·상자)", "설계 활동지", "대형 화면", "학생용 기기"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "로봇카 관제 프로젝트 ①", "subtitle": "자율주행 로봇카 만들기 · 7/9차시 (프로젝트 1/3)", "teacherNote": "7~9차시는 하나의 프로젝트입니다. 오늘 만든 로봇카를 분해하지 않고 3차시 동안 이어 갑니다. 팀별 보관함을 준비하세요."}, {"phase": "도입", "minutes": 7, "type": "talk", "title": "최종 미션: 달리는 차 + 지켜보는 관제탑", "body": ["실제 자율주행 서비스에는 차만 있는 게 아닙니다 — 차들의 상태를 지켜보는 '관제 센터'가 있어요.", "우리의 3차시 계획: 오늘 자율주행 로봇카 → 다음 시간 실시간 관제 대시보드 → 마지막 시연·발표.", "오늘의 목표: 달리다가 장애물 앞에서 스스로 멈추는 차. (5차시 자동문의 조건·반복과 같은 구조!)", "그리고 설계 질문: 관제탑이 알아야 할 데이터는 무엇일까? (거리? 상태? 속도?)"], "teacherNote": "자동문(5차시)과 로봇카의 프로그램 구조가 같다는 것을 학생이 발견하게 유도하세요. 배움의 전이를 확인하는 순간입니다."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "조립과 데이터 설계", "body": ["네트워크 + 거리 센서(앞!) + 모터(바퀴) + LED + 버튼을 조립하세요.", "데이터 설계: 관제탑에 보낼 데이터 목록을 활동지에 적으세요. (예: 거리cm, 주행 상태, 멈춤 횟수)", "각 데이터가 왜 필요한지 한 줄씩 근거를 쓰세요."], "teacherNote": "'데이터 목록 정의'가 이 차시의 정보과다운 핵심입니다. 다음 차시 대시보드가 이 목록 그대로 만들어집니다."}, {"phase": "전개", "minutes": 16, "type": "ai", "title": "AI와 함께 만들기 — 스스로 멈추는 로봇카", "codingType": "blockly", "body": ["1단계: 버튼으로 출발/정지.", "2단계: 장애물이 20cm 안이면 자동 정지 + 빨간 LED.", "3단계: 멈춤 거리를 바꿔 가며 실험 — 우리 차의 최적 멈춤 거리는?"], "prompts": ["버튼을 누르면 출발하고 다시 누르면 멈추는 로봇카 만들어 줘", "달리다가 장애물이 20cm보다 가까우면 스스로 멈추고 LED가 빨간색이 되게 해 줘", "장애물이 사라지면 3초 후 다시 출발하게 해 줘"], "teacherNote": "'3초 후 재출발'까지 가면 자동문에서 배운 시간 제어가 재등장합니다. 속도가 빠를수록 멈춤 거리가 길어야 함을 실험으로 발견하게 하세요."}, {"phase": "정리", "minutes": 7, "type": "activity", "title": "주행 테스트와 기록", "body": ["장애물 앞 자동 멈춤을 3번 반복 테스트하고 성공률을 기록하세요.", "우리 차의 멈춤 거리(cm)와 그렇게 정한 이유를 활동지에 기록하세요.", "다음 시간 대시보드에 표시할 데이터 목록을 최종 확정하세요."]}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "오늘 배운 것", "body": ["조건·반복·센서·모터가 통합된 자율주행 로봇카 완성!", "관제탑에 보낼 데이터 목록도 설계했습니다.", "다음 시간: 이 차의 데이터가 실시간으로 보이는 관제 대시보드를 만듭니다."], "teacherNote": "로봇카를 분해하지 말고 보관하세요. 8~9차시에서 그대로 사용합니다."}]}, {"no": 8, "title": "로봇카 관제 프로젝트 ② — 실시간 관제 대시보드", "projectType": "webhw", "projectLabel": "Web + H/W (블록 2/3)", "summary": "설계한 데이터 목록대로 관제 대시보드를 구현하고, 로봇카의 거리·상태 데이터가 실시간으로 화면에 보이도록 연동한다.", "objectives": ["데이터의 특성에 맞는 시각화 방법(게이지, 상태색, 숫자)을 선택하여 대시보드를 구현할 수 있다.", "센서 데이터가 화면에 반영되는 전체 데이터 흐름을 검증하고 설명할 수 있다."], "standards": [{"code": "[9정02-02]", "text": "데이터를 수집·분류·표현하여 의미를 해석한다."}, {"code": "[9정01-03]", "text": "피지컬 컴퓨팅의 개념을 이해하고 센서와 액추에이터로 시스템을 구성한다."}], "materials": ["7차시 완성 로봇카", "학생용 기기", "7차시 데이터 설계 활동지", "대형 화면"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "로봇카 관제 프로젝트 ②", "subtitle": "실시간 관제 대시보드 · 8/9차시 (프로젝트 2/3)"}, {"phase": "도입", "minutes": 6, "type": "talk", "title": "관제센터의 화면은 왜 한눈에 들어올까", "body": ["기상청, 공항 관제탑, 자율주행 관제센터 — 모두 '대시보드'로 상태를 봅니다.", "좋은 대시보드: 지금 상태가 3초 안에 파악된다. (색·크기·위치의 힘)", "데이터에 맞는 표현: 거리는 게이지, 주행 상태는 색 배지, 멈춤 횟수는 숫자.", "오늘의 미션: 지난 시간 데이터 목록 → 대시보드 화면 → 로봇카와 실시간 연결!"], "teacherNote": "'왜 거리는 게이지가 좋고 상태는 색이 좋은가'를 토론시키세요. 데이터 특성-표현 매칭이 핵심 개념입니다. 연동이 어려운 환경은 교사 세트 시연으로 대체 가능합니다."}, {"phase": "전개", "minutes": 14, "type": "ai", "title": "AI와 함께 만들기 ① — 대시보드 화면", "codingType": "react", "body": ["지난 시간 확정한 데이터 목록을 AI에게 전달하고 대시보드를 주문하세요.", "거리 게이지, 주행 상태 배지(주행중=초록/정지=빨강), 멈춤 횟수 카드.", "심화: 장애물 감지 시 화면 전체에 경고 표시."], "prompts": ["로봇카 관제 대시보드 만들어 줘. 거리는 반원 게이지, 주행 상태는 초록/빨강 배지, 멈춤 횟수는 숫자 카드로", "거리가 20보다 작아지면 화면 테두리가 빨갛게 깜빡이는 경고를 넣어 줘", "긴급 정지 버튼을 크고 빨갛게 넣어 줘"]}, {"phase": "전개", "minutes": 13, "type": "ai", "title": "AI와 함께 만들기 ② — 실시간 연동", "codingType": "blockly", "body": ["로봇카를 연결하고 센서 데이터 전송 블록을 요청하세요.", "차를 주행시키며 화면 게이지가 실시간으로 움직이는지 확인!", "도전: 대시보드의 긴급 정지 버튼 → 로봇카 정지까지 연결. (화면→차 방향!)"], "prompts": ["로봇카의 거리 값과 주행 상태를 웹 대시보드로 계속 보내 줘", "대시보드의 긴급 정지 버튼을 누르면 로봇카가 즉시 멈추게 해 줘"], "teacherNote": "게이지가 처음 움직이는 순간이 이 과정 최고의 순간입니다. 성공 팀 화면을 대형 화면에 미러링해 함께 축하하세요. 양방향(차→화면, 화면→차)이 모두 되면 만점입니다."}, {"phase": "전개", "minutes": 5, "type": "activity", "title": "데이터 흐름 설명하기", "body": ["모둠 화이트보드에 우리 시스템의 데이터 흐름을 그리세요.", "거리 센서 → ? → ? → 화면 게이지. 중간에 무엇이 있나요?", "한 명이 30초 동안 흐름을 설명하는 리허설 — 다음 차시 발표의 핵심입니다."]}, {"phase": "정리", "minutes": 3, "type": "quiz", "title": "확인 문제", "question": "'주행중/정지' 상태를 대시보드에서 가장 빠르게 알아보게 하는 표현은?", "choices": ["긴 설명 문장", "상태 색(초록/빨강) 배지", "소수점 8자리 숫자", "표시하지 않는다"], "answer": 1}, {"phase": "정리", "minutes": 2, "type": "wrapup", "title": "오늘 배운 것", "body": ["현실의 데이터가 내가 만든 관제 화면에서 실시간으로 살아 움직입니다.", "다음 시간: 최종 시연·발표회 — 관제 시스템 전체를 세상에 소개합니다."]}]}, {"no": 9, "title": "로봇카 관제 프로젝트 ③ — 시연과 발표", "projectType": "webhw", "projectLabel": "Web + H/W (블록 3/3)", "summary": "완성한 자율주행 로봇카와 관제 대시보드를 데이터 흐름 중심으로 발표하고, 상호 평가와 성찰로 9차시 과정을 마무리한다.", "objectives": ["시스템의 구조와 데이터 흐름을 논리적으로 설명할 수 있다.", "평가 기준에 따라 다른 팀의 작품을 평가하고 근거 있는 피드백을 줄 수 있다.", "AI 협업 경험을 성찰하고 자신의 학습 과정을 되돌아볼 수 있다."], "standards": [{"code": "[9정04-01]", "text": "인공지능 기술의 활용 사례를 탐색하고 인공지능을 문제 해결에 적용한다."}, {"code": "[9정05-01]", "text": "디지털 사회에서 지켜야 할 윤리와 정보 보호의 중요성을 이해하고 실천한다."}], "materials": ["완성 시스템(로봇카+대시보드)", "장애물·주행 공간", "대형 화면", "동료 평가지", "성찰 활동지"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "로봇카 관제 프로젝트 ③", "subtitle": "시연과 발표 · 9/9차시 (마지막)"}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "발표회 규칙과 평가 기준", "body": ["팀 발표 3분 + 질의 1분.", "발표 필수 요소: ① 시스템 구조(데이터 흐름 그림) ② 라이브 시연(자동 멈춤 + 실시간 게이지) ③ AI와 협업하며 배운 점.", "동료 평가 기준: 작동 완성도 / 설명의 논리성 / 창의성 — 각 5점.", "평가는 점수보다 '근거 한 줄'이 중요합니다."], "teacherNote": "동료 평가지를 미리 배부하고, '근거 없는 점수는 무효'라는 규칙을 안내하세요. 평가의 질이 확 달라집니다."}, {"phase": "전개", "minutes": 26, "type": "activity", "title": "팀 발표 + 라이브 시연 (팀당 4분)", "body": ["발표: 데이터 흐름 그림을 먼저 보여 주고 → 주행·자동 멈춤·실시간 게이지 시연 → 배운 점.", "청중: 평가지 작성 (점수 + 근거 한 줄).", "추천 질문: '거리 값이 화면까지 오는 길을 다시 설명해 주세요', '가장 어려웠던 버그는?'"], "teacherNote": "6팀 기준 팀당 4분 정도입니다. 시연 실패도 배움입니다 — '어느 부분(차/전송/화면)의 문제인지 추측'을 발표하게 하면 오히려 깊은 이해를 보여 줍니다."}, {"phase": "정리", "minutes": 7, "type": "activity", "title": "성찰 — AI와 나", "body": ["성찰 활동지: ① AI에게 가장 잘 '말한' 순간은? ② AI의 결과를 의심하고 검증한 경험은? ③ AI가 대신할 수 없었던 나의 역할은?", "모둠에서 한 가지씩 공유해 보세요."], "teacherNote": "③번 질문이 핵심입니다. '문제 정의, 요구사항, 검증, 판단은 사람의 몫'이라는 결론이 학생 입에서 나오도록 유도하세요."}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "9차시 완주를 축하합니다! 🏁", "body": ["D-day 앱·스톱워치·투표 앱·무드등·자동문·드럼 키트, 그리고 자율주행 로봇카 관제 시스템까지 — 총 7개의 작품!", "요구사항 정의 → 구현 → 디버깅 → 피지컬 컴퓨팅 → 데이터 시각화 → 실시간 연동을 모두 경험했습니다.", "'만들기' 모드에서 나만의 프로젝트에 계속 도전하세요!"]}]}]}, "high": {"level": "high", "label": "고등", "grade": "고등학교 1~2학년", "subject": "정보", "classMinutes": 50, "theme": "차시마다 새로운 서비스 — 최종 프로젝트는 자율주행 관제 서비스", "overview": "소프트웨어 공학의 관점(요구 분석, 데이터 모델링, 반복 개선, 테스트)으로 매 차시 서로 다른 서비스·장치를 완성하는 9차시 과정입니다. 1~3차시는 Web 서비스 3개, 4~6차시는 MODI 장치 3개를 각각 완성하고, 7~9차시는 '자율주행 로봇카 관제 서비스'를 3차시 프로젝트로 완성해 포트폴리오까지 만듭니다.", "curriculumNote": "2022 개정 교육과정 고등학교 정보 성취기준(컴퓨팅 시스템·데이터·알고리즘과 프로그래밍·인공지능 영역)을 기반으로 구성했습니다. 성취기준 코드·문구는 학교 교육과정 편성 시 최신 고시본과 대조하여 검수해 주세요.", "finalGoal": "자율주행 MODI 로봇카 + 텔레메트리 관제 웹 서비스 + 개발 포트폴리오 (7~9차시 프로젝트)", "lessons": [{"no": 1, "title": "서비스 기획 — 동아리방 예약 서비스", "projectType": "web", "projectLabel": "Web 만들기", "summary": "실제 서비스 개발 프로세스(문제 정의→페르소나→요구사항 명세)를 배우고, 동아리방 예약 충돌 문제를 해결하는 서비스 프로토타입을 완성한다.", "objectives": ["해결할 문제와 사용자를 정의하고 기능·비기능 요구사항을 구분하여 명세할 수 있다.", "LLM과 협업하여 요구사항 기반 프로토타입을 신속하게 제작할 수 있다.", "생성형 AI 협업에서 인간의 역할(정의·판단·검증)을 설명할 수 있다."], "standards": [{"code": "[12정03-01]", "text": "문제를 분석하고 해결 전략에 따라 문제 해결을 설계한다."}, {"code": "[12정04-01]", "text": "인공지능 기술의 원리를 이해하고 문제 해결에 활용한다."}], "materials": ["대형 화면", "학생용 PC", "요구사항 명세 템플릿(기능/비기능)"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "서비스 기획", "subtitle": "동아리방 예약 서비스 · 1/9차시", "teacherNote": "이 과정은 팀(3~4인) 활동이 많습니다. 1차시에 팀을 확정하는 것이 이후 운영에 유리합니다."}, {"phase": "도입", "minutes": 8, "type": "talk", "title": "스타트업은 어떻게 서비스를 만드는가", "body": ["모든 서비스는 '문제'에서 출발합니다. 기술이 아니라 문제가 먼저입니다.", "개발 프로세스: 문제 정의 → 사용자(페르소나) → 요구사항 명세 → 프로토타입 → 검증 → 반복.", "요구사항의 두 종류 — 기능 요구: '무엇을 할 수 있다' / 비기능 요구: '얼마나 빠르게·쉽게·안전하게'.", "LLM 시대의 개발: 프로토타입 제작 비용이 급감 → 기획과 검증 능력이 개발자의 핵심 역량.", "이번 9차시: 매시간 다른 서비스를 만들고, 마지막엔 자율주행 관제 서비스와 포트폴리오까지."], "teacherNote": "진로와 연결하세요: 기획자·개발자·데이터 분석가 모두 이 프로세스 위에서 일합니다. 9차시 로드맵을 한 번 보여 주면 좋습니다."}, {"phase": "전개", "minutes": 10, "type": "activity", "title": "문제 정의서와 요구사항 명세", "body": ["오늘의 문제: '동아리방 예약이 겹쳐서 다툼이 생긴다.'", "문제 정의서 작성: ① 누가(페르소나) ② 언제 어떤 불편을 ③ 지금은 어떻게 해결하나 ④ 우리 서비스의 한 줄 정의.", "기능 요구 3가지 + 비기능 요구 1가지(예: '예약 현황이 3초 안에 파악된다')를 명세하세요."], "teacherNote": "비기능 요구를 처음 써 보는 학생이 많습니다. '속도·편의성·안전성' 카테고리를 힌트로 주세요."}, {"phase": "전개", "minutes": 18, "type": "ai", "title": "AI와 함께 만들기 — 예약 서비스 프로토타입", "codingType": "react", "body": ["요구사항 명세를 AI에게 전달하고 설계 대화를 나누세요.", "AI의 역질문에 팀이 합의한 답을 주세요 — 이 대화 기록이 곧 설계 문서입니다.", "프로토타입이 나오면 명세 대비 체크리스트로 검수하세요. 특히 '겹치면 예약 불가'가 실제로 되는지!"], "prompts": ["동아리방 예약 서비스를 만들고 싶어. 시간대별 예약 현황이 보이고, 겹치면 예약이 안 되게 하고 싶어", "우리 요구사항 명세를 알려 줄게. 빠진 관점이 있으면 질문해 줘", "프로토타입에서 비기능 요구('한눈에 파악')가 지켜졌는지 평가해 줘"], "teacherNote": "설계 대화(design 모드)가 자동으로 설계 문서를 만들어 줍니다. '대화 기록 = 산출물'임을 알려 주면 학생들이 대화의 질을 높입니다."}, {"phase": "정리", "minutes": 7, "type": "quiz", "title": "확인 문제", "question": "'예약 현황이 3초 안에 파악되어야 한다'는 어떤 요구사항인가?", "choices": ["기능 요구사항", "비기능 요구사항", "요구사항이 아니다", "버그 리포트"], "answer": 1}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리", "body": ["문제 정의 → 페르소나 → 요구사항 명세 → 프로토타입의 흐름을 실행했습니다.", "AI가 구현을 가속해도, 무엇을 왜 만들지는 사람이 정의합니다.", "다음 시간: 새로운 서비스 — 급식 리뷰 서비스와 데이터 모델링을 배웁니다."]}]}, {"no": 2, "title": "데이터 모델링 — 급식 리뷰 서비스", "projectType": "web", "projectLabel": "Web 만들기", "summary": "서비스가 다루는 데이터를 엔티티·속성·관계로 구조화하는 데이터 모델링을 배우고, 별점과 리뷰가 쌓이는 급식 리뷰 서비스를 완성한다.", "objectives": ["서비스에 필요한 데이터를 엔티티와 속성으로 구조화할 수 있다.", "자료구조(목록, 객체)를 활용한 상태 관리 코드를 읽고 수정 방향을 제시할 수 있다."], "standards": [{"code": "[12정02-01]", "text": "데이터를 목적에 맞게 수집·분석·구조화하여 문제 해결에 활용한다."}, {"code": "[12정03-03]", "text": "자료구조를 활용하여 문제 해결 프로그램을 작성한다."}], "materials": ["대형 화면", "학생용 PC", "데이터 모델 설계지(엔티티-속성 표)"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "데이터 모델링", "subtitle": "급식 리뷰 서비스 · 2/9차시"}, {"phase": "도입", "minutes": 8, "type": "talk", "title": "배달 앱 뒤에는 어떤 데이터가 있을까", "body": ["배달 앱의 화면 뒤: 가게{이름, 별점, 배달비}, 메뉴{이름, 가격}, 리뷰{별점, 내용, 작성일}.", "이런 '데이터의 설계도'를 데이터 모델이라 합니다. 엔티티(무엇)·속성(어떤 정보)·관계(어떻게 연결).", "데이터 모델이 부실하면 → 기능 추가마다 무너집니다. 뼈대가 먼저입니다.", "오늘의 문제: 오늘 급식이 어땠는지 별점과 리뷰로 남기는 서비스를 만들자!"], "teacherNote": "학생들이 아는 앱(배달, 영화 평점) 하나를 골라 즉석에서 엔티티를 분해해 보는 문답이 효과적입니다."}, {"phase": "전개", "minutes": 10, "type": "activity", "title": "급식 리뷰 데이터 모델 설계", "body": ["팀별로: 이 서비스의 엔티티를 모두 나열하세요. (급식메뉴? 리뷰? 날짜?)", "엔티티마다 속성과 자료형을 표로 정리하세요. (예: 리뷰{메뉴명:문자, 별점:숫자 1~5, 한줄평:문자})", "관계를 화살표로 표현하세요. (예: 한 메뉴는 여러 리뷰를 가진다 — 1:N)", "심화: 평균 별점은 저장할까, 계산할까? 근거를 말해 보세요."], "teacherNote": "'평균은 저장 vs 계산' 질문이 데이터 모델링의 진짜 사고를 끌어냅니다. 정답보다 근거를 평가하세요."}, {"phase": "전개", "minutes": 18, "type": "ai", "title": "AI와 함께 만들기 — 모델 기반 구현", "codingType": "react", "body": ["설계한 데이터 모델을 AI에게 먼저 전달하고, 그 구조대로 서비스를 주문하세요.", "별점 입력, 리뷰 목록, 평균 별점 표시, 별점순 정렬 — 단계적으로!", "생성된 코드에서 우리 모델(엔티티·속성)이 어떤 자료구조로 표현되었는지 확인하세요."], "prompts": ["우리 데이터 모델을 알려 줄게: 리뷰{메뉴명, 별점 1~5, 한줄평}. 이 구조로 급식 리뷰 서비스를 만들어 줘", "메뉴별 평균 별점이 계산되어 보이고, 별점 높은 순으로 정렬되게 해 줘", "코드에서 리뷰 데이터가 어떤 자료구조로 저장되는지 설명해 줘"], "teacherNote": "'모델을 먼저 주고 코드를 요청'하는 순서를 지키게 하세요. 모델→코드 방향의 사고가 이 차시의 핵심 습관이며, 8차시 텔레메트리 설계에서 재등장합니다."}, {"phase": "정리", "minutes": 7, "type": "quiz", "title": "확인 문제", "question": "데이터 모델에서 리뷰가 갖는 {메뉴명, 별점, 한줄평}은 무엇이라 부르는가?", "choices": ["엔티티", "속성", "관계", "함수"], "answer": 1}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리", "body": ["데이터 모델은 서비스의 뼈대이며, 코드보다 먼저 설계합니다.", "8차시의 로봇카 텔레메트리 데이터 모델링에서 오늘 배운 것이 그대로 쓰입니다.", "다음 시간: 새로운 서비스 — 스터디 타이머, 그리고 사용자 평가와 반복 개선."]}]}, {"no": 3, "title": "반복 개선 — 스터디 타이머 사용성 평가", "projectType": "web", "projectLabel": "Web 만들기", "summary": "뽀모도로 스터디 타이머를 만들고 교차 사용성 평가를 실시한 뒤, 피드백의 우선순위를 정해 반복 개선하는 애자일 사이클을 경험한다.", "objectives": ["사용성 평가를 계획·실시하고 피드백을 수집할 수 있다.", "피드백의 우선순위를 정해 개선 계획을 수립하고 반복 개선을 실행할 수 있다."], "standards": [{"code": "[12정03-01]", "text": "문제를 분석하고 해결 전략에 따라 문제 해결을 설계한다."}, {"code": "[12정03-04]", "text": "프로그램의 오류를 찾아 수정하고 성능을 개선한다."}], "materials": ["대형 화면", "학생용 PC", "사용성 평가지(과제 시나리오+관찰 기록)", "우선순위 매트릭스 활동지"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "반복 개선", "subtitle": "스터디 타이머 사용성 평가 · 3/9차시"}, {"phase": "도입", "minutes": 7, "type": "talk", "title": "출시가 끝이 아니라 시작이다", "body": ["실제 서비스는 '만들고 끝'이 아니라 출시 → 피드백 → 개선을 반복합니다(애자일).", "사용성 평가: 사용자에게 과제를 주고 관찰합니다. '설명 없이 25분 타이머를 시작할 수 있는가?'", "모든 피드백을 다 반영할 수는 없다 → 우선순위: 영향 큼×노력 작음 부터.", "오늘: 뽀모도로 스터디 타이머를 만들고 → 다른 팀이 평가하고 → 개선 스프린트를 돕니다."], "teacherNote": "'영향×노력 매트릭스'를 칠판에 2×2로 그려 주세요. 오늘 수업의 의사결정 도구입니다."}, {"phase": "전개", "minutes": 12, "type": "ai", "title": "AI와 함께 만들기 — 뽀모도로 타이머", "codingType": "react", "body": ["25분 집중 + 5분 휴식을 반복하는 스터디 타이머를 주문하세요.", "완료한 뽀모도로 개수가 토마토 아이콘으로 쌓이게!", "빠르게 완성하세요 — 오늘의 진짜 학습은 이다음 '평가와 개선'입니다."], "prompts": ["25분 집중, 5분 휴식을 반복하는 뽀모도로 타이머 만들어 줘", "완료한 뽀모도로 개수가 토마토 아이콘으로 쌓여서 보이게 해 줘", "집중 시간이 끝나면 화면 색이 바뀌면서 알림이 보이게 해 줘"]}, {"phase": "전개", "minutes": 10, "type": "activity", "title": "교차 사용성 평가", "body": ["옆 팀과 서비스를 교환하세요. 제작팀은 설명 금지!", "평가팀: 과제 시나리오 수행(예: '타이머를 시작하고, 휴식으로 넘어가 보세요') + 막힌 지점 기록.", "평가 종료 후 관찰 기록지를 제작팀에 전달하세요."], "teacherNote": "'제작팀 설명 금지'가 규칙의 전부입니다. 설명 없이 쓸 수 없는 UI가 어디인지 드러나는 순간이 최고의 학습 장면입니다."}, {"phase": "전개", "minutes": 6, "type": "activity", "title": "개선 백로그와 우선순위", "body": ["받은 피드백을 목록화하고 영향(상/하)×노력(상/하) 매트릭스에 배치하세요.", "이번 스프린트(10분)에서 처리할 항목 2개를 선정하고, 선정 이유를 한 줄로 기록하세요."]}, {"phase": "전개", "minutes": 8, "type": "ai", "title": "AI와 함께 — 개선 스프린트", "codingType": "react", "body": ["선정한 개선 항목을 AI에게 하나씩 요청하세요.", "항목마다: 수정 → 원래 평가 과제로 재검증 → 다음 항목."], "prompts": ["사용자가 시작 버튼을 못 찾았어. 버튼을 더 눈에 띄게 하고 첫 화면에 안내 문구를 넣어 줘", "타이머가 끝난 걸 몰랐다는 피드백이 있어. 소리 대신 화면 전체가 바뀌는 큰 알림으로 해 줘"], "teacherNote": "'한 번에 하나씩 수정하고 재검증'하는 리듬을 지키게 하세요. 여러 개선을 한 프롬프트에 몰아넣으면 왜 위험한지 회귀 관점에서 설명해 주세요."}, {"phase": "정리", "minutes": 3, "type": "quiz", "title": "확인 문제", "question": "개선 우선순위를 정할 때 가장 먼저 처리할 항목은?", "choices": ["영향 작고 노력 큰 것", "영향 크고 노력 작은 것", "가장 최근에 들어온 것", "만든 사람이 좋아하는 것"], "answer": 1}, {"phase": "정리", "minutes": 2, "type": "wrapup", "title": "Web 만들기 3차시 마무리", "body": ["예약 서비스·리뷰 서비스·타이머 — 기획→모델링→구현→평가→개선의 사이클로 3개 완성!", "다음 시간부터 피지컬 컴퓨팅: 현실 세계의 데이터를 다룹니다."]}]}, {"no": 4, "title": "데이터 수집 — 무인 출입 카운터", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "거리 센서로 출입을 감지해 인원을 세는 무인 카운터를 만들며, 실측 데이터의 특성(노이즈·중복 감지)과 전처리(이동 평균·쿨다운)를 배운다.", "objectives": ["센서 노드를 구성하고 측정 데이터의 특성(주기, 범위, 노이즈)을 분석할 수 있다.", "중복 감지·노이즈 문제를 데이터 전처리 관점에서 해결할 수 있다."], "standards": [{"code": "[12정01-02]", "text": "사물인터넷과 피지컬 컴퓨팅 시스템의 구성 요소와 동작 원리를 이해한다."}, {"code": "[12정02-01]", "text": "데이터를 목적에 맞게 수집·분석·구조화하여 문제 해결에 활용한다."}], "materials": ["MODI 키트(팀당: 네트워크·거리 센서·디스플레이·LED)", "대형 화면", "학생용 PC", "측정 기록 시트"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "데이터 수집", "subtitle": "무인 출입 카운터 · 4/9차시", "teacherNote": "MODI 키트를 사전 점검하세요. 4~9차시 동안 팀별 키트를 고정 배정하면 관리가 쉽습니다."}, {"phase": "도입", "minutes": 8, "type": "talk", "title": "무인 매장은 손님 수를 어떻게 셀까", "body": ["무인 매장, 도서관, 지하철 — 출입 인원을 자동으로 셉니다. 어떻게?", "문 앞의 센서가 사람 통과를 감지 → 숫자를 1 올림. 간단해 보이지만…", "현실의 함정 ①: 한 사람이 천천히 지나가면 여러 번 세어진다(중복 감지).", "현실의 함정 ②: 센서 값이 미세하게 흔들린다(노이즈).", "오늘: 카운터를 만들고, 이 두 함정을 데이터 전처리로 해결합니다."], "teacherNote": "'현실 데이터는 지저분하다'가 이 차시의 주제입니다. 함정을 미리 알려 주지 말고 직접 겪게 하는 편이 더 효과적이면 함정 슬라이드는 실험 후에 다시 보여 주세요."}, {"phase": "전개", "minutes": 10, "type": "activity", "title": "1차 실험 — 함정 발견하기", "body": ["네트워크 + 거리 센서 + 디스플레이를 연결하고 '지나가면 +1' 기본 카운터를 만들어 보세요. (AI에게 요청)", "팀원이 5번 지나가며 실험: 카운터가 정확히 5인가요?", "틀렸다면 왜 틀렸는지 관찰 기록: 언제 중복으로 세어지나요?"], "teacherNote": "천천히 걷기, 문 앞에 서 있기 등 '중복 감지'가 잘 나는 조건을 실험하게 하세요. 문제를 스스로 발견해야 다음 활동이 설계가 됩니다."}, {"phase": "전개", "minutes": 17, "type": "ai", "title": "AI와 함께 — 전처리로 정확하게", "codingType": "blockly", "body": ["발견한 문제를 AI에게 설명하고 해결을 요청하세요.", "해법 1(쿨다운): 한 번 세면 1초 동안은 다시 세지 않기.", "해법 2(상태 기반): '지나가는 중'과 '지나감 완료'를 구분해서 완료될 때만 +1.", "다시 5번 통과 실험 — 정확도가 얼마나 좋아졌나요?"], "prompts": ["사람이 지나가면 카운트가 1 올라가는 출입 카운터 만들어 줘", "한 사람이 천천히 지나가면 여러 번 세어져. 한 번 감지하면 1초간 다시 세지 않게 고쳐 줘", "10명이 넘으면 디스플레이에 혼잡 표시와 빨간 LED가 켜지게 해 줘"], "teacherNote": "쿨다운은 디바운싱, 상태 기반은 엣지 감지 개념입니다. 용어보다 '왜 이렇게 하면 해결되는가'의 논리를 설명하게 하세요."}, {"phase": "정리", "minutes": 8, "type": "activity", "title": "정확도 보고", "body": ["개선 전/후 정확도를 표로 정리하세요. (5회 통과 실험 × 2번)", "우리 팀이 쓴 해법과 그 원리를 두 문장으로 기록 — 포트폴리오 재료입니다.", "토론: 완벽한 100%가 안 되는 이유는 무엇일까?"]}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리", "body": ["현실의 센서 데이터는 지저분하며, 전처리가 데이터 품질을 만듭니다.", "개선 전/후를 수치로 비교하는 것이 엔지니어의 보고 방식입니다.", "다음 시간: 새로운 문제 — 스마트 온도 조절기와 제어 알고리즘의 세계."]}]}, {"no": 5, "title": "제어 알고리즘 — 스마트 온도 조절기", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "단순 임계값 제어의 문제(경계에서의 떨림)를 실험으로 재현하고, 히스테리시스를 적용한 스마트 온도 조절기(자동 팬)를 완성한다.", "objectives": ["임계값 제어의 한계를 실험으로 발견하고 원인을 분석할 수 있다.", "히스테리시스(이중 임계값) 개념을 적용해 제어 알고리즘을 개선할 수 있다."], "standards": [{"code": "[12정03-02]", "text": "알고리즘의 효율을 분석하고 문제 해결에 적합한 알고리즘을 설계한다."}, {"code": "[12정01-02]", "text": "사물인터넷과 피지컬 컴퓨팅 시스템의 구성 요소와 동작 원리를 이해한다."}], "materials": ["MODI 키트(네트워크·환경 센서·모터·LED·디스플레이)", "프로펠러 날개", "대형 화면", "학생용 PC"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "제어 알고리즘", "subtitle": "스마트 온도 조절기 · 5/9차시"}, {"phase": "도입", "minutes": 8, "type": "talk", "title": "보일러는 왜 계속 껐다 켰다 하지 않을까", "body": ["단순 규칙: '28도 넘으면 팬 ON, 아니면 OFF'. 문제 없어 보이죠?", "그런데 온도가 정확히 28도 근처에서 오르내리면? → 팬이 미친 듯이 켜졌다 꺼졌다(채터링).", "해결책 — 히스테리시스: 켜는 온도(29도)와 끄는 온도(27도)를 다르게!", "실제 보일러·에어컨·냉장고가 모두 이 원리로 동작합니다.", "오늘: 문제를 직접 재현하고, 알고리즘으로 해결합니다."], "teacherNote": "채터링을 그래프(온도 곡선과 ON/OFF 선)로 그려 설명하면 명확합니다. '문제를 먼저 겪고 → 해법을 배우는' 순서가 이 차시의 설계 의도입니다. 이 알고리즘은 7차시 로봇카의 감속·정지 제어에서 재사용됩니다."}, {"phase": "전개", "minutes": 10, "type": "ai", "title": "실험 ① — 단순 임계값 제어의 문제 재현", "codingType": "blockly", "body": ["AI에게 단순 임계값 팬 제어를 요청하세요. (28도 기준 ON/OFF)", "센서를 손으로 감싸 데웠다 식혔다 하며 경계 온도 근처에 머물게 해 보세요.", "팬이 떨리는(채터링) 현상을 관찰하고 기록하세요."], "prompts": ["온도가 28도보다 높으면 모터를 켜고, 아니면 끄게 해 줘"], "teacherNote": "채터링이 잘 재현되지 않으면 임계값을 현재 실온 근처로 바꾸게 하세요. 재현되는 순간 학생들의 몰입도가 확 올라갑니다."}, {"phase": "전개", "minutes": 15, "type": "ai", "title": "실험 ② — 히스테리시스로 개선", "codingType": "blockly", "body": ["AI에게 개선을 요청하세요: 켜는 온도와 끄는 온도를 분리.", "같은 실험을 반복 — 채터링이 사라졌나요?", "심화: 켜짐/꺼짐 임계값 차이(밴드 폭)를 바꿔 보며 반응을 비교하세요."], "prompts": ["29도 이상이면 켜고 27도 이하면 끄게 바꿔 줘. 그 사이에서는 상태를 유지하고", "지금 팬 상태와 현재 온도를 디스플레이에 같이 보여 줘", "켜는 온도와 끄는 온도의 차이를 더 크게 하면 어떤 장단점이 있어?"], "teacherNote": "밴드 폭 트레이드오프(좁으면 민감·잦은 전환, 넓으면 둔감·안정)를 팀별로 말로 정리하게 하세요. 알고리즘 '설계 판단'의 경험입니다."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "알고리즘 문서화", "body": ["우리 제어 알고리즘을 순서도 또는 의사코드로 기록하세요.", "개선 전/후의 동작 차이를 두 문장으로 요약하세요.", "이 문서는 9차시 포트폴리오에 들어갑니다."]}, {"phase": "정리", "minutes": 4, "type": "quiz", "title": "확인 문제", "question": "히스테리시스 제어의 핵심 아이디어는?", "choices": ["임계값을 없앤다", "켜는 기준과 끄는 기준을 다르게 둔다", "센서를 두 개 쓴다", "모터를 천천히 돌린다"], "answer": 1}, {"phase": "정리", "minutes": 3, "type": "wrapup", "title": "정리", "body": ["같은 문제도 알고리즘 설계에 따라 시스템의 품질이 달라집니다.", "문제 재현 → 원인 분석 → 개선 → 검증: 엔지니어의 사고 과정을 경험했습니다.", "다음 시간: 새로운 문제 — 반응속도 측정기를 만들고 테스트 케이스를 설계합니다."]}]}, {"no": 6, "title": "테스트 설계 — 반응속도 측정기", "projectType": "hw", "projectLabel": "H/W 만들기", "summary": "LED 신호에 버튼으로 반응하는 시간을 측정하는 반응속도 측정기를 만들고, 경계값·예외 상황을 포함한 테스트 케이스를 설계해 체계적으로 검증한다.", "objectives": ["여러 기능이 통합된 시스템의 테스트 케이스를 설계할 수 있다.", "경계값·예외 상황을 포함한 체계적 검증을 수행하고 결과를 문서화할 수 있다."], "standards": [{"code": "[12정03-04]", "text": "프로그램의 오류를 찾아 수정하고 성능을 개선한다."}, {"code": "[12정01-02]", "text": "사물인터넷과 피지컬 컴퓨팅 시스템의 구성 요소와 동작 원리를 이해한다."}], "materials": ["MODI 키트(네트워크·버튼·LED·스피커·디스플레이)", "테스트 케이스 템플릿(번호/조건/절차/기대/결과)", "대형 화면", "학생용 PC"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "테스트 설계", "subtitle": "반응속도 측정기 · 6/9차시"}, {"phase": "도입", "minutes": 7, "type": "talk", "title": "테스트 케이스 — 검증을 설계하다", "body": ["지금까지는 '되나 안 되나' 눌러 봤다면, 오늘은 검증을 설계합니다.", "테스트 케이스: 번호 / 사전 조건 / 절차 / 기대 결과 / 실제 결과 / 판정.", "좋은 테스트는 경계값과 예외를 노립니다: LED가 켜지기 전에 버튼을 누르면? 안 누르고 버티면?", "오늘의 작품: LED가 켜지는 순간 버튼을 누르기까지의 시간을 재는 반응속도 측정기.", "오늘의 목표: 측정기 완성 + 테스트 케이스 6개 이상 설계·실행."], "teacherNote": "소프트웨어 직군에 QA 엔지니어가 있음을 소개하면 진로 연계가 됩니다. '테스트도 설계'라는 관점 전환이 핵심입니다."}, {"phase": "전개", "minutes": 15, "type": "ai", "title": "AI와 함께 만들기 — 반응속도 측정기", "codingType": "blockly", "body": ["동작 설계: 시작 버튼 → 랜덤 대기(2~5초) → LED ON → 버튼 누를 때까지 시간 측정 → 디스플레이 표시.", "이 설계를 AI에게 전달해 구현하세요.", "심화: 최고 기록 저장, 0.2초보다 빠르면 '치트 의심' 표시."], "prompts": ["시작 버튼을 누르면 2~5초 랜덤 대기 후 LED가 켜지고, 버튼을 누르기까지 시간을 재서 디스플레이에 보여 줘", "최고 기록을 저장해서 신기록이면 축하 소리가 나게 해 줘", "LED가 켜지기 전에 버튼을 누르면 반칙 표시가 나게 해 줘"], "teacherNote": "'LED 켜지기 전 입력'을 스스로 처리한 팀은 이미 예외 설계를 한 것입니다. 다음 활동에서 그 점을 짚어 칭찬하세요."}, {"phase": "전개", "minutes": 10, "type": "activity", "title": "테스트 케이스 설계", "body": ["팀별로 테스트 케이스 6개 이상 작성. 필수 포함: 경계값 2개, 예외 상황 2개.", "예: TC-3 [예외] LED가 켜지기 전에 버튼 연타 → 어떻게 되어야 하는가?", "예: TC-5 [경계] LED가 켜지자마자(거의 0초) 누르면 → 정상 기록인가, 반칙인가?"], "teacherNote": "'거의 0초 입력'의 판정 기준은 정답이 없습니다. 팀이 스스로 정책을 정하게 하세요 — 이것이 설계 의사결정입니다."}, {"phase": "전개", "minutes": 9, "type": "activity", "title": "교차 검증 + 반응속도 대회", "body": ["옆 팀과 측정기+테스트 케이스를 교환해 상대 팀 케이스를 실행하세요.", "실패 항목은 재현 절차와 함께 기록해 제작팀에 전달, 1개 이상 AI와 수정.", "마지막 3분: 학급 반응속도 챔피언전!"]}, {"phase": "정리", "minutes": 4, "type": "quiz", "title": "확인 문제", "question": "테스트 케이스에서 '경계값 테스트'가 노리는 지점은?", "choices": ["아무 값이나", "판정 기준이 바뀌는 경계(예: 거의 0초 입력)", "가장 큰 값만", "테스트하지 않는 값"], "answer": 1}, {"phase": "정리", "minutes": 3, "type": "wrapup", "title": "H/W 만들기 3차시 마무리", "body": ["출입 카운터·온도 조절기·반응속도 측정기 — 데이터·알고리즘·테스트를 모두 다뤘습니다.", "다음 시간부터 최종 프로젝트: 자율주행 로봇카 관제 서비스! (3차시)", "지금까지의 모든 기술(전처리·히스테리시스·테스트 설계)이 총출동합니다."]}]}, {"no": 7, "title": "관제 서비스 프로젝트 ① — 자율주행 로봇카와 아키텍처", "projectType": "webhw", "projectLabel": "Web + H/W (블록 1/3)", "summary": "최종 프로젝트 시작. 감속·정지 제어가 들어간 자율주행 로봇카를 구현하고, 디바이스-네트워크-서비스 3계층 아키텍처와 텔레메트리 데이터 모델을 설계한다.", "objectives": ["제어 알고리즘(히스테리시스)을 적용한 자율주행 로봇카를 구현할 수 있다.", "시스템 전체의 아키텍처 다이어그램과 텔레메트리 데이터 모델을 작성할 수 있다."], "standards": [{"code": "[12정01-02]", "text": "사물인터넷과 피지컬 컴퓨팅 시스템의 구성 요소와 동작 원리를 이해한다."}, {"code": "[12정03-02]", "text": "알고리즘의 효율을 분석하고 문제 해결에 적합한 알고리즘을 설계한다."}], "materials": ["MODI 키트(네트워크·거리 센서·모터·바퀴·LED·버튼)", "로봇카 프레임", "장애물", "아키텍처 설계지", "대형 화면", "학생용 PC"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "관제 서비스 프로젝트 ①", "subtitle": "자율주행 로봇카와 아키텍처 · 7/9차시 (프로젝트 1/3)", "teacherNote": "7~9차시는 하나의 프로젝트입니다. 오늘 만든 로봇카를 분해하지 않고 3차시 동안 이어 갑니다. 팀별 보관함을 준비하세요."}, {"phase": "도입", "minutes": 8, "type": "talk", "title": "자율주행 서비스의 3계층 — 차, 통신, 관제", "body": ["실제 자율주행 서비스는 3계층입니다: ① 디바이스(차량의 센서·모터) ② 네트워크(데이터 전달) ③ 서비스(관제 대시보드).", "차량이 관제 센터로 계속 보내는 상태 데이터를 '텔레메트리'라고 합니다.", "3차시 계획: 오늘 차량+아키텍처 설계 → 다음 시간 관제 대시보드 구현·연동 → 마지막 데모데이.", "오늘의 차량 목표: 장애물이 멀면 주행, 가까워지면 감속, 더 가까우면 정지 — 3단계 제어!", "5차시 히스테리시스를 기억하세요. 감속↔정지 경계가 떨리지 않게!"], "teacherNote": "3계층 그림은 9차시 발표에서 반복 사용됩니다. 5차시(히스테리시스)와 4차시(데이터 전처리)가 여기서 재사용됨을 명시적으로 짚어 주세요 — 배움이 연결되는 순간입니다."}, {"phase": "전개", "minutes": 10, "type": "activity", "title": "조립 + 아키텍처·텔레메트리 설계", "body": ["네트워크 + 거리 센서(앞!) + 모터 + LED + 버튼을 조립하세요.", "아키텍처 설계지에 3계층 다이어그램을 그리세요. 화살표마다 '무슨 데이터가 어느 방향으로' 라벨!", "텔레메트리 데이터 모델 정의(2차시 방식): 상태{거리cm, 주행상태(주행/감속/정지), 정지횟수}."], "teacherNote": "라벨 없는 화살표는 설계가 아니라 그림입니다. 2차시 데이터 모델링 방식이 그대로 쓰인다는 것을 알려 주세요."}, {"phase": "전개", "minutes": 17, "type": "ai", "title": "AI와 함께 만들기 — 3단계 자율주행 제어", "codingType": "blockly", "body": ["1단계: 버튼 출발/정지 + 기본 주행.", "2단계: 거리 30cm 이하 감속(노란 LED), 15cm 이하 정지(빨간 LED).", "3단계: 감속↔정지 경계에 히스테리시스 적용 — 떨림 없이 부드럽게!"], "prompts": ["버튼으로 출발하고, 장애물이 30cm 이하면 느려지고 15cm 이하면 멈추는 로봇카 만들어 줘", "정지했다가 장애물이 20cm보다 멀어져야 다시 출발하게 해 줘 (히스테리시스)", "주행 상태(주행/감속/정지)에 따라 LED가 초록/노랑/빨강이 되게 해 줘"], "teacherNote": "'멈춤은 15cm, 재출발은 20cm'가 바로 히스테리시스의 재사용입니다. 이 연결을 발견한 팀을 크게 칭찬하세요."}, {"phase": "정리", "minutes": 8, "type": "activity", "title": "주행 검증과 기록", "body": ["6차시 방식으로 테스트 케이스 3개를 즉석 설계해 주행을 검증하세요. (경계값 포함!)", "우리 차의 제어 알고리즘을 순서도로 기록 — 포트폴리오 재료입니다.", "다음 시간 대시보드에 표시할 텔레메트리 항목을 최종 확정하세요."]}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "오늘 배운 것", "body": ["3단계 제어 + 히스테리시스가 들어간 자율주행 로봇카 완성!", "3계층 아키텍처와 텔레메트리 데이터 모델도 설계했습니다.", "다음 시간: 이 차의 텔레메트리가 실시간으로 보이는 관제 대시보드를 구현합니다."], "teacherNote": "로봇카를 분해하지 말고 보관하세요. 8~9차시에서 그대로 사용합니다."}]}, {"no": 8, "title": "관제 서비스 프로젝트 ② — 텔레메트리 대시보드 구현", "projectType": "webhw", "projectLabel": "Web + H/W (블록 2/3)", "summary": "설계 명세대로 관제 대시보드를 구현하고 로봇카와 실시간 연동하여, 텔레메트리 표시부터 원격 긴급 정지까지 종단 간(E2E) 검증한다.", "objectives": ["설계 명세에 따라 실시간 관제 대시보드를 구현하고 장치와 연동할 수 있다.", "종단 간(차→화면, 화면→차) 테스트로 전체 시스템을 검증할 수 있다."], "standards": [{"code": "[12정01-02]", "text": "사물인터넷과 피지컬 컴퓨팅 시스템의 구성 요소와 동작 원리를 이해한다."}, {"code": "[12정02-02]", "text": "빅데이터를 분석·시각화하여 의미를 해석하고 문제 해결에 활용한다."}, {"code": "[12정03-04]", "text": "프로그램의 오류를 찾아 수정하고 성능을 개선한다."}], "materials": ["7차시 완성 로봇카", "7차시 설계 산출물", "학생용 PC", "대형 화면", "E2E 체크리스트"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "관제 서비스 프로젝트 ②", "subtitle": "텔레메트리 대시보드 구현 · 8/9차시 (프로젝트 2/3)"}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "오늘의 스프린트 계획", "body": ["타임박스 운영: ① 대시보드 구현(15분) ② 로봇카 연동(15분) ③ E2E 검증(8분).", "E2E(종단 간) 테스트: 장애물을 가까이 대면 → 몇 초 안에 → 화면 상태가 '정지'로 바뀌는가?", "원칙: 명세에 없는 기능 추가 금지(스코프 크리프 방지). 완성이 먼저!"], "teacherNote": "'스코프 크리프'라는 용어를 소개하세요. 시간 내 완성을 위해 기능 욕심을 참는 것도 엔지니어링 역량입니다. 연동이 어려운 환경이면 교사 세트 시연으로 E2E를 보여 주세요."}, {"phase": "전개", "minutes": 15, "type": "ai", "title": "스프린트 ① — 관제 대시보드 구현", "codingType": "react", "body": ["7차시 텔레메트리 모델을 AI에게 전달하고 대시보드를 구현하세요.", "거리 게이지, 주행 상태(초록/노랑/빨강), 정지 횟수, 이벤트 로그(정지·재출발 이력).", "완성 기준: 설계 명세의 필수 항목 100%."], "prompts": ["우리 텔레메트리 모델을 알려 줄게: 상태{거리cm, 주행상태, 정지횟수}. 이대로 관제 대시보드를 만들어 줘", "주행 상태가 초록(주행)/노랑(감속)/빨강(정지) 큰 배지로 보이게 해 줘", "정지·재출발이 일어날 때마다 시각과 함께 이벤트 로그가 쌓이게 해 줘"]}, {"phase": "전개", "minutes": 15, "type": "ai", "title": "스프린트 ② — 실시간 연동 + 원격 정지", "codingType": "blockly", "body": ["로봇카를 연결하고 텔레메트리 전송 블록을 요청하세요.", "차를 주행시키며 게이지·상태 배지가 실시간으로 바뀌는지 확인!", "도전: 대시보드의 긴급 정지(E-Stop) 버튼 → 차량 즉시 정지. (화면→차 방향!)"], "prompts": ["로봇카의 거리·주행상태·정지횟수를 웹 대시보드로 계속 전송해 줘", "대시보드의 긴급 정지 버튼을 누르면 로봇카가 즉시 멈추고 버튼을 다시 누르기 전까지 출발하지 않게 해 줘", "값이 화면에 늦게 반영돼. 전송 주기를 조절할 수 있을까?"], "teacherNote": "양방향(차→화면 텔레메트리, 화면→차 E-Stop)이 모두 되는 순간이 이 과정의 절정입니다. 성공 팀 화면을 미러링해 전체가 공유하게 하세요."}, {"phase": "전개", "minutes": 8, "type": "activity", "title": "E2E 검증", "body": ["체크리스트 실행: ① 장애물 접근 → 감속·정지 + 화면 상태 전환 ② 히스테리시스 재출발 ③ E-Stop 왕복.", "각 항목의 반응 시간(몇 초 만에 화면에 반영?)도 기록하세요.", "실패 항목은 어느 계층(디바이스/네트워크/서비스)의 문제인지 추정해 기록."], "teacherNote": "'어느 계층의 문제인가'를 추정하게 하는 것이 아키텍처 이해의 평가입니다. 정답보다 추론 근거를 칭찬하세요."}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "정리 + 발표 준비 안내", "body": ["3계층을 관통하는 실시간 관제 서비스가 완성됐습니다.", "다음 시간 데모데이: 라이브 시연 + 아키텍처 설명 + 개발 과정 스토리.", "과제: 팀 포트폴리오 초안(요구사항·데이터 모델·알고리즘 순서도·테스트 기록) 모아 오기."]}]}, {"no": 9, "title": "관제 서비스 프로젝트 ③ — 데모데이와 포트폴리오", "projectType": "webhw", "projectLabel": "Web + H/W (블록 3/3)", "summary": "완성한 자율주행 관제 서비스를 시연하고 개발 전 과정을 포트폴리오로 발표하며, 상호 평가와 KPT 회고로 과정을 마무리한다.", "objectives": ["시스템 데모와 아키텍처 설명을 포함한 기술 발표를 수행할 수 있다.", "개발 전 과정의 산출물을 포트폴리오로 구조화할 수 있다.", "AI 협업 개발 경험을 성찰하고 자신의 진로와 연결하여 표현할 수 있다."], "standards": [{"code": "[12정04-01]", "text": "인공지능 기술의 원리를 이해하고 문제 해결에 활용한다."}, {"code": "[12정05-01]", "text": "디지털 기술이 사회에 미치는 영향을 분석하고 바람직한 활용 방안을 실천한다."}], "materials": ["완성 시스템(로봇카+대시보드)", "장애물·주행 공간", "팀 포트폴리오(전 차시 산출물)", "대형 화면", "동료 평가지(기술성/완성도/발표력)"], "slides": [{"phase": "도입", "minutes": 2, "type": "title", "title": "관제 서비스 프로젝트 ③", "subtitle": "데모데이와 포트폴리오 · 9/9차시 (마지막)"}, {"phase": "도입", "minutes": 5, "type": "talk", "title": "발표 형식 — 데모데이처럼", "body": ["팀당 5분: ① 해결한 문제(30초) ② 라이브 데모: 3단계 제어 + 실시간 관제 + E-Stop(2분) ③ 3계층 아키텍처와 데이터 흐름(1분) ④ 가장 어려웠던 기술 문제와 해결(1분) ⑤ AI 협업 회고(30초).", "평가 기준: 기술성(아키텍처 설명의 정확성) / 완성도(E2E 동작) / 전달력.", "데모가 실패하면? 침착하게 원인 계층을 추정해 설명하는 것도 평가에 포함됩니다."], "teacherNote": "'데모 실패 시 대응도 평가'라고 미리 공지하면 학생들의 심리적 안전감이 올라가고, 실제로 더 깊은 발표가 나옵니다."}, {"phase": "전개", "minutes": 30, "type": "activity", "title": "팀 데모데이 (팀당 5분 + 질의 1분)", "body": ["발표 팀: 라이브 데모 중심으로. 아키텍처 다이어그램을 화면에 띄우고 설명하세요.", "청중: 평가지 작성 + 기술 질문 준비.", "추천 질문: '왜 정지는 15cm인데 재출발은 20cm인가요?', '텔레메트리는 어떤 모델로 정의했나요?', '한 계층이 죽으면 어떻게 되나요?'"], "teacherNote": "5팀 기준 30분입니다. 팀 수가 많으면 데모 2분을 엄수시키세요. 교사는 각 발표 후 한 문장씩 기술적 피드백을 남기면 좋습니다."}, {"phase": "정리", "minutes": 8, "type": "activity", "title": "회고 — KPT", "body": ["팀별 KPT 회고: Keep(계속할 것) / Problem(아쉬웠던 것) / Try(다음에 시도할 것).", "개인 성찰: AI와 협업하며 '사람만이 할 수 있었던 일'은 무엇이었나?", "포트폴리오 최종본을 정리해 제출하세요. (진로·세특 자료로 활용 가능!)"], "teacherNote": "KPT는 실제 개발팀의 회고 형식입니다. 포트폴리오는 학생부 세특·진로 활동과 연계할 수 있음을 안내하세요."}, {"phase": "정리", "minutes": 5, "type": "wrapup", "title": "9차시 대장정 완료! 🏁", "body": ["예약 서비스·리뷰 서비스·타이머·출입 카운터·온도 조절기·반응속도 측정기, 그리고 자율주행 관제 서비스까지 — 총 7개의 작품!", "여러분은 하나의 서비스를 처음부터 끝까지 만들어 낸 개발팀입니다.", "이 경험은 '만들기' 모드에서, 그리고 여러분의 진로에서 계속됩니다."]}]}]}};
+async function loadLevel(id){ return CURRICULUM[id]; }
+
+// ── 화면 1: 학교급 선택 ──
+async function renderLevels(){
+  $('#crumb').innerHTML = '› 교육과정';
+  const metas = await Promise.all(LEVELS.map(l => loadLevel(l.id)));
+  $('#main').innerHTML = `
+    <h1>교육과정 선택</h1>
+    <p class="sub">우리나라 교과 과정에 맞춘 학교급별 9차시 프로젝트 수업입니다.<br>
+    PPT 없이 이 화면을 프로젝터에 그대로 띄워 수업을 진행하세요.</p>
+    <div class="levels">` +
+    metas.map((d,i) => `
+      <div class="lvcard" data-lv="${LEVELS[i].id}">
+        <div class="em">${LEVELS[i].em}</div>
+        <h2>${esc(d.label)}</h2>
+        <div class="meta">${esc(d.grade)} · ${esc(d.subject)}</div>
+        <div class="theme">${esc(d.theme)}</div>
+        <span class="mins">${d.classMinutes}분 수업 × 9차시</span>
+      </div>`).join('') + `</div>`;
+  document.querySelectorAll('.lvcard').forEach(c => c.onclick = () => { location.hash = '#' + c.dataset.lv; });
+}
+
+// ── 화면 2: 차시 목록 ──
+async function renderLessons(levelId){
+  const d = await loadLevel(levelId); cur = d;
+  $('#crumb').innerHTML = `› <a href="#" style="color:inherit">교육과정</a> › <b>${esc(d.label)}</b>`;
+  const groups = [
+    {label:'1~3차시 · Web 만들기', items:d.lessons.filter(l => l.projectType === 'web')},
+    {label:'4~6차시 · H/W 만들기 (MODI)', items:d.lessons.filter(l => l.projectType === 'hw')},
+    {label:'7~9차시 · Web + H/W — ' + esc(d.finalGoal), items:d.lessons.filter(l => l.projectType === 'webhw')}
+  ];
+  $('#main').innerHTML = `
+    <h1>${esc(d.label)} · ${esc(d.subject)} <span style="color:var(--dim);font-size:16px;font-weight:600">${esc(d.grade)} · ${d.classMinutes}분 수업</span></h1>
+    <p class="sub">${esc(d.overview)}</p>` +
+    groups.map(g => `
+      <div class="phasehead">${g.label}<span class="bar"></span></div>
+      <div class="lessons">` + g.items.map(l => `
+        <div class="lcard" data-no="${l.no}">
+          <div class="top"><span class="no">${l.no}</span>
+            <span class="ptype ${l.projectType}">${PTLABEL[l.projectType]}</span></div>
+          <h3>${esc(l.title)}</h3>
+          <p>${esc(l.summary)}</p>
+          <div class="foot">
+            <button data-act="plan">📋 교안 보기</button>
+            <button data-act="play" class="play">▶ 수업 시작</button>
+          </div>
+        </div>`).join('') + `</div>`).join('');
+  document.querySelectorAll('.lcard').forEach(c => {
+    const l = d.lessons.find(x => x.no == c.dataset.no);
+    c.querySelector('[data-act=plan]').onclick = e => { e.stopPropagation(); openPlan(l); };
+    c.querySelector('[data-act=play]').onclick = e => { e.stopPropagation(); startLesson(l); };
+    c.onclick = () => openPlan(l);
+  });
+}
+
+// ── 교안(수업 계획) 모달 ──
+function openPlan(l){
+  const phases = ['도입','전개','정리'];
+  const rows = phases.map(ph => {
+    const ss = l.slides.filter(s => s.phase === ph);
+    const min = ss.reduce((a,s) => a + (s.minutes||0), 0);
+    return `<tr><th style="width:64px">${ph}<br><span style="color:var(--dim)">${min}분</span></th>
+      <td>${ss.map(s => esc(s.title)).join(' → ')}</td></tr>`;
+  }).join('');
+  $('#mbox').innerHTML = `
+    <h2>${l.no}차시 · ${esc(l.title)}</h2>
+    <div class="meta">${esc(cur.label)} ${esc(cur.subject)} · ${cur.classMinutes}분 · ${PTLABEL[l.projectType]}</div>
+    <h4>학습 목표</h4><ul>${l.objectives.map(o => `<li>${esc(o)}</li>`).join('')}</ul>
+    <h4>성취기준</h4>${l.standards.map(s => `<div class="std"><b>${esc(s.code)}</b> ${esc(s.text)}</div>`).join('')}
+    <h4>준비물</h4><ul>${l.materials.map(m => `<li>${esc(m)}</li>`).join('')}</ul>
+    <h4>수업 흐름 (${cur.classMinutes}분)</h4>
+    <table class="flowtb">${rows}</table>
+    <div class="mact">
+      <button class="close" onclick="document.getElementById('modal').classList.remove('open')">닫기</button>
+      <button class="start" id="mstart">▶ 이 차시 수업 시작</button>
+    </div>`;
+  $('#mstart').onclick = () => { $('#modal').classList.remove('open'); startLesson(l); };
+  $('#modal').classList.add('open');
+}
+$('#modal').onclick = e => { if (e.target.id === 'modal') $('#modal').classList.remove('open'); };
+
+// ── 화면 3: 수업 플레이어 ──
+function startLesson(l){
+  lesson = l; slideIdx = 0; noteOn = false; $('#tnote').classList.remove('on'); $('#btnNote').classList.remove('on');
+  $('#player').classList.add('open');
+  $('#pTitle').textContent = `${cur.label} ${l.no}차시 · ${l.title}`;
+  resetChat();
+  classStart = Date.now();
+  clearInterval(classTimer);
+  classTimer = setInterval(tick, 1000); tick();
+  renderSlide();
+}
+function exitLesson(){
+  $('#player').classList.remove('open');
+  clearInterval(classTimer);
+  stopStream();
+}
+$('#btnExit').onclick = exitLesson;
+
+function tick(){
+  const el = Math.floor((Date.now() - classStart) / 1000);
+  const mm = String(Math.floor(el/60)).padStart(2,'0'), ss = String(el%60).padStart(2,'0');
+  const t = $('#pTimer'); t.textContent = mm + ':' + ss + ' / ' + cur.classMinutes + '분';
+  t.className = 'timer' + (el >= cur.classMinutes*60 ? ' over' : (el >= (cur.classMinutes-5)*60 ? ' warn' : ''));
+}
+
+function renderSlide(){
+  const s = lesson.slides[slideIdx];
+  const sl = $('#slide');
+  sl.className = 'slide' + (s.type === 'title' ? ' titleslide' : '') + (s.type === 'activity' ? ' activity' : '');
+  let h = '';
+  const phaseTag = `<div class="s-phase">${s.phase}${s.minutes ? `<span class="mins">⏱ ${s.minutes}분</span>` : ''}</div>`;
+  if (s.type === 'title'){
+    h = `<div class="s-phase">${cur.label} · ${cur.subject}</div><h2>${esc(s.title)}</h2>
+         <div class="subtitle">${esc(s.subtitle||'')}</div>`;
+  } else if (s.type === 'quiz'){
+    h = phaseTag + `<h2>${esc(s.title)}</h2><div class="qq">Q. ${esc(s.question)}</div>
+      <div class="quizchoices">` + s.choices.map((c,i) =>
+        `<button data-i="${i}"><span class="num">${i+1}</span>${esc(c)}</button>`).join('') + `</div>`;
+  } else if (s.type === 'ai'){
+    h = phaseTag + `<div class="badge-ai">🤖 AI와 함께 만들기 · ${s.codingType === 'blockly' ? 'MODI 블록' : 'Web'}</div>
+      <h2>${esc(s.title)}</h2><ul class="body">${(s.body||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+      <div class="promptchips">` + (s.prompts||[]).map(p =>
+        `<button data-p="${esc(p)}">💬 ${esc(p)}</button>`).join('') + `</div>`;
+  } else {
+    const badge = s.type === 'activity' ? `<div class="badge-act">✋ 학생 활동${s.minutes ? ` · ${s.minutes}분` : ''}</div>` : '';
+    h = phaseTag + badge + `<h2>${esc(s.title)}</h2>
+      <ul class="body">${(s.body||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
+  }
+  sl.innerHTML = h;
+  // 퀴즈 클릭
+  if (s.type === 'quiz') sl.querySelectorAll('.quizchoices button').forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.i;
+      sl.querySelectorAll('.quizchoices button').forEach(x => {
+        if (+x.dataset.i === s.answer) x.classList.add('correct');
+      });
+      if (i !== s.answer) b.classList.add('wrong');
+    };
+  });
+  // AI 프롬프트 칩 → 드로어 열고 입력 채움
+  if (s.type === 'ai'){
+    sl.querySelectorAll('.promptchips button').forEach(b => {
+      b.onclick = () => { openDrawer(s.codingType || (lesson.projectType === 'hw' ? 'blockly' : 'react'));
+        $('#dinput').value = b.dataset.p; $('#dinput').focus(); };
+    });
+  }
+  // 교사 노트
+  $('#tnote').innerHTML = s.teacherNote ? `<b>👩‍🏫 교사 노트</b> — ${esc(s.teacherNote)}` : `<b>👩‍🏫 교사 노트</b> — 이 슬라이드에는 별도 노트가 없습니다.`;
+  // 진행 표시
+  $('#cnt').textContent = (slideIdx+1) + ' / ' + lesson.slides.length;
+  $('#prog').innerHTML = lesson.slides.map((x,i) =>
+    `<i class="${i < slideIdx ? 'doip' : ''} ${i === slideIdx ? 'on' : ''}"></i>`).join('');
+  $('#pPhases').innerHTML = ['도입','전개','정리'].map(p =>
+    `<span class="${s.phase === p ? 'cur' : ''}">${p}</span>`).join('');
+  $('#btnPrev').disabled = slideIdx === 0;
+  $('#btnNext').textContent = slideIdx === lesson.slides.length - 1 ? '수업 종료' : '다음 →';
+}
+function nav(d){
+  if (!lesson) return;
+  const n = slideIdx + d;
+  if (n < 0) return;
+  if (n >= lesson.slides.length){ exitLesson(); return; }
+  slideIdx = n; renderSlide();
+}
+$('#btnPrev').onclick = () => nav(-1);
+$('#btnNext').onclick = () => nav(1);
+$('#btnNote').onclick = toggleNote;
+function toggleNote(){ noteOn = !noteOn; $('#tnote').classList.toggle('on', noteOn); $('#btnNote').classList.toggle('on', noteOn); }
+document.addEventListener('keydown', e => {
+  if (!$('#player').classList.contains('open')) return;
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nav(1); }
+  else if (e.key === 'ArrowLeft') nav(-1);
+  else if (e.key === 't' || e.key === 'T' || e.key === 'ㅅ') toggleNote();
+  else if (e.key === 'a' || e.key === 'A' || e.key === 'ㅁ') $('#drawer').classList.contains('open') ? closeDrawer() : openDrawer();
+  else if (e.key === 'Escape') exitLesson();
+});
+
+// ── AI 드로어 (/chat SSE) ──
+let chatType = 'react', streaming = false, abortCtl = null;
+let userId = localStorage.getItem('mp_uid') || ('u-' + Math.random().toString(36).slice(2,12));
+localStorage.setItem('mp_uid', userId);
+function chatSession(){ return `lms-${cur.level}-${lesson.no}-${userId.slice(2,8)}`; }
+function openDrawer(type){
+  if (type) chatType = type;
+  $('#dmode').textContent = chatType === 'blockly' ? '· MODI 블록' : '· Web';
+  $('#drawer').classList.add('open');
+}
+function closeDrawer(){ $('#drawer').classList.remove('open'); }
+$('#btnAI').onclick = () => openDrawer(lesson && lesson.projectType === 'hw' ? 'blockly' : chatType);
+$('#dclose').onclick = closeDrawer;
+function resetChat(){
+  $('#dmsgs').innerHTML = '<div class="dmsg sys">수업 활동 프롬프트를 누르거나 직접 입력해 보세요.</div>';
+  $('#dout').classList.remove('on'); $('#dout').innerHTML = ''; closeDrawer();
+}
+function dEl(cls, t){ const d = document.createElement('div'); d.className = 'dmsg ' + cls; d.textContent = t;
+  $('#dmsgs').appendChild(d); $('#dmsgs').scrollTop = 1e9; return d; }
+let dStatus = null;
+function dSetStatus(t){
+  if (!t){ if (dStatus){ dStatus.remove(); dStatus = null; } return; }
+  if (!dStatus){ dStatus = document.createElement('div'); dStatus.className = 'dstatus';
+    dStatus.innerHTML = '<span class="sp"></span><span class="tx"></span>'; }
+  dStatus.querySelector('.tx').textContent = t; $('#dmsgs').appendChild(dStatus); $('#dmsgs').scrollTop = 1e9;
+}
+function stopStream(){ if (abortCtl){ abortCtl.abort(); abortCtl = null; } streaming = false; }
+async function dSend(){
+  const text = $('#dinput').value.trim();
+  if (!text || streaming) return;
+  $('#dinput').value = ''; dEl('me', text);
+  streaming = true;
+  dSetStatus('생각하고 있어요...');
+  setTimeout(() => {
+    dSetStatus(null);
+    dEl('ai', '"' + text + '" — 좋아요, 같이 해 봐요!\n\n(미리보기 시뮬레이션 응답입니다. 실제 서비스에서는 Claude 기반 AI가 설계를 되묻고, 코드와 MODI 블록까지 만들어 이 자리에 보여줍니다.)');
+    streaming = false;
+  }, 900);
+}
+$('#dsend').onclick = dSend;
+$('#dinput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); dSend(); } });
+
+// ── 해시 라우팅 ──
+function route(){
+  const h = location.hash.replace('#','');
+  if (h === 'lms') renderLevels();
+  else if (h === 'maker') renderMaker();
+  else if (LEVELS.some(l => l.id === h)) renderLessons(h);
+  else renderHome();
+}
+
+// ── 화면 0: 랜딩 (두 모드 선택) ──
+function renderHome(){
+  $('#crumb').innerHTML = '';
+  $('#main').innerHTML = `
+    <div class="hero">
+      <h1 style="text-align:center;font-size:clamp(24px,3.5vw,36px)">오늘은 <b style="color:var(--green)">무엇을</b> 해볼까요?</h1>
+      <p class="sub" style="text-align:center">AI와 대화하며 웹과 MODI 하드웨어를 만드는 교육 플랫폼입니다.<br>
+      학교 수업이라면 <b>교육과정</b>, 자유로운 창작이라면 <b>만들기</b>를 선택하세요.</p>
+    </div>
+    <div class="homecards">
+      <a class="hcard lmsc" href="#lms">
+        <div class="hic" style="background:#e5f6ee">🏫</div>
+        <span class="htag" style="background:#e5f6ee;color:var(--green-d)">선생님 · 학교 수업</span>
+        <h2>교육과정 (LMS)</h2>
+        <p>우리나라 교과 과정에 맞춘 초·중·고 각 9차시 교안. PPT 없이 이 화면 그대로 띄워 수업을 진행합니다.</p>
+        <ul><li>초등 40분 · 중등 45분 · 고등 50분 수업 설계</li>
+            <li>도입 – 전개 – 정리 흐름과 수업 타이머</li>
+            <li>차시마다 완성하는 서로 다른 Web·H/W 작품</li>
+            <li>최종 프로젝트: 웹으로 조종하는 자율주행 로봇카</li></ul>
+        <span class="hgo" style="color:var(--green-d)">수업 시작하기 →</span>
+      </a>
+      <a class="hcard mkc" href="#maker">
+        <div class="hic" style="background:#e9f0ff">🛠️</div>
+        <span class="htag" style="background:#e9f0ff;color:var(--blue)">학생 · 자유 창작</span>
+        <h2>만들기</h2>
+        <p>만들고 싶은 것을 한국어로 말하면 AI가 함께 설계하고 코드와 MODI 블록까지 만들어 줍니다.</p>
+        <ul><li>AI와 대화하며 같이 만들기</li>
+            <li>Web(웹·앱 화면) 또는 MODI 하드웨어 블록</li>
+            <li>설계 → 구현 → 검증 3단계 진행</li>
+            <li>학습 노트와 코드 설명 자동 제공</li></ul>
+        <span class="hgo" style="color:var(--blue)">만들기 시작하기 →</span>
+      </a>
+    </div>
+    <p class="pvnote">🔍 프로토타입 미리보기 — 모든 화면·27차시 교안은 실제 데이터이며, AI 응답만 시뮬레이션입니다.</p>`;
+}
+
+// ── 화면 4: 만들기 (대화 데모) ──
+let mkTurn = 0, mkType = 'react';
+function renderMaker(){
+  $('#crumb').innerHTML = '› <a href="#" style="color:inherit">홈</a> › <b>만들기 · AI와 같이 만들기</b>';
+  mkTurn = 0;
+  $('#main').innerHTML = `
+    <div class="mkbar">
+      <div class="mkseg" id="mkseg">
+        <button data-t="react" class="on">🌐 Web 만들기</button>
+        <button data-t="blockly">🤖 MODI 하드웨어</button>
+      </div>
+      <span class="pvnote" style="margin:0">미리보기: AI 응답은 시뮬레이션입니다</span>
+    </div>
+    <div class="mkgrid">
+      <div class="mkchat">
+        <div class="mkmsgs" id="mkmsgs">
+          <div class="mkwel" id="mkwel">
+            <h2>무엇을 만들고 싶나요?</h2>
+            만들고 싶은 것을 한국어로 편하게 말해 주세요.<br>AI가 되묻고 정리하며 <b>설계 → 구현 → 검증</b> 순서로 같이 만들어 갑니다.
+            <div class="mkex">
+              <button>우리 반 알림판 웹 만들고 싶어</button>
+              <button>클릭하면 점수 올라가는 게임</button>
+              <button>버튼 누르면 LED 켜지게 하고 싶어</button>
+            </div>
+          </div>
+        </div>
+        <div class="mkinput">
+          <textarea id="mkin" placeholder="예: 배달 앱 만들고 싶어 / 버튼으로 모터 돌리고 싶어" rows="1"></textarea>
+          <button id="mksend">보내기</button>
+        </div>
+      </div>
+      <div class="mkout">
+        <div class="mkouthead">📄 결과물</div>
+        <div class="mkoutbody" id="mkoutbody"><div class="mkempty">아직 만들어진 결과물이 없어요.<br>대화가 무르익으면 AI가 코드(또는 MODI 블록)를 만들어 여기에 보여줍니다.</div></div>
+      </div>
+    </div>`;
+  $('#mkseg').onclick = e => { const b = e.target.closest('button'); if (!b) return; mkType = b.dataset.t;
+    document.querySelectorAll('#mkseg button').forEach(x => x.classList.toggle('on', x === b)); };
+  document.querySelector('.mkex').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+    $('#mkin').value = b.textContent; mkSend(); };
+  $('#mksend').onclick = mkSend;
+  $('#mkin').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); mkSend(); } });
+}
+function mkMsg(cls, t){ const d = document.createElement('div'); d.className = 'mkmsg ' + cls; d.textContent = t;
+  $('#mkmsgs').appendChild(d); $('#mkmsgs').scrollTop = 1e9; return d; }
+function mkSend(){
+  const v = $('#mkin').value.trim(); if (!v) return;
+  const w = $('#mkwel'); if (w) w.remove();
+  $('#mkin').value = ''; mkMsg('me', v); mkTurn++;
+  const think = mkMsg('ai', '…');
+  setTimeout(() => {
+    if (mkTurn === 1){
+      think.textContent = demoDesignReply(v);
+    } else {
+      think.textContent = mkType === 'blockly'
+        ? '좋아요, 정리한 설계대로 MODI 블록을 만들었어요! 오른쪽에서 블록 구성을 확인하고 MODI에 넣어 실행해 보세요. 바꾸고 싶은 부분이 있으면 계속 말해 주세요. (미리보기 시뮬레이션)'
+        : '좋아요, 정리한 설계대로 코드를 만들고 빌드 검증까지 통과했어요! 오른쪽에서 코드를 확인해 보세요. 학습 노트와 코드 설명도 함께 붙였어요. 바꾸고 싶은 부분이 있으면 계속 말해 주세요. (미리보기 시뮬레이션)';
+      $('#mkoutbody').innerHTML = mkType === 'blockly' ? DEMO_XML : DEMO_CODE;
+    }
+  }, 900);
+}
+function demoDesignReply(v){
+  return '"' + v + '" — 좋은 아이디어예요! 같이 설계부터 해 봐요.\n\n' +
+    (mkType === 'blockly'
+      ? '1. 어떤 MODI 모듈을 가지고 있나요? (버튼·LED·모터·환경 센서…)\n2. 어떤 동작(입력→출력)을 원하나요?\n3. 특별히 넣고 싶은 조건이 있나요?\n\n대답해 주시면 설계를 정리하고 블록을 만들어 드릴게요. (미리보기 시뮬레이션)'
+      : '1. 이 화면을 누가 쓰게 되나요?\n2. 꼭 필요한 기능 2~3가지는 무엇인가요?\n3. 어떤 분위기(색·느낌)를 원하나요?\n\n대답해 주시면 설계를 정리하고 코드를 만들어 드릴게요. (미리보기 시뮬레이션)');
+}
+const DEMO_CODE = `<div class="mkfile">App.tsx <span>빌드 검증 통과 ✓</span></div><pre class="mkpre">import { useState } from 'react';
+
+export default function App() {
+  const [notices, setNotices] = useState([
+    { id: 1, text: '수요일까지 과학 관찰일지 제출!' },
+  ]);
+  const [input, setInput] = useState('');
+
+  const add = () => {
+    if (!input.trim()) return;
+    setNotices([...notices, { id: Date.now(), text: input }]);
+    setInput('');
+  };
+
+  return (
+    &lt;div className="board"&gt;
+      &lt;h1&gt;📌 우리 반 알림판&lt;/h1&gt;
+      {notices.map(n =&gt; (
+        &lt;div key={n.id} className="notice"&gt;{n.text}&lt;/div&gt;
+      ))}
+      &lt;input value={input} onChange={e =&gt; setInput(e.target.value)}
+             placeholder="새 알림을 입력하세요" /&gt;
+      &lt;button onClick={add}&gt;붙이기&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<div class="mkfile" style="margin-top:10px">📒 학습 노트</div>
+<div class="mknote">• <b>useState</b>는 화면이 기억하는 값(상태)을 만들어요. 알림 목록이 여기에 저장돼요.<br>• 버튼을 누르면 상태가 바뀌고, 화면이 자동으로 다시 그려져요.</div>`;
+const DEMO_XML = `<div class="mkfile">MODI 블록 <span>모듈: 버튼 · LED ✓</span></div><pre class="mkpre">&lt;xml&gt;
+  &lt;block type="when_button_pressed"&gt;
+    &lt;field name="MODULE"&gt;button_1&lt;/field&gt;
+    &lt;next&gt;
+      &lt;block type="led_set_color"&gt;
+        &lt;field name="MODULE"&gt;led_1&lt;/field&gt;
+        &lt;field name="COLOR"&gt;#16a06a&lt;/field&gt;
+      &lt;/block&gt;
+    &lt;/next&gt;
+  &lt;/block&gt;
+&lt;/xml&gt;</pre>
+<div class="mkfile" style="margin-top:10px">🔁 동작 흐름</div>
+<div class="mknote">버튼 모듈을 누르면 → LED 모듈이 초록색으로 켜져요. 입력(버튼) → 출력(LED)의 기본 구조예요.</div>`;
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
