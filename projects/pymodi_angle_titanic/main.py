@@ -116,6 +116,61 @@ def read_dial_raw(dial):
     raise AttributeError("다이얼 모듈에서 회전값 속성을 찾지 못했습니다.")
 
 
+def read_imu_degree(imu):
+    """IMU(자이로) 모듈에서 기울기 각도(도)를 읽는다. roll 축 기준."""
+    for attr in ("roll", "angle_x", "yaw"):
+        if hasattr(imu, attr):
+            return float(getattr(imu, attr)) % 360.0
+    raise AttributeError("IMU 모듈에서 각도 속성을 찾지 못했습니다.")
+
+
+def list_module_names(bundle):
+    """진단용: 현재 번들에 인식된 모듈 타입 이름 목록."""
+    try:
+        return [type(m).__name__ for m in bundle.modules]
+    except Exception:
+        return []
+
+
+def find_angle_module(bundle, timeout=10.0):
+    """각도 소스 모듈(다이얼 우선, 없으면 IMU)을 찾을 때까지 기다린다.
+
+    연결 직후에는 모듈 등록이 끝나기 전이라 목록이 잠깐 비어 있을 수 있으므로
+    timeout 동안 0.5초 간격으로 다시 확인한다.
+    """
+    deadline = time.monotonic() + timeout
+    printed_wait = False
+    while True:
+        dials = getattr(bundle, "dials", None)
+        if dials:
+            return dials[0], "dial"
+        for attr in ("imus", "gyros"):
+            imus = getattr(bundle, attr, None)
+            if imus:
+                # 다이얼이 조금 늦게 잡힐 수 있으니 2초는 더 기다려 본다.
+                extra = time.monotonic() + 2.0
+                while time.monotonic() < extra:
+                    if getattr(bundle, "dials", None):
+                        return bundle.dials[0], "dial"
+                    time.sleep(0.2)
+                return imus[0], "imu"
+        if time.monotonic() >= deadline:
+            found = list_module_names(bundle)
+            raise SystemExit(
+                "각도 소스 모듈(다이얼 또는 IMU)을 찾지 못했습니다.\n"
+                f"현재 인식된 모듈: {found if found else '없음'}\n"
+                "확인해 보세요:\n"
+                "  1. 각도 모듈이 네트워크 모듈에 자석으로 단단히 붙어 있는지\n"
+                "  2. 모듈 LED가 켜져 있는지 (전원/연결 상태)\n"
+                "  3. 커넥터를 뗐다 다시 붙이거나 연결 순서를 바꿔볼 것\n"
+                "위 목록에 모듈 이름이 보이면 그 이름과 함께 문의해 주세요."
+            )
+        if not printed_wait:
+            print("모듈 등록을 기다리는 중입니다... (최대 10초)")
+            printed_wait = True
+        time.sleep(0.5)
+
+
 def set_speaker_tune(speaker, frequency, volume):
     """pymodi-plus는 set_tune(), pymodi는 tune 프로퍼티를 쓴다."""
     if hasattr(speaker, "set_tune"):
@@ -302,15 +357,17 @@ def main():
     args = parser.parse_args()
 
     if args.sim:
-        dial, speaker = SimDial(raw_max=args.raw_max), SimSpeaker()
+        angle_module, source = SimDial(raw_max=args.raw_max), "dial"
+        speaker = SimSpeaker()
         print("시뮬레이션 모드: 각도가 자동으로 회전합니다.")
     else:
-        print("MODI 모듈을 찾는 중입니다... (네트워크 + 다이얼 + 스피커)")
+        print("MODI 모듈을 찾는 중입니다... (네트워크 + 각도 + 스피커)")
         bundle = connect_bundle()
-        if not bundle.dials:
-            raise SystemExit("다이얼(각도) 모듈이 연결돼 있지 않습니다.")
-        dial = bundle.dials[0]
-        speaker = bundle.speakers[0] if bundle.speakers else None
+        angle_module, source = find_angle_module(bundle)
+        print(f"인식된 모듈: {list_module_names(bundle)}")
+        print(f"각도 소스: {source} ({type(angle_module).__name__})")
+        speakers = getattr(bundle, "speakers", None)
+        speaker = speakers[0] if speakers else None
         if speaker is None and not args.no_music:
             print("스피커 모듈이 없어 음악 없이 시각화만 실행합니다.")
             args.no_music = True
@@ -322,7 +379,9 @@ def main():
         player.start()
 
     def read_degree():
-        return raw_to_degree(read_dial_raw(dial), args.raw_max)
+        if source == "imu":
+            return read_imu_degree(angle_module)
+        return raw_to_degree(read_dial_raw(angle_module), args.raw_max)
 
     def on_close():
         if player:
