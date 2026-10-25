@@ -1,0 +1,3 @@
+ultralytics>=8.3.0   # YOLO / YOLO-World (torch, opencv-python, pillow, numpy 함께 설치됨)
+git+https://github.com/ultralytics/CLIP.git  # YOLO-World 문구 인식용 (world 백엔드)
+# pymodi             # --modi 옵션(MODI 스피커·LED 퇴치) 사용 시에만
